@@ -15,6 +15,7 @@
  * @plugindesc コントローラ(ゲームパッド)・キーボードの設定を変更できます。
  * ユーザーが入力を拡張する場合の補助も行います。
  * @author しぐれん(https://github.com/Sigureya/RPGmakerMV)
+ * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_InputConfig.js
  * 
  * @target MZ
  * 
@@ -558,6 +559,7 @@
  * @plugindesc You can change the controller (gamepad) and keyboard settings.
  * It also helps users expand their input.
  * @author Shiguren (https://github.com/Sigureya/RPGmakerMV)
+ * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_InputConfig.js
  *
  * @target MZ
  * 
