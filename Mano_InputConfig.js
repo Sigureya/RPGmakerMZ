@@ -11,6 +11,8 @@
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
 
+
+
 /*:ja
  * @plugindesc コントローラ(ゲームパッド)・キーボードの設定を変更できます。
  * ユーザーが入力を拡張する場合の補助も行います。
@@ -2336,6 +2338,15 @@ class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
         SoundManager.playCancel();
         SceneManager.pop();
     }
+    /**
+     * @returns {Number}
+     */
+    helpWindowTop(){
+        return this.mainAreaTop();
+    }
+    bottomAreaHeight(){
+        return 20;
+    }
     helpWindowInitParam(){
         if(Utils.RPGMAKER_NAME ==="MV"){
             return 3;
@@ -2343,7 +2354,10 @@ class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
         if(Utils.RPGMAKER_NAME ==="MZ"){
             const height = this.calcWindowHeight(3);
             const width = Graphics.boxWidth;
-            return new Rectangle( 0,0,width,height );
+            const listWindowHeight = this.symbolListHeight();
+
+            const y = Math.min(this.helpWindowTop(),  Graphics.boxHeight-listWindowHeight-height -this.bottomAreaHeight());
+            return new Rectangle( 0,y,width,height );
         }
     }
     createHelpWindow(){
