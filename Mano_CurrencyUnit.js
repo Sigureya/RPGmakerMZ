@@ -15,6 +15,7 @@
  * @plugindesc 変数やアイテムを消費して購入できるショップが作れます。
  * 競合率・中ぐらい
  * @author しぐれん(https://github.com/Sigureya/RPGmakerMV)
+ * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_CurrencyUnit.js
  * 
  * @help
  * お金の代わりに変数やアイテムを消費して購入できるショップを作成できます。
@@ -41,12 +42,6 @@
  * 
  * 2020/08/31 公開
  * 
- * @param autoReset
- * @text 通貨単位の自動リセット
- * @desc ショップ終了時に通貨単位を自動で戻します
- * コイン交換所などで使う場合は、ONにすることを推奨
- * @type boolean
- * @default true
  * 
  * @command setWalletVariable
  * @text 通貨変数の切り替え
@@ -82,7 +77,7 @@
  * @type string
  * @default 個
  * 
- * @command reset
+ * @command resetWallet
  * @text 通貨切り替えの解除
  * @desc 通貨を通常のお金に戻します
  * 
@@ -194,29 +189,7 @@ class WalletVariable extends WalletBase{
         const lastValue = this.value();
         $gameVariables.setValue(this._variableId, lastValue-value );
     }
-
 }
-
-/**
- * @returns {WalletBase}
- * @param {String} mode 
- * @param {Number} id 
- */
-function makeWallet(mode,id){
-    if(mode ==="item"){
-        const wi = new WalletItem(id);
-        return wi;
-    }
-
-    if(mode ==="variable"){
-        const wv = new WalletVariable(id);
-        return wv;
-    }
-
-    return new WalletGold();
-}
-
-
 
 /**
  * @param {WalletBase} wallet 
@@ -225,9 +198,9 @@ function setupWallet(wallet){
     g_wallet = wallet;
 }
 
-//アイテムと引き換えに交換を行うショップの設定
+
 /**
- * 
+ * アイテムと引き換えに交換を行うショップの設定
  * @param {Number} itemId 
  * @param {string} unit 
  */
@@ -277,9 +250,9 @@ PluginManager.registerCommand(PLUGIN_NAME,"resetWallet",
 );
 
 
-
 const Scene_Load_onLoadSuccess=Scene_Load.prototype.onLoadSuccess
 Scene_Load.prototype.onLoadSuccess =function(){
+    resetWallet();
     g_wallet=null;
     Scene_Load_onLoadSuccess.call(this);
 };
