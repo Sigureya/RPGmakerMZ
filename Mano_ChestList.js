@@ -37,7 +37,8 @@
  * 画面内にある宝箱で、開けていないものをすべて光らせます。
  * 光り方ですが、バルーンの再生で行います。
  * 
- * プラグインコマンド「ChestFlash」で、開けていない宝箱にバルーンが付きます
+ * プラグインコマンド「ChestFlash」で、開けていない宝箱にバルーンが付きます。
+ * プラグインコマンド「CountChest」で、開けていない宝箱の数を表示します。
  * 
  * @param balloonId
  * @desc chestFlash()で使用するバルーンの番号です。
@@ -84,12 +85,6 @@
  * ウェイトするかを設定します
  * @type boolean
  * @default true
- * 
- * @param CountChest
- * @desc 簡易版盗賊の鼻を使うかを決めます
- * イベントコマンドを書くのが面倒という人向け
- * @type boolean
- * @default false
  * 
  * @param CountChestText
  * @desc 簡易版盗賊の鼻のメッセージです。
@@ -143,63 +138,11 @@
  * @type variable
  * @default 20
  * 
+ * @command showChestCountMessage
+ * @text 開けていない宝箱の数を表示
+ * @desc 開けていない宝箱の数をメッセージで表示します。
+ * 
 */
-/*~struct~CommonDefine:
- *  
- * @param enableSwitch
- * @desc 指定したスイッチがONの時だけ、呼びだしを行います。
- * ゲームの進行で機能が追加される場合を想定しています。
- * @type switch
- * 
- * @param symbol
- * @desc Input.isTriggered()の引数として使われます
- * 
- * @param text
- * @desc コマンド名称です
- * 
- * @param mandatory
- * @desc inputConfigの方で必須指定されたものとして扱います。
- * @type boolean
- * @default false
- * 
- * @param keycode
- * @desc キーボードの割り当てです
- * キーコードは各自調べてください
- * @type number
- * 
- * @param padButton
- * @desc ゲームパッドの割り当てです
- * カッコ内はツクールのデフォルトでの割り当てです
- * @type select
- * @default -1
- * @option non(割り当てなし)
- * @value -1
- * @type select
- * @option button6
- * @value 6
- * @option button7
- * @value 7
- * @option button8
- * @value 8
- * @option button9
- * @value 9
- * @option button10
- * @value 10
- * @option button11
- * @value 11
- * @option button0(ok/決定)
- * @value 0
- * @option button1(cancel/キャンセル)
- * @value 1
- * @option button2(shift/ダッシュ)
- * @value 2
- * @option button3(menu/メニュー)
- * @value 3
- * @option button4(pageup)
- * @value 4
- * @option button5(pagedown)
- * @value 5
- */
 
 /**
  * TODO
@@ -218,40 +161,10 @@
  * 第2引数に'B','C','D'など任意のセルフスイッチに割り当てられるキーを指定することで、
  * 他のセルフスイッチも調べられます。
  * 
- * @param oneButtonCountChestCall
- * @desc キーボードやゲームパッドから1ボタンで盗賊の鼻を起動します。
- * @type boolean
- * @on 機能を使う
- * @off 機能を使わない
- * @default false
- * 
  */
 (function(){
 'use strict'
 const PLUGIN_NAME='Mano_ChestList';
-
-function createCommonDefine(param){
-    const obj =JSON.parse(param);
-    return{
-        mandatory:Boolean(obj.mandatory),
-        text:String(obj.text),
-        symbol:String(obj.symbol),
-        enableSwitch:Number(obj.enableSwitch),
-        keycode:String(obj.keycode),
-        padButton:String(obj.padButton),
-    };
-}
-
-function createCountChestSetting(params){
-    if(params.CountChest!=='true'){
-        return null;
-    }
-    return {
-        countChestEmptyText:String(params.CountChestEmptyText),
-        inputDefine :createCommonDefine(params.CountChestinputSetting),
-    };
-}
-
 
 const setting=(function(){
     const params = PluginManager.parameters('Mano_ChestList');
@@ -269,17 +182,9 @@ const setting=(function(){
         flashWait:(params.flashWait==='true'),
         countChestText:String(params.CountChestText),
         countChestEmptyText:String(params.CountChestEmptyText),
-        countChest:createCountChestSetting(params),
     };
     return result;
 })();
-
-
-
-//const setting =createSetting();
-
-
-const KEYSYMBOL_CHESTCOUNT ='ChestCount';
 
 /**
  * @param {[]} array
@@ -386,16 +291,6 @@ Game_Interpreter.prototype.chestFlash=function(){
         this.setWaitMode('balloon');
     }
 };
-function argParse(arg){
-    return {
-
-        flash:"true"===arg.flash
-    };
-}
-
-function chestSearch(arg){
-    
-}
 
 const Game_Interpreter_pluginCommand =Game_Interpreter.prototype.pluginCommand;
 Game_Interpreter.prototype.pluginCommand =function(command, args){
@@ -434,7 +329,9 @@ PluginManager.registerCommand(PLUGIN_NAME,"countClosedChest",(arg)=>{
     const result = countClosedChest();
     $gameVariables.setValue(variableId,result);
 });
-
+PluginManager.registerCommand(PLUGIN_NAME,"showChestCountMessage",function(){
+    $gameMap.showChestCountMessage();
+});
 
 
 })();
