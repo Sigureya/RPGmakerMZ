@@ -13,7 +13,8 @@
 
 
 
-/*:ja
+
+/*:
  * @plugindesc コントローラ(ゲームパッド)・キーボードの設定を変更できます。
  * ユーザーが入力を拡張する場合の補助も行います。
  * @author しぐれん(https://github.com/Sigureya/RPGmakerMV)
@@ -22,18 +23,58 @@
  * @target MZ
  * 
  * @param debugMode
- * @text デバッグモード
+ * @text デバッグモード/debugMode
  * @desc 一部のデバッグ用の情報をコンソールへ出します。
  * 起動時に出力されます。
  * @type boolean
  * @default true
  * 
- * @param unknowSymbolAutoImport
- * @text 不明なシンボルの自動取り込み
- * @desc キーボード・ゲームパッドのシンボルを全て読み込み、一覧に入れます。
- * シンボルの細かい意味が分からないなら、ONにした方がいいです。
- * @type boolean
- * @default true
+ * @param mapperOk
+ * @text 決定/ok
+ * @type struct<MultiLangString>
+ * @default {"en":"ok","jp":"決定"}
+ * 
+ * @param mapperCancel
+ * @text 取り消し/cancle
+ * @type struct<MultiLangString>
+ * @default {"en":"cancel","jp":"キャンセル"}
+ * 
+ * @param mapperShift
+ * @text ダッシュ/dash
+ * @type struct<MultiLangString>
+ * @default {"en":"dash","jp":"ダッシュ"}
+ * 
+ * @param mapperMenu
+ * @text メニュー/menu
+ * @type struct<MultiLangString>
+ * @default {"en":"menu","jp":"メニュー"}
+ * 
+ * @param mapperEscape
+ * @text メニュー(2)/menu(2)
+ * @type struct<MultiLangString>
+ * @default {"en":"menu/cancel","jp":"メニュー/キャンセル"}
+ * 
+ * 
+ * @param mapperPageup
+ * @text 次/next
+ * @type struct<MultiLangString>
+ * @default {"en":"next","jp":"次"}
+ * 
+ * @param mapperPagedown
+ * @text 前/prev
+ * @type struct<MultiLangString>
+ * @default {"en":"prev","jp":"前"}
+ * 
+ * @param mapperDelete
+ * @text 設定を消去/delete
+ * @type struct<MultiLangString>
+ * @default {"en":"delete","jp":"設定を消去"}
+ * 
+ * 
+ * @param extendsMapper
+ * @text 入力拡張/extendsMapper
+ * @type struct<InputDefine>[]
+ * @default []
  * 
  * @param overwriteWarning
  * @text 上書き警告
@@ -43,6 +84,7 @@
  *
  * 
  * @param GamepadIsNotConnected
+ * @text 未接続/GamepadIsNotConnected
  * @desc ゲームパッドが接続されていない場合の文章です。
  * @type note
  * @default "ゲームパッドが接続されていません\nボタンを押して再度試してください"
@@ -53,6 +95,35 @@
  * 手を放すように促すメッセージを設定します。
  * @type note
  * @default "コンフィグを終了するためには\nボタンから手を放してください。"
+ * 
+ * @param apply
+ * @text 設定の保存/apply
+ * @type struct<KeyconfigCommand>
+ * @default {"width":"4","text":"{\"jp\":\"設定を保存\",\"en\":\"apply\"}"}
+ * 
+ * @param rollback
+ * @text 変更を破棄/rollback
+ * @type struct<KeyconfigCommand>
+ * @default {"width":"4","text":"{\"jp\":\"変更前に戻す\",\"en\":\"rollback\"}"}
+ * 
+ * @param reset
+ * @text 初期設定に戻す/reset
+ * @type struct<KeyconfigCommand>
+ * @default {"width":"4","text":"{\"jp\":\"初期設定に戻す\",\"en\":\"reset\"}"}
+ * 
+ * @param WASD
+ * @type struct<KeyconfigCommand>
+ * @default {"width":"3","text":"{\"jp\":\"WASD\",\"en\":\"WASD\"}"}
+ * 
+ * @param changeLayout
+ * @text JIS/US
+ * @type struct<KeyconfigCommand>
+ * @default {"width":"3","text":"{\"jp\":\"JIS/US\",\"en\":\"JIS/US\"}"}
+ * 
+ * @param exit
+ * @text やめる/exit
+ * @type struct<KeyconfigCommand>
+ * @default {"width":"3","text":"{\"jp\":\"やめる\",\"en\":\"exit\"}"}
  * 
  * @param text
  * @param CommandWidth
@@ -82,241 +153,7 @@
  * @desc コンフィグを終了するときのコマンドです。
  * @default やめる
  * @parent text
- * 
- * @param textEmpty
- * @desc 何も割り当てられていない時の説明
- * Explanation when no function is assigned
- * @default 設定を消去
- * @parent text
- * 
- * @param textOK
- * @desc okの機能の説明
- * Description of ok's function
- * @default 決定
- * @parent text
- * 
- * @param textCancel
- * @desc cancelの機能の説明
- * Description of cancel function
- * @default 取り消し
- * @parent text
- * 
- * @param textShift
- * @desc shiftの機能の説明
- * Description of shift function
- * @default ダッシュ
- * @parent text
- * 
- * @param textMenu
- * @desc menuの機能の説明
- * @default メニュー
- * @parent text
- * 
- * @param textPageup
- * @desc pageupの機能の説明
- * @default 前
- * @parent text
- * 
- * @param textPagedown
- * @desc pagedownの機能の説明
- * @default 次
- * @parent text
- * 
- * @param textEscape
- * @desc escapeの機能の説明(キャンセルとメニューを兼ねたキー)
- * @default キャンセル/メニュー
- * @parent text
- * 
- * @param textSymbol6
- * @desc ユーザー拡張アクション6の説明
- * ※6なのは、既存の機能を0から数えているためです。
- * @default アクション6
- * 
- * @param extendSymbol6
- * @desc ユーザー拡張アクション6です。
- * Input.pressed('ここで設定した文字')で入力を取得できます。
- * @parent textSymbol6
- * 
- * @param textSymbol7
- * @desc ユーザー拡張アクション7の説明
- * @default アクション7
- * 
- * @param extendSymbol7
- * @desc ユーザー拡張アクション7です。
- * Input.pressed('ここで設定した文字')で入力を取得できます。
- * @parent textSymbol7
- * 
- * @param textSymbol8
- * @desc ユーザー拡張アクション8の説明
- * @default アクション8
- * @param extendSymbol8
- * @desc ユーザー拡張アクション8です。
- * Input.pressed('ここで設定した文字')で入力を取得できます。
- * @parent textSymbol8
- * 
- * 
- * @param symbols
- * @desc コンフィグでの変更先の一覧です。
- * ユーザー定義のコマンドも混ぜることができます。
- * @default ["ok","cancel","shift","menu","pageup","pagedown","escape"]
- * @type combo[]
- * @option ok
- * @option cancel
- * @option shift
- * @option menu
- * @option pageup
- * @option pagedown
- * @option escape
- * 
- * @param mandatorySymbols
- * @desc 必須シンボルです。
- * これらのシンボル全てがある場合のみ、変更を保存できます。
- * @type combo[]
- * @option ok
- * @option cancel
- * @option shift
- * @option menu
- * @option pageup
- * @option pagedown
- * @default ["ok","cancel","menu"]
- * 
- * @param buttons
- * @text ボタン及びキーボードの初期設定
- * @desc 使用できるゲームパッドボタンの一覧です。
- * 並び順の制御を兼ねています。
- * @type number[]
- * @default ["1","0","3","2","4","5","6","7","8","9","10","11","16"]
- * 
- * 
- * @param button0
- * @desc PS2コントローラ：×
- * @default {"buttonName":"B","action":""} 
- * @type struct<ButtonInfo>
- * @parent buttons
- * 
- * @param button1
- * @desc PS2コントローラ:〇
- * @type struct<ButtonInfo>
- * @default {"buttonName":"A","action":""}
- * @parent buttons
- * 
- * @param button2
- * @desc PS2コントローラ：□
- * @type struct<ButtonInfo>
- * @default {"buttonName":"Y","action":""}
- * @parent buttons
- * 
- * @param button3
- * @desc PS2コントローラ：△
- * @type struct<ButtonInfo>
- * @default {"buttonName":"X","action":""}
- * @parent buttons
- * 
- * @param button4
- * @desc PS2コントローラ：L1
- * @type struct<ButtonInfo>
- * @default {"buttonName":"L1","action":""}
- * @parent buttons
- * 
- * @param button5
- * @desc PS2コントローラ：R1
- * @type struct<ButtonInfo>
- * @default {"buttonName":"R1","action":""}
- * @parent buttons
- * 
- * @param button6
- * @desc PS2コントローラ：L2
- * @type struct<ButtonInfo>
- * @default {"buttonName":"L2","action":""}
- * @parent buttons
- * 
- * @param button7
- * @desc PS2コントローラ：R2
- * @type struct<ButtonInfo>
- * @default {"buttonName":"R2","action":""}
- * @parent buttons
- * 
- * @param button8
- * @desc PS2コントローラ：select
- * @type struct<ButtonInfo>
- * @default {"buttonName":"select","action":""}
- * @parent buttons
- * 
- * @param button9
- * @desc PS2コントローラ：start
- * @type struct<ButtonInfo>
- * @default {"buttonName":"start","action":""}
- * @parent buttons
- * 
- * @param button10
- * @desc PS2コントローラ：左スティック押し込み
- * @type struct<ButtonInfo>
- * @default {"buttonName":"L push","action":""}
- * @parent buttons
- * 
- * @param button11
- * @desc PS2コントローラ：右スティック押し込み
- * @type struct<ButtonInfo>
- * @default {"buttonName":"R push","action":""}
- * @parent buttons
- * 
- * @param moveButtons
- * @desc 十字キーをコンフィグ範囲に含めます。
- * 自動的に上下左右が必須ボタンに追加されます。
- * @type boolean
- * @default false
- * 
- * @param button12
- * @desc 上キー/UP_BUTTON
- * @type struct<ButtonInfo>
- * @default {"buttonName":"UP","action":""}
- * @parent moveButtons
- * 
- * @param textUp
- * @desc 上ボタンの説明
- * @default ↑
- * @parent moveButtons
- * 
- * @param button13
- * @desc 下キー/DOWN_BUTTON
- * @type struct<ButtonInfo>
- * @default {"buttonName":"DOWN","action":""}
- * @parent moveButtons
- * 
- * @param textDown
- * @desc 下ボタンの説明
- * Description of ok's function
- * @default ↓
- * @parent moveButtons
- * 
- * @param button14
- * @desc 左キー/LEFT_BUTTON
- * @type struct<ButtonInfo>
- * @default {"buttonName":"LEFT","action":""}
- * @parent moveButtons
- * 
- * @param textLeft
- * @desc 左の説明
- * @default ←
- * @parent moveButtons
- * 
- * @param button15
- * @desc 右キー/RIGHT_BUTTON
- * @type struct<ButtonInfo>
- * @default {"buttonName":"RIGHT","action":""}
- * @parent moveButtons
- * 
- * @param textRight
- * @desc 右の説明
- * @default →
- * @parent moveButtons
- * 
- * @param button16
- * @desc PS2コントローラ：
- * @type struct<ButtonInfo>
- * @default {"buttonName":"button16","action":""}
- * @parent buttons
- * @param button_unknow
+ *  
  * 
  * @param CommandDefaultWidth
  * @type number
@@ -391,61 +228,22 @@
  * @type number
  * @default 16
  * 
- * @param cols
- * @desc ゲームパッドコンフィグの横方向の要素数です
- * @type number
- * @min 1
- * @default 2
- *  
- * @param textKeyUp
- * @desc キーコンフィグの上キーの表示名です
- * @default ↑
- * 
- * @param textKeyDown
- * @desc キーコンフィグの下キーの表示名です
- * @default ↓
- * 
- * @param textKeyRight
- * @desc キーコンフィグの右キーの表示名です
- * @default →
- * 
- * @param textKeyLeft
- * @desc キーコンフィグの左キーの表示名です
- * @default ←
  * 
  * @param symbolWindowWidth
  * @desc シンボルの種類を選択するウィンドウの幅
  * @type number
  * @default 148
  * 
- * @param symbolAutoSelect
- * @desc キーに対応するシンボルを切り替えるときに、
- * そのキーに設定されているシンボルへ自動でカーソルを合わせます。
- * @type boolean
- * @on シンボルに合わせる
- * @off 先頭に合わせる
- * @default true
  * 
- * @param gamepadConfigEnabled
- * @desc ゲームパッドコンフィグの有効化設定です
- * @type boolean
- * @default true
- * 
- * @param keyboardConfigEnabled
- * @desc キーボードコンフィグの有効化設定です
- * @type boolean
- * @default true
- * 
- * @param commandName
+ * @param gamepadConfigCommandText
  * @desc ゲームパッドコンフィグを開くコマンドの名前です
- * @type string
- * @default ゲームパッドコンフィグ
+ * @type struct<MultiLangString>
+ * @default {"gamepad config":"ok","jp":"ゲームパッドコンフィグ"}
  * 
- * @param keyconfigCommandName
+ * @param keyConfigCommandText
  * @desc キーコンフィグを開くコマンドの名前です
- * @type string
- * @default キーコンフィグ
- * 
+ * @type struct<MultiLangString>
+ * @default {"keyboard config":"ok","jp":"キーコンフィグ"}
  * 
  * 
  * @help
@@ -457,48 +255,6 @@
  * 新しいプラグインを入れた場合、
  * ゲーム起動後にコンフィグを「初期設定に戻す」でリセットしてください。
  * 
- * ■extendSymbols
- * 定義することで、新たなアクションを定義できます。
- * ここにKeyと入力した場合、Input.isPressed('Key')で入力を取得できます。
- * symbolsに登録するのを忘れないようにしてください。
- * 他のプラグインによって追加された入力(アクション・Symbol)を調べる場合、
- * キーコンフィグを開いて、そこにある小さい文字を見てコピーしてください。
- * （大文字・小文字を間違えないように）
- * 
- * ■symbolsについて
- * ボタン選択画面で決定を押した後の一覧で表示する順番を定義します。
- * 「不明なシンボルの自動取り込み」を有効にしておくと、プラグイン側が適当に一覧に追加します。
- * 表示が仮の物になりますので、書き換えて調整してください。
- * unknow:xxxのような表示になります。
- * 
- * ■mandatorySymbolsについて
- * ゲームを操作するうえで、必須となるボタンの一覧です。
- * 決定や取り消しの設定を変更してゲームが動かなくなると困るので、
- * 一部のボタンが欠けている状態では設定の保存ができません。
- * 初期設定では決定・取り消し・メニューの3つが割り当てられています。
- * 
- * ゲームパッドでは比較的問題が少ないのですが、
- * キーボードだと問題が発生します。
- * insertキーは、一部のPCでは機能しづらいです。
- * 
- * ■ボタンの第2パラメータ・actionについて
- * 本来はsymbolになるはずだったデータです。
- * デフォルトの設定に加えて、
- * ここに設定した内容を上書きで追加した物が初期設定になります。
- * 
- * ■新規シンボルの設定について
- * ゲーム固有の操作を設定する場合、ここで行います。
- * たとえば弾を発射するshotというシンボルを新たに設定したいとします。
- * この場合textSymbol6で「シンボルの説明」を設定します。
- * 次にextendSymbol6に「shot」と入力します。
- * 次にsymbolsにshotを追加します。
- * ゲーム中常に使うのであれば、mandatorySymbolsにも追加します。
- * これをすべて終えれば、input.pressed('shot')などで
- * 入力状態を取得できるようになります。
- * 
- * シンボルの大文字・小文字が間違っていると動かないので注意。
- * シンボルを調べる場合、プラグインを開いてCTRL+Fで「input」を検索すると見つかります。
- * 
  * ■スクリプトで遷移を制御したい場合
  * 他のプラグインを改造したり、スクリプトで直接シーンを切り替える時に使います。
  * SceneManager.push(Mano_InputConfig.Scene_GamepadConfig  );  //ゲームパッドコンフィグ
@@ -506,6 +262,10 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 2020/11/15 ver5.0
+ * プラグインパラメータを再設計。
+ * 内部実装であるsymbolを意識する必要が無くなりました。
+ * 
  * 2020/08/23 ver4.0
  * ツクールMZに対応。
  * 基本システムはMZ向けに最適化し、MVはラッパーで調整
@@ -558,527 +318,6 @@
  * 
  */
 
-/*:
- * @plugindesc You can change the controller (gamepad) and keyboard settings.
- * It also helps users expand their input.
- * @author Shiguren (https://github.com/Sigureya/RPGmakerMV)
- * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_InputConfig.js
- *
- * @target MZ
- * 
- * @param debugMode
- * @text debug mode
- * @desc Write some debugging information to the console.
- * Output at startup.
- * @type boolean
- * @default true
- *
- * @param unknowSymbolAutoImport
- * @text Automatic capture of unknown symbols
- * @desc Read all keyboard and gamepad symbols and list them.
- * If you do not understand the detailed meaning of the symbol, it is better to turn it on.
- * @type boolean
- * @default true
- *
- * @param overwriteWarning
- * @text overwrite warning
- * @desc Warn the console if the button settings assigned by this plugin overwrite existing inputs
- * @type boolean
- * @default true
- * @param GamepadIsNotConnected
- * @desc The sentence when the gamepad is not connected.
- * @type note
- * @default "The gamepad is not connected.\nPlease press button and try again."
- *
- * @param needButtonDetouch
- * @desc key configuration will not finish unless you release the button.
- * Set a message that prompts you to let go.
- * @type note
- * @default "Release button to exit config."
- *
- * @param text
- * @param CommandWidth
- * 
- * @param textApply
- * @desc This command applies the settings.
- * If you select this, the configuration will end.
- * @default Save Settings
- * @parent text
- *
- * @param textRollback
- * @desc This command returns to the state before starting the configuration.
- * @default Undo before change
- * @parent text
- *
- * @param textDefault
- * @desc This command returns to the default setting.
- * @default Restore default settings
- * @parent text
- *
- * @param textChangeLayout
- * @desc This is a command to switch the key arrangement in JIS / US.
- * @default JIS / US
- * @parent text
- *
- * @param textExit
- * @desc This is the command to end the configuration.
- * @default quit
- * @parent text
- *
- * @param textEmpty
- * @desc Explanation when nothing is assigned
- * Explanation when no function is assigned Clear 
- * @default settings
- * @parent text
- * 
- *
- * @param textOK 
- * @desc Description of ok function
- * Description of ok's function
- * @default decision
-  *@parent text
-  *
-  * @param textCancel
-  * @desc  Description of cancel function
-  * @default cancel
-  * @parent text
-  *
-  * @param textShift
-  * @desc  Description of shift function
-  * @default dash
-  * @parent text
-  *
-  * @param textMenu
-  * @desc Description of menu functions
-  * @default menu
-  * @parent text
-  * *
-  * @param textPageup
-  * @desc Description of  pageup function
-  * @default before
-  * @parent text
-  *
-  * @param textPagedown
-  *  @desc  Description ofpagedown function
-  * @default next
-  * @parent text
-  *
-  * @param textEscape
-  *  @desc  Description of escape function (cancel and menu key)
-  * @default Cancel / Menu
-  * @parent text
-  *
-  * @param textSymbol6
-  * @desc Extended user action 6 description
-  * 6 is because existing functions are counted from 0.
-  * @default action 6
-  * @param extendSymbol6
-  * @desc User extended action 6.
-  * You can get input by Input.pressed ('Character set here').
-  * @parent textSymbol6
-  *
-  * @param textSymbol7
-  * @desc Extended user action 7 description
-  * @default action 7
-  *
-  * @param extendSymbol7
-  * @desc User extended action 7.
-  * You can get input by Input.pressed ('Character set here').
-  * @parent textSymbol7
-  *
-  * @param textSymbol8
-  * @desc Extended user action 8 description
-  * @default action 8
-  * 
-  * @param extendSymbol8
-  * @desc User extended action 8.
-  * You can get input by Input.pressed ('Character set here').
-  * @parent textSymbol8
-  * 
-  * 
-  * @param symbols
-  * @desc This is the list of changes in the config.
- * User defined commands can be mixed.
-   * @default ["ok", "cancel", "shift", "menu", "pageup", "pagedown", "escape"]
-   * @type combo []
-   * @option ok
-   * @option cancel
-   * @option shift
-   * @option menu
-   * @option pageup
-   * @option pagedown
-   * @option escape
-   *
-   * @param mandatorySymbols
-   * @desc Required symbol.
-   * You can only save changes if you have all these symbols.
-   * @type combo []
-   * @option ok
-   * @option cancel
-   * @option shift
-   * @option menu
-   * @option pageup
-   * @option pagedown
-   * @default ["ok", "cancel", "menu"]
-   *
-   * @param buttons
-   * @text Initial settings for buttons and keyboard
-   * @desc A list of available gamepad buttons.
-   * It also controls the order of arrangement.。
-   * @type number[]
-   * @default ["1","0","3","2","4","5","6","7","8","9","10","11","16"]
-
-   * @param button0
-   * @desc PS2 controller: ×
-   * @default {"buttonName": "B", "action": ""}
-   * @type struct<ButtonInfo>
-   * @parent buttons
-   *
-   * @param button1
-   * @desc PS2 controller: 〇
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "A", "action": ""}
-   * @parent buttons
-   *
-   * @param button2
-   * @desc PS2 controller: □
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "Y", "action": ""}
-   * @parent buttons
-   *
-   * @param button3
-   * @desc PS2 controller: △
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "X", "action": ""}
-   * @parent buttons
-   *
-   * @param button4
-   * @desc PS2 controller: L1
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "L1", "action": ""}
-   * @parent buttons
-   *
-   * @param button5
-   * @desc PS2 controller: R1
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "R1", "action": ""}
-   * @parent buttons
-   *
-   * @param button6
-   * @desc PS2 controller: L2
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "L2", "action": ""}
-   * @parent buttons
-   *
-   * @param button7
-   * @desc PS2 controller: R2
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "R2", "action": ""}
-   * @parent buttons
-   *
-   * @param button8
-   * @desc PS2 controller: select
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "select", "action": ""}
-   * @parent buttons
-   *
-   * @param button9
-   * @desc PS2 controller: start
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "start", "action": ""}
-   * @parent buttons
-   *
-   * @param button10
-   * @desc PS2 controller: Left stick pressed down
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "L push", "action": ""}
-   * @parent buttons
-   *
-   * @param button11
-   * @desc PS2 controller: push right stick
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "R push", "action": ""}
-   * @parent buttons
-   *
-   * @param moveButtons
-   * @desc Includes the cross key in the configuration range.
-   * Top, bottom, left and right are automatically added to required buttons.
-   * @type boolean
-   * @default false
-   *
-   * @param button12
-   * @desc UP key / UP_BUTTON
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "UP", "action": ""}
-   * @parent moveButtons
-   *
-   * @param textUp
-   * @desc Description of up button
-   * @default ↑
-   * @parent moveButtons
-   *
-   * @param button13
-   * @desc Down key / DOWN_BUTTON
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "DOWN", "action": ""}
-   * @parent moveButtons
-
-   * @param textDown
-   * @desc down button description
-   * Description of ok's function
-   * @default ↓
-   * @parent moveButtons
-   *
-   * @param button14
-   * @desc left key / LEFT_BUTTON
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "LEFT", "action": ""}
-   * @parent moveButtons
-   *
-   * @param textLeft
-   * @desc left description
-   * @default ←
-   * @parent moveButtons
-   *
-   * @param button15
-   * @desc right key / RIGHT_BUTTON
-   * @type struct<ButtonInfo>
-   * @default {"buttonName": "RIGHT", "action": ""}
- * @parent moveButtons
- *
- * @param textRight
- * @desc right explanation
- * @default →
- * @parent moveButtons
- *
- * @param button16
- * @desc PS2 controller:
- * @type struct<ButtonInfo>
- * @default {"buttonName": "button16", "action": ""}
- * @parent buttons
- * @param button_unknow
- * 
- *
- * @param CommandDefaultWidth
-    * @type number
-    * @min 1
-    * @default 4
-    * @parent CommandWidth
-    *
-    * @param CommandApplyWidth
-    * @type number
-    * @min 1
-    * @default 4
-    * @parent CommandWidth
-    *
-    * @param CommandLayoutWidth
-    * @type number
-    * @min 1
-    * @default 3
-    * @parent CommandWidth
-    *
-    * @param CommandExitWidth
-    * @type number
-    * @min 1
-    * @default 3
-    * @parent CommandWidth
-    *
-    * @param CommandWASD_Width
-    * @type number
-    * @min 1
-    * @default 4
-    * @parent CommandWidth
-    *
-    * @param gamepadConfigPositionMode
-    * @text Gamepad config location
-    * @desc window position
-    * @type select
-    * @option center
-    * @value center
-    * @option Numeric value specification
-    * @value custom
-    * @default center
-    *
-    * @param gamepadConfigPositionX
-    * @desc X coordinate of the window.
-    * @type number
-    * @default 100
-    * @parent gamepadConfigPositionMode
-    *
-    * @param gamepadConfigPositionY
-    * @desc Y coordinate of the window.
-    * @type number
-    * @default 100
-    * @parent gamepadConfigPositionMode
-    *
-    * @param gamepadSymbolPositionMode
-    * @text symbol list position
-    * @desc window position
-    * @option right
-    * @value right
-    * @type select
-    * @option center
-    * @value center
-    * @default right
-
-    *
-    * @param gamepadWindowItemWitdh
-    * @desc Drawing area.
-    * The size of the window is * cols + padding.
-    * @type number
-    * @default 260
-    *
-    * @param numVisibleRows
-    * @desc is the number of vertical elements to display
-    * @type number
-    * @default 16
-    *
-    * @param cols
-    * @desc is the number of horizontal elements in the gamepad config
-    * @type number
-    * @min 1
-    * @default 2
-    *
-    * @param textKeyUp
-    * @desc The display name of the key above the key configuration
-    * @default ↑
-    *
-    * @param textKeyDown
-    * @desc Display name of the lower key of the key configuration
-    * @default ↓
-    *
-    * @param textKeyRight
-    * @desc Display name of right key of key config
-    * @default →
-    *
-    * @param textKeyLeft
-    * @desc Display name of left key of key config
-    * @default ←
-    *
-    
-* @param symbolWindowWidth
-* @desc Width of window for selecting symbol type
-* @type number
-* @default 148
-*
-* @param symbolAutoSelect
-* When switching the symbol corresponding to the @desc key,
-* Automatically move the cursor to the symbol set for that key.
-* @type boolean
-* Match on @on symbol
-* @off fit to the beginning
-* @default true
-*
-* @param gamepadConfigEnabled
-* @desc Gamepad config activation setting
-* @type boolean
-* @default true
-*
-* @param keyboardConfigEnabled
-* @desc This is the setting to enable Keyboard Config.
-* @type boolean
-* @default true
- *
- * @param commandName
- * @desc The name of the command to open the gamepad config
- * @type string
- * @default gamepad config
- *
- * @param keyconfigCommandName
- * @desc The name of the command to open the key config
- * @type string
- * @default key config
- *
- *
- * @help
- * Warning: Keep this plugin above YEP_OptionsCore.js.
- * Conflicts may occur depending on the order of installation.
- * 
- * Load the settings when the game starts as default values.
- * Detects input changes regardless of where the plugin is installed.
- * It is OK even if the button is modified by another plugin.
- *
- * The configuration data set by this plugin is recorded in a file.
- * If you insert a new plugin,
- * After starting the game, reset the config with "Return to initial settings".
- *
- * ■ extSymbols
- * You can define a new action by defining it.
- * If you enter Key here, you can get input by Input.isPressed ('Key').
- * Don't forget to register for symbols.
- * When examining the input (action / Symbol) added by other plugins,
- * Open Key Config and look at the small letters there and copy them.
- * (Do not confuse uppercase and lowercase letters)
- *
- * ■ About symbols
- * Defines the order to be displayed in the list after pressing ENTER on the button selection screen.
- * If you enable "Automatic capture of unknown symbols", the plugin will add it to the list.
- * The display will be a temporary one, please rewrite and adjust.
- * It looks like unknow: xxx. 
- * 
-
-* ■ About mandatorySymbols
- * A list of buttons that are required to operate the game.
- * If you change the decision or cancellation settings and the game does not work,
- * Settings cannot be saved if some buttons are missing.
- * By default, three items are assigned: OK, Cancel, Menu.
- *
- * There are relatively few problems with gamepads,
- * Problems with keyboard.
- * The insert key is difficult to work on some PCs.
- *
- * ■ About the second parameter and action of the button
- * It is data that should have been symbol.
- * In addition to the default settings,
- * The default setting is the one added here by overwriting the contents set here.
- * 
-
-* ■ About setting new symbols
- * To set game-specific operations, do so here.
- * For example, let's say you want to set a new symbol called shot to fire a bullet.
- * In this case, set "Symbol description" with textSymbol6.
- * Next, enter "shot" in extendSymbol6.
- * Next, add a shot to symbols.
- * Add it to mandatorySymbols if you use it all the time during the game.
- * After all this, input.pressed ('shot') etc.
- * You can get input status.
- *
- * Note that the symbol will not work if the case is incorrect.
- * To check a symbol, open the plugin and search for "input" with CTRL + F.
- *
- * ■ If you want to control the transition by script
- * Used to modify other plug-ins or switch scenes directly with a script.
- * SceneManager.push (Mano_InputConfig.Scene_GamepadConfig); // Gamepad config
- * SceneManager.push (Mano_InputConfig.Scene_KeyConfig); // Keyboard config
- * You can now go to the specified scene.
- * 
- * 
- * ■ About English version help
- * The English help uses contents translated by Google.
- * There may be some strange translations.
- * However, it is basically made to operate minimally without reading help.
- * If you have any troubles, please go to my Twitter (https://twitter.com/Sigureya) or github (https://github.com/Sigureya/RPGmakerMV).
- * 
- * Change log
- * 2020/08/23 ver 4.0
- * Compatible with RPG Maker MZ.
- * Basic system optimized for MZ, MV adjusted with wrapper
- * 
- * 2020/07/24 ver 3.2
- * English text fix.
- * 2020/04/01 ver 3.1
- * Added help for English language support.
- *
- * 2020/03/14 ver3.0
- * Added a function to set WASD movement.
- * Significantly modified the internal implementation of Key Config.
- * 
- * 2018-2019 ver2.0~ver2.9
- * Various updates.
- * I omit it because it is long when I write it. 
- * 
- * 2017/10/05 ver 1.0 release
- * */
  /**
  * TODO
  * 複数ボタン押し対応
@@ -1097,42 +336,73 @@
  * 
  * 
  */
-/*~struct~ButtonDefineJA:
+//処理の流れ
+//パラメータから、命名済みのアクションをすべて設定する
+//該当のリストからsymbol/name間の対応表を作る
+//全てのシンボルを読み出し、対応表にないものにunknowで対応表に入れる
+
+/*~struct~InputDefine:
  * メモ：キーボードとボタンを結びつけつつ、シンボルを書かずに割り当て
  * キーとボタンのどちらかに設定があれば、もう一方へ取り込む
  * 両方にデータがある場合、エラーで落とす
  * 次回更新の目玉
- * @param actionName
- * @desc 行動内容の表示名です
- * @defualt 未設定
- * 
- * @param buttonName
- * @text ボタン名称
- * 
  * 
  * @param keys
- * @text キーボード設定(SHIFTなどは不可)
- * @desc 入力を設定するキーボードの一覧です。(英数指定)
- * ASDと書いた場合、ASDの3つのキーにシンボルが入ります。
+ * @text キー設定/keySetting
+ * @desc 半角英字で設定。例：ASD
+ * Set the key corresponding to the action (ex:ASD)
  * 
  * @param button
+ * @text パッドボタン/padButton
  * @desc ゲームパッドのボタン設定です。
  * スタンダードレイアウト基準(PSコン基準でも可)
  * @type select
- * @option 0(×)
+ * @default NaN
+ * @option none
+ * @value NaN
+ * @option 0(B/×)
  * @value 0
- * @option 1(○)
+ * @option 1(A/○)
  * @value 1
- * @option 2(□)
+ * @option 2(X/□)
  * @value 2
- * 
+ * @option 3(Y/△)
+ * @value 3
+ * @option 6(L2)
+ * @value 6
+ * @option 7(R2)
+ * @value 7
  * @option 8(select)
  * @value 8
+ * @option 9(start)
+ * @value 9
+ * @option 10(L_press)
+ * @value 10
+ * @option 11(R_press)
+ * @value 11
+ * @option 16(center)
+ * @value 16
+ * 
  *
  * @param mandatory
+ * @text 必須フラグ/mandatory
  * @type boolean
  * @default false
-*/
+ * 
+ * @param overwrite
+ * @text 上書き/overwrite
+ * @desc シンボル書き込みの際に上書きの有無を設定します
+ * @type boolean
+ * @default false
+ * 
+ * @param name
+ * @text 行動名/actionName
+ * @desc 言語別に行動の説明を入力します
+ * @type struct<MultiLangString>
+ * @default ["{\"keys\":\"A\",\"button\":\"NaN\",\"mandatory\":\"false\",\"overwrite\":\"false\",\"name\":\"{\\\"jp\\\":\\\"\\\",\\\"en\\\":\\\"\\\",\\\"ch\\\":\\\"\\\",\\\"ko\\\":\\\"\\\",\\\"ge\\\":\\\"\\\",\\\"fr\\\":\\\"\\\",\\\"ru\\\":\\\"\\\"}\"}"]
+ * 
+ */
+
 
 /*~struct~ButtonInfo:
  *
@@ -1156,15 +426,100 @@
  * @desc 入力を設定するキーボードの一覧です。(英数指定)
  * ASDと書いた場合、ASDの3つのキーにシンボルが入ります。
  */
+ /*~struct~MultiLangNote:
+  * @param jp
+  *  @text 日本語
+  *  @type multiline_string
+  *  @type note
 
+  *  @param en
+  *  @type multiline_string
+  *  @type note
+ */
+ /*~struct~MultiLangNoteFull:
+  * @param jp
+  *  @text 日本語
+  *  @type multiline_string
+  *  @type note
+
+  *  @param en
+  *  @type multiline_string
+  *  @type note
+
+  *  @param ch
+  *  @text 中文
+  *  @type multiline_string
+  *  @type note
+
+  *  @param ko
+  *  @text 한국
+  *  @type multiline_string
+  *  @type note
+
+  *  @param ge
+  *  @text Deutsche
+  *  @type multiline_string
+  *  @type note
+
+  *  @param fr
+  *  @text français
+  *  @type multiline_string
+  *  @type note
+
+  *  @param ru
+  *  @text русский
+  *  @type multiline_string
+  *  @type note
+ */
+ /*~struct~MultiLangString:
+  * @param jp
+  * @text 日本語
+
+  * @param en
+  * @text English
+ */
+
+ /*~struct~MultiLangStringFull:
+  * @param jp
+    @text 日本語
+
+    @param en
+    @text English
+
+    @param ch
+    @text 中文
+
+    @param ko
+    @text 한국
+
+    @param ge
+    @text Deutsche
+
+    @param fr
+    @text français
+
+    @param ru
+    @text русский
+ */
+ /*~struct~KeyconfigCommand:
+  * 
+  * @param width
+  * @type number
+  * @default 3
+  * 
+  * @param text
+  * @type struct<MultiLangString>
+  * @default {}
+  * 
+*/
 
 
 var  MA_InputSymbols = MA_InputSymbols ||[];
 var Imported = Imported || {};
 Imported.Mano_InputConfig = true;
-
 var Mano_InputConfig=( function(){
     'use strict'
+    const  PLUGIN_NAME='Mano_InputConfig';
 
 /**
  * @param {Window_Base} window_ 
@@ -1192,76 +547,489 @@ function window_initializeMVMZ(window_,rect,initFuncton){
     }
     
 const moveSymbols =['up','down','left','right'];
+//言語判定
+//本体の処理タイミングがおかしいので、コピペしてきた
+const isJapanese = function() {
+    return $dataSystem.locale.match(/^ja/);
+};
+const isChinese = function() {
+    return $dataSystem.locale.match(/^zh/);
+};
 
-class InputDefine{
-    setName(name){
-        this._name =name;
+const isKorean = function() {
+    return $dataSystem.locale.match(/^ko/);
+};
+
+const isRussian = function() {
+    return $dataSystem.locale.match(/^ru/);
+};
+
+
+class MultiLanguageText{
+
+
+    constructor(){
+        this.setNameEN("");
+        this.setNameJP("");
+        this.setDefaultName("");
+    }
+    static create(objText){
+        const obj = JSON.parse(objText);
+        const mtext = new MultiLanguageText();
+        mtext.setNameJP(obj.jp);
+        mtext.setNameEN(obj.en);
+
+        return mtext;
+    }
+    /**
+     * @param {String} name 
+     */
+    setNameJP(name){
+        this.ja_JP =name;
+    }
+    /**
+     * @param {String} name 
+     */
+    setNameEN(name){
+        this.en_US =name;
+    }
+    /**
+     * @param {String} name 
+     */
+    setDefaultName(name){
+        this._defaultName=name;
+    }
+    isUnknow(){
+        return this._defaultName[0]==="?";
+    }
+    refresh(){
+        if(!this.isUnknow()){
+            this.setDefaultName(this.currentName());
+        }
+    }
+
+    currentName(){
+        if(isJapanese()){
+            return this.ja_JP;
+        }
+        return this.en_US;
+    }
+
+    name(){
+        return this._defaultName;
     }
 }
 
-function getParam(){
-    return PluginManager.parameters('Mano_InputConfig');
-}
-/**
- * @param {*} param 
- */
-function fetchButtonInfo(param){
-    const p = JSON.parse(param);
+
+//遅延初期化で動かす
+//データ読み込み後に、プラグインパラメータを読み込んで処理
+//instance自体は、setting以外の場所に作っておく
+//行動名称のクラス 実行時の言語切り替えを想定し、一応クラスにしておく
+class InputDefine{
+
     /**
-     * @type {String}
+     * @param {String} actionName 
+     * @param {Number} buttonId 
+     * @param {String} keys 
      */
-    const key =p.keys ||"";
-    return {
-        buttonName:String(p.buttonName),
-        symbol:String(p.action),
-        keys:key.toUpperCase()
-    };
+    static create(actionName,buttonId,keys){
+        const def = new InputDefine();
+        def.setDefaultName(actionName);
+        def.setKeys(keys);
+        def.setPadButtonId(buttonId);
+        def.loadSymbol();
+        return def;
+    }
+    
+    /**
+     * @param {MultiLanguageText} mtext 
+     */
+    constructor(mtext){
+        this.setMultiText(mtext ||new MultiLanguageText());
+        this.setOverwriteEnabled(false);
+        this.setDefaultName("")
+        this.setKeys("")
+        this.setPadButtonId(NaN);
+        this.setSymbol("");
+    }
+    /**
+     * @param {MultiLanguageText} mtext 
+     */
+    setMultiText(mtext){
+        this._mtext = mtext;
+    }
+    refreshLocal(){
+        this._mtext.refresh();
+    }
+    /**
+     * @param {Boolean} value 
+     */
+    setOverwriteEnabled(value){
+        this._overwriteEnabled =value;
+    }
+    /**
+     * @returns {String}
+     */
+    name(){
+        return this._mtext.name();
+    }
+    /**
+     * @param {String} symbol 
+     */
+    setUnknowSymbol(symbol){
+        const _this=this;
+        let keys ="";
+        keyMapperFor(function(key,value){
+            if(value===symbol){
+                const keyN =Number(key);
+                if(keyN >=48 && keyN<=90){
+                    const k=String.fromCodePoint(key);
+                    keys+=k;
+                }
+            }
+        });
+        this.setDefaultName("?"+keys+":"+symbol);
+        this.setSymbol(symbol);
+        this.setKeys(keys);
+        this.setPadButtonId(NaN);
+    }
+    /**
+     * @param {String} symbol 
+     */
+    setSymbol(symbol){
+        this._symbol =symbol;
+    }
+    symbol(){
+        return this._symbol;
+    }
+    /**
+     * @param {String} name 
+     */
+    setDefaultName(name){
+        this._mtext.setDefaultName(name);
+    }
+    /**
+     * @param {String} keys 
+     */
+    setKeys(keys){
+        this._keys=keys;
+    }
+    /**
+     * @param {Number} buttonId 
+     */
+    setPadButtonId(buttonId){
+        this._buttonId =buttonId;
+    }
+    /**
+     * @returns {String}
+     */
+    padSymbol(){
+        return Input.gamepadMapper[this._buttonId];
+    }
+    loadSymbol(){
+        if(!this._symbol){
+            const symbol =(this.padSymbol() || this.firstKeySymbol());
+            this.setSymbol(symbol);
+        }
+    }
+
+    /**
+     * @returns {String}
+     */
+    firstKeySymbol(){
+        const charLen =this._keys.length;
+        for(let i =0; i <charLen; ++i){
+           const char_=  this._keys.charCodeAt(i);
+           const symbol = Input.keyMapper[char_];
+           if(symbol){
+               return symbol;
+           }
+        }
+        return null;
+    }
+    fillSymbol(){
+        if(!this._symbol){return;}
+        gamepadMapperOverwrite(this._buttonId,this._symbol);
+        for (const iterator of this._keys) {
+            keyMapperOverwrite(iterator,this._symbol);
+        }
+    }
+}
+
+function mapperXXX(symbol,mapper){
+    for (const key in mapper) {
+        if ( mapper.hasOwnProperty(key)) {
+            const element = mapper[key];
+            if(element===symbol){
+
+            }
+        }
+    }
+}
+
+/**
+ * @param {any} mapper 
+ * @param {(key:String,value:String)=>void} func 
+ */
+function mapperFor(mapper,func){
+    for (const key in mapper) {
+        if (mapper.hasOwnProperty(key)) {
+            const element = mapper[key];
+            func(key,element);
+        }
+    }
+
 }
 /**
- * @return {String[]}
+ * @param {(key:String,value:String)=>void} func 
  */
-function paramToActionKeys(params){
-    const list= JSON.parse(params.symbols);
-    return list;
+function gamepadMapperFor(func){
+    mapperFor(Input.gamepadMapper,func);
 }
+/**
+ * @param {(key:String,value:String)=>void} func 
+ */
+function keyMapperFor(func){
+    mapperFor(Input.keyMapper,func);
+}
+
+class SymbolMapper_T{
+    constructor(){
+        /**
+         * @type {InputDefine[]}
+         */
+        this._list = [];
+    }
+
+    loadBasicSymbol(){
+        const param = getParam();
+        const ok =createDefaultKeyMapperItem("ok",param.mapperOk);
+        const cancel = createDefaultKeyMapperItem("cancel",param.mapperCancel);
+        const shift = createDefaultKeyMapperItem("shift",param.mapperShift);
+        const menu = createDefaultKeyMapperItem("menu",param.mapperMenu);
+        const escape =createDefaultKeyMapperItem("escape",param.mapperEscape);
+
+        const pageup =createDefaultKeyMapperItem("pageup",param.mapperPageup)
+        const pagedonw =createDefaultKeyMapperItem("pagedown",param.mapperPagedown)
+        this._list.push(ok,cancel,shift,menu,pageup,pagedonw,escape);
+    }
+    loadExtendsInput(){
+        const param = getParam();
+        /**
+         * @type {String[]}
+         */
+        const textList = JSON.parse(param.extendsMapper);
+        for (const iterator of textList) {
+            const obj = JSON.parse(iterator);
+            const mtext = MultiLanguageText.create(obj.name);
+            const def = new InputDefine(mtext);
+            def.setKeys(obj.keys);
+
+            this._list.push(def);
+
+        }
+
+
+    }
+
+    //インスタンスだけ先行して作成し、初期化は後にする
+    onBoot(){
+        if(this._list.length>0){
+            throw(new Error("不明な操作でリストが変更されました"));
+        }
+        //ツクールの基本シンボルを読み込む
+        this.loadBasicSymbol();
+        //追加設定のボタン配置を確認する
+        this.loadExtendsInput();
+        //ボタン配置を利用して、シンボルを読み取る
+        //this.loadSymbols(); //importUnkno内で行っているので不要
+        //不明なシンボルを取り込む
+        this.importUnknowSymbols();
+        //「設定を消去」を追加
+        this.makeRemoveSymbol();
+        //現在の言語設定に応じて表示を切り替え
+        this.refreshLocal();
+    }
+    makeRemoveSymbol(){
+        const param =getParam();
+        const mtext = MultiLanguageText.create(param.mapperDelete)
+        const remove = new InputDefine(mtext);
+        remove.setSymbol(null);
+        this._list.push(remove);
+    }
+
+    actionName(symbol){
+        if(!symbol){
+            return "";
+        }
+        const item = this.find(symbol);
+        if(item){
+            const name = item.name();
+            return item.name();
+        }
+        return "unknow:"+symbol;
+    }
+
+    find(symbol){
+        return this._list.find(function(item){
+            return item.symbol() ===symbol;
+        });
+    }
+    makeUnknow(symbol){
+        const def = this.find(symbol);
+        if(def){
+            return;
+        }
+        const unknow = new InputDefine();
+        unknow.setUnknowSymbol(symbol);
+        this._list.push(unknow);
+    }
+
+    isSystemSymbol(symbol){
+        return ["debug","control","tab","up","down","left","right"].includes(symbol);
+    }
+
+    loadSymbols(){
+        for (const iterator of this._list) {
+            iterator.loadSymbol();
+        }
+    }
+    importUnknowSymbols(){
+        this.loadSymbols();
+        const _this = this;
+        keyMapperFor(function(key,value){
+            if(!_this.isSystemSymbol(value)){
+                _this.makeUnknow(value);                
+            }
+        });
+    }
+    refreshLocal(){
+        for (const iterator of this._list) {
+            iterator.refreshLocal();
+        }
+    }
+    item(index){
+        return this._list[index];
+    }
+    maxItems(){
+        return this._list.length;
+    }
+    indexOfSymbol(symbol){
+        for (let i = 0; i < +this._list.length; i++) {
+            const element = this._list[i];
+            if(element.symbol()===symbol){
+                return i;
+            }
+        }
+        return -1;
+    }
+    toButtonNumber(symbol){
+        const def = this.find(symbol);
+
+        return -1;
+
+    }
+}
+
+const symbolMapper = new SymbolMapper_T([]);
+
+class GamepadButton{
+    /**
+     * @param {Number} buttonId 
+     * @param {String} name 
+     */
+    constructor(buttonId,name){
+        this.setName(name);
+        this.setButtonId(buttonId);
+    }
+    /**
+     * @param {String} name 
+     */
+    setName(name){
+        this._name =name;
+    }
+    /**
+     * @param {Number} buttonId 
+     */
+    setButtonId(buttonId){
+        this._buttonId=buttonId;
+    }
+    name(){
+        return this._name;
+    }
+    buttonId(){
+        return this._buttonId;
+    }
+    text(){
+        const buttonNumber= this._buttonId.toString().padStart(2,"  ");
+        return buttonNumber +":"+this.name();
+    }
+    /**
+     * @returns {String}
+     */
+    symbol(){
+        const symbol =Input.gamepadMapper[this._buttonId];
+        return symbol ||"";
+    }
+}
+//ボタンの名前を入れておくクラス
+//また、編集可能なボタンを制御する際にも使う
+class Gamepad{
+    constructor(){
+
+        const buttons =[
+            new GamepadButton(0,"B/×"),
+            new GamepadButton(1,"A/○"),
+            new GamepadButton(2,"X/□"),
+            new GamepadButton(3,"Y/△"),
+            new GamepadButton(4,"L1"),
+            new GamepadButton(5,"R1"),
+            new GamepadButton(6,"L2"),
+            new GamepadButton(7,"R2"),
+            new GamepadButton(8,"select"),
+            new GamepadButton(9,"start"),
+            new GamepadButton(10,"L_press"),
+            new GamepadButton(11,"R_press"),
+            new GamepadButton(16,"center")
+        ]
+        this._list = Object.freeze(buttons);
+    }
+    maxItems(){
+        return this._list.length;
+    }
+    indexOf(buttonNumber){
+        return -1;
+    }
+    button(index){
+        return this._list[index];
+    }
+    buttons(){
+        return this._list;
+    }
+    buttonName(index){
+        const b = this.button(index);
+        if(b){
+            return b.name();
+        }
+        return "";
+    }
+}
+
+
+function getParam(){
+    return PluginManager.parameters(PLUGIN_NAME);
+}
+
 
 /**
  * @return {string[]}
  */
 function createMandatorySymbols(params){
+    return ["ok","cancel","menu"];
     const result =JSON.parse(params.mandatorySymbols);
     return result;
 }
 
-function insertExtendAction(helpText,params){
-    for(var i=6; i <=8; ++i){
-        var actionKey = String(params['extendSymbol'+i]);
-        if(actionKey){
-            helpText[actionKey] = helpText['symbol'+i];
-        }
-    }
-}
-
-function createHelpText(){
-    const params = getParam();
-    const helpText ={
-        ok:String(params.textOK),
-        cancel:String(params.textCancel),
-        shift:String(params.textShift),
-        menu:String(params.textMenu),
-        pageup:String(params.textPageup),
-        pagedown:String(params.textPagedown),
-        symbol6 :String(params.textSymbol6),
-        symbol7 :String(params.textSymbol7),
-        symbol8 :String(params.textSymbol8),
-        up:String(params.textUp),
-        down:String(params.textDown),
-        left:String(params.textLeft),
-        right:String(params.textRight),
-        escape:String(params.textEscape),
-    };
-    return helpText;
-}
 /**
  * @returns {String[]}
  * @param {Object} mapper 
@@ -1297,15 +1065,45 @@ function noteOrString(text){
     return String(text);
 }
 
-const setting = (function(){
-    /**
-     * @return {String[]}
-     * @param {any} params 
-     */
-    function createButtonList(params){
-        return JSON.parse(params.buttons);
+function createDefaultKeyMapperItem(symbol,objText){
+    const mtext = MultiLanguageText.create(objText);
+    const def = new InputDefine(mtext);
+    def.setSymbol(symbol);
+    return def;
+}
+function createKeyconfigCommand(objText){
+    const obj = JSON.parse(objText);
+    return {
+        mtext:MultiLanguageText.create(obj.text),
+        width:Number(obj.width)
     }
+}
+class Key_CommandV2{
+    constructor(){
+        const params = getParam();
+        this._apply =createKeyconfigCommand(params.apply);
+        this._wasd=createKeyconfigCommand(params.WASD);
+        this._changeLayout=createKeyconfigCommand(params.changeLayout);
+        this._exit=createKeyconfigCommand(params.exit);
+        this._reset=createKeyconfigCommand(params.reset);
+    }
+    reset(){
+        return this._reset;
+    }
+    apply(){
+        return this._apply
+    }
+    exit(){
+
+    }
+
+}
+
+
+const setting = (function(){
     const params = getParam();
+
+    
     const commandText={
         apply:String(params.textApply),
         rollback:String(params.textRollback),
@@ -1315,46 +1113,19 @@ const setting = (function(){
         WASD_Move:String(params.textWASD_Move||"WASD Move"),
     };
 
-    const helpText = createHelpText();
-    insertExtendAction(helpText,params);
-
-    const buttonInfo ={
-        0:fetchButtonInfo(params.button0),
-        1:fetchButtonInfo(params.button1),
-        2:fetchButtonInfo(params.button2),
-        3:fetchButtonInfo(params.button3),
-        4:fetchButtonInfo(params.button4),
-        5:fetchButtonInfo(params.button5),
-        6:fetchButtonInfo(params.button6),
-        7:fetchButtonInfo(params.button7),
-        8:fetchButtonInfo(params.button8),
-        9:fetchButtonInfo(params.button9),
-        10:fetchButtonInfo(params.button10),
-        11:fetchButtonInfo(params.button11),
-        12:fetchButtonInfo(params.button12),
-        13:fetchButtonInfo(params.button13),
-        14:fetchButtonInfo(params.button14),
-        15:fetchButtonInfo(params.button15),
-        16:fetchButtonInfo(params.button16),
-    };
-
     const keyText ={
-        up:String(params.textKeyUp),
-        down:String(params.textKeyDown),
-        right:String(params.textKeyRight),
-        left:String(params.textKeyLeft),
+        up:"↑",//String(params.textKeyUp),
+        down:"↓",//String(params.textKeyDown),
+        right:"→",//String(params.textKeyRight),
+        left:"←"//String(params.textKeyLeft),
     };
 
     const result= {
-        unknowSymbolAutoImport:(params.unknowSymbolAutoImport!=='false'),
+        gamepad :new Gamepad(),
         overwriteWarning:(params.overwriteWarning==='true'),
         keyText:keyText,
         commandText:commandText,
         emptySymbolText:String(params.textEmpty),
-        symbolList: paramToActionKeys(params),
-        symbolText:helpText,
-        buttonInfo:buttonInfo,
-//        textPadInfo:String(params.textPadInfo),
         /**
          * @type {String}
          */
@@ -1363,14 +1134,10 @@ const setting = (function(){
          * @type {String}
          */
         gamepadIsNotConnected: noteOrString(params.GamepadIsNotConnected),
-        buttonList: createButtonList(params),
         mandatorySymbols:createMandatorySymbols(params),
-        symbolAutoSelect:(params.symbolAutoSelect==='true'),
         windowSymbolListWidht:Number(params.windowSymbolListWidth),
-        commandName:String(params.commandName),
-        keyConfigCommandName:String(params.keyconfigCommandName),
-        
-        moveButtonsConfig:(params.moveButtons ==='true'),
+        gamepadConfigCommandText:MultiLanguageText.create(params.gamepadConfigCommandText),
+        keyConfigCommandText:MultiLanguageText.create(params.keyConfigCommandText),
 
         gamepadConfigPosition :{
             mode:String(params.gamepadConfigPositionMode),
@@ -1392,18 +1159,22 @@ const setting = (function(){
             symbolWidth:Number(params.symbolWindowWidth),
         },
         numVisibleRows:Number(params.numVisibleRows),
-        cols:Number(params.cols),
-        gamepadConfigEnabled:(params.gamepadConfigEnabled==='true'),
-        keyboardConfigEnabled:(params.keyboardConfigEnabled==='true'),
+        cols:2,
     };
-    if(result.moveButtonsConfig){
-        Array.prototype.push.apply( result.mandatorySymbols,moveSymbols);
-        Array.prototype.push.apply( result.symbolList,moveSymbols);
-        Array.prototype.push.apply(result.buttonList,['12','13','14','15']);
-    }
     return result;
 })();
 
+
+function mapperOverwrite2(target,key,symbol,overwrite){
+    if(!overwrite){
+        const current = target[key];
+        if(current){
+            return false;
+        }
+    }
+    target[key]=symbol;
+    return true;
+}
 
 /**
  * @param {*} target 
@@ -1413,16 +1184,15 @@ const setting = (function(){
 function mapperOverwrite(target,key,symbol,targetName){
 
     if(symbol ===""){ return;}
-    if(!symbol){      return;}
+    if(!symbol){ return;}
     if(setting.overwriteWarning){
         const preSymbor =target[key];
         if(!!preSymbor && preSymbor !==symbol ){
+            // 警告機能
             console.log('overwriteWarning/キー上書き警告 \n'+targetName+'['+key+']('+preSymbor+')='+symbol);
         }
     }
-    // 警告機能
     target[key] =symbol;
-
 }
 
 function keyMapperOverwrite(key,symbol){
@@ -1455,37 +1225,9 @@ function keyWrite(){
 }
 keyWrite();
 
-class ButtonDefine{
-    constructor(){
-        this._buttonNumber=NaN;
-        this._keys ="";
-        this._symbol=null;
-        this._buttonName ="";
-        this._actionName ="";
-    }
-    /**
-     * 
-     * @param {String} symbol 
-     */
-    setSymbol(symbol){
 
 
-    }
-    readSymbol(){
-        let symbol = Input.gamepadMapper[this._buttonNumber];
-
-
-
-        
-
-
-
-
-    }
-
-}
-
-
+//削除予定
 function MA_InputSymbolsEx_Import(){
     if(!MA_InputSymbols){return;}
     const len =MA_InputSymbols.length;
@@ -1525,6 +1267,7 @@ function symbolToButtonNumber(symbol){
  * @desc シンボルからゲームパッドのボタン名を返します
  */
 function symbolToButtonName(symbol){
+    //削除予定？
     return buttonName(symbolToButtonNumber(symbol));
 }
 
@@ -1534,14 +1277,7 @@ function symbolToButtonName(symbol){
  * @return {string}
  */
 function symbolToText(symbol){
-    if(!symbol){
-        return '';
-    }
-    const text =setting.symbolText[symbol];
-    if(text){
-        return text;
-    }
-    return 'unknow:'+symbol;
+    return symbolMapper.actionName(symbol);
 };
 
 /**
@@ -1589,7 +1325,7 @@ ConfigManager.setKeyLayoutMA =function(layout){
 };
 
 function defaultKeyLayout() {
-    if($dataSystem.locale ==="ja-JP"){
+    if($gameSystem.isJapanese()){
         return 'JIS';
     }
     return 'US';
@@ -1709,7 +1445,51 @@ class Window_Selectable_InputConfigVer extends Window_Selectable{
         return this;
     }
 }
+class Window_InputSymbolList_V2 extends Window_Selectable_InputConfigVer{
+    /**
+     * @param {Rectangle} rect 
+     */
+    initialize(rect) {
+        super.initialize(rect);
+        this.deactivate();
+        this.deselect();
+    }
+    symbol(index){
+        const item = symbolMapper.item(index);
+        if(item){
+            return item.symbol();
+        }
+        return null;
+    }
+    currentSymbol(){
+        return this.symbol(this.index());
+    }
 
+    maxItems(){
+        return symbolMapper.maxItems();
+    }
+    selectSymbol(symbol){
+        const index = symbolMapper.indexOfSymbol(symbol);
+        if(index >=0){
+            this.select(index);
+        }else{
+            this.select(0);
+        }
+
+    }
+    drawItem(index){
+        const item = symbolMapper.item(index);
+        if(item){
+            const rect = this.itemRectWithPadding(index);
+            this.drawText(item.name(), rect.x, rect.y, rect.width);
+        }
+    }
+    moveCenter() {
+        const x = Graphics.boxWidth / 2 - this.width / 2;
+        const y = Graphics.boxHeight / 2 - this.height / 2;
+        this.move(x, y, this.width, this.height);
+    }
+}
 class Window_InputSymbolList extends Window_Selectable_InputConfigVer {
 
     /**
@@ -1776,15 +1556,6 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer {
         }
         return null;
     }
-    makeCommandList() {
-        this._list = [];
-        const len = setting.symbolList.length;
-        for (var i = 0; i < len; ++i) {
-            const actionKey = setting.symbolList[i];
-            this.addCommand(symbolToText(actionKey) || setting.emptySymbolText, actionKey, 'テスト' + i);
-        }
-        this.addCommand(setting.emptySymbolText, null);
-    }
     /**
      * @param {number} index
      * @return {string}
@@ -1848,14 +1619,14 @@ class Window_GamepadConfig_MA extends Window_Selectable_InputConfigVer {
         this.refresh();
     }
 
-    makeItemList() {
-        this._list = [];
-        const length = setting.buttonList.length;
-        for (var i = 0; i < length; i += 1) {
-            var buttonId = setting.buttonList[i];
-            this.addButtonItem(buttonId);
-        }
-    }
+    // makeItemList() {
+    //     this._list = [];
+    //     const length = setting.buttonList.length;
+    //     for (var i = 0; i < length; i += 1) {
+    //         var buttonId = setting.buttonList[i];
+    //         this.addButtonItem(buttonId);
+    //     }
+    // }
     /**
      * @param {String} name 
      * @param {String} symbol 
@@ -1883,7 +1654,7 @@ class Window_GamepadConfig_MA extends Window_Selectable_InputConfigVer {
         ];
         this._applyCommand = apply;
         this._exitCommand = exit;
-        this._exitCommandIndex = this._list.length + this._command.indexOf(exit);
+        this._exitCommandIndex = this.buttonItems() + this._command.indexOf(exit);
     }
 
     /**
@@ -1897,13 +1668,16 @@ class Window_GamepadConfig_MA extends Window_Selectable_InputConfigVer {
         return index - this.buttonItems();
     }
     maxItems() {
-        return this._list.length + this._command.length;
+        return this.buttonItems() + this._command.length;
     }
     buttonItems(){
-        return this._list.length;
+        return setting.gamepad.maxItems();
+    }
+    isItemEnabled(index){
+        return index < this.buttonItems();
     }
     isEnabledCommand(index){
-        return (index >= this._list.length);
+        return index >= this.buttonItems();
     }
 
     cursorDown(wrap) {
@@ -1973,13 +1747,15 @@ class Window_GamepadConfig_MA extends Window_Selectable_InputConfigVer {
             this.processCommandOk();
             return;
         }
-        if (this._list[index]) {
+
+        if (this.isItemEnabled(index)) {
             this.updateInputData();
             this.deactivate();
             this.playSymbolSetSound();
             this.callOkHandler();
         }
     }
+
     /**
      * @param {Number} index 
      */
@@ -2008,15 +1784,9 @@ class Window_GamepadConfig_MA extends Window_Selectable_InputConfigVer {
     windowHeight() {
         return this.fittingHeight(Math.min(setting.numVisibleRows, this.numVisibleRows()));
     }
-    /**
-     * @return {number}
-     */
-    configItems() {
-        return this._list.length;
-    }
+
     setGamepadMapper(map) {
         this._map = objectClone(map);
-        this.makeItemList();
     }
     cloneGamepadMapper() {
         return createNormalizedInputMapper(this._map);
@@ -2036,14 +1806,16 @@ class Window_GamepadConfig_MA extends Window_Selectable_InputConfigVer {
      * @return {string} buttonNumber
      */
     buttonNumber(index) {
-        return this._list[index].buttonNumber;
+        const button= setting.gamepad.button(index);
+        return button.buttonId();
+//        return this._list[index].buttonNumber;
     }
     /**
      * @param {number} index
      * @return {string} buttonName
      */
     buttonName(index) {
-        return this._list[index].name;
+        return setting.gamepad.buttonName(index);
     }
     /**
      * @param {number} index
@@ -2058,7 +1830,9 @@ class Window_GamepadConfig_MA extends Window_Selectable_InputConfigVer {
      * @return {string} symbol
      */
     symbolText(index) {
-        return symbolToText(this.symbol(index));
+        const s =this.symbol(index)
+        return symbolToText(s);
+
     }
     addButtonItem(buttonNumber_) {
         const index = this._list.length;
@@ -2089,11 +1863,12 @@ class Window_GamepadConfig_MA extends Window_Selectable_InputConfigVer {
         return this._symbolTextWidth;
     }
     defineNameWidth() {
-        var width = 0;
-        for (var i = 0; i < this._list.length; ++i) {
-            width = Math.max(width, this.textWidth(this.buttonName(i)));
-        }
-        this._nameWidth = width;
+        const _this =this;
+        const w = setting.gamepad.buttons().map(function(button){
+            return _this.textWidth(button.text());
+        });
+
+        this._nameWidth = Math.max(...w);
     }
     /**
      * @return {number}
@@ -2108,6 +1883,7 @@ class Window_GamepadConfig_MA extends Window_Selectable_InputConfigVer {
         const buttonNumber = this.buttonNumber(index);
         this._map[buttonNumber] = newSymbol;
         this.redrawItem(index);
+        
         this.redrawApplyCommand();
     }
 
@@ -2123,8 +1899,36 @@ class Window_GamepadConfig_MA extends Window_Selectable_InputConfigVer {
             this.changePaintOpacity(true);
         }
     }
+    numberWidth(){
+        return 20;
+    }
+    drawButtonNumber(x,y,width,buttonNumber){
+        const text = buttonNumber +":";
+        this.drawText(text,x,y,width,"right");
+    }
+
+    button(index){
+        return setting.gamepad.button(index);
+    }
+    drawButton(index){
+        const button = this.button(index);
+        if(button){
+            this.changeTextColor(getColorSrc(this).normalColor());
+            const rect = this.itemRectWithPadding(index);
+            const nameWidth =this.nameWidth();
+            this.drawText(button.text(),rect.x,rect.y,nameWidth);
+            const symbolWidth = rect.width - nameWidth;
+            this.drawText(this.symbolText(index), rect.x + nameWidth + this.textPadding(), rect.y, symbolWidth);
+    
+        }
+
+    }
+
     drawItem(index) {
-        if(index< this._list.length){
+        if(index< this.buttonItems()){
+
+            this.drawButton(index);
+            return;
 
             this.changeTextColor(getColorSrc(this).normalColor());
             const rect = this.itemRectWithPadding(index);
@@ -2154,13 +1958,14 @@ class Window_GamepadConfig_MA extends Window_Selectable_InputConfigVer {
         return this._exitCommandIndex;
     }
     applyCommandIndex() {
-        return this._list.length + 1;
+        return this.buttonItems() + 1;
     }
     defaultCommandIndex() {
-        return this._list.length;
+        return this.buttonItems();
     }
     redrawApplyCommand() {
         this.clearItem(this.applyCommandIndex());
+        this.drawItemBackground(this.applyCommandIndex())
         this.drawApplyCommand();
     }
     drawDefaultCommand() {
@@ -2209,7 +2014,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
 
 
     symbolListHeight(){
-        return this.calcWindowHeight( setting.symbolList.length+1);
+        return this.calcWindowHeight( symbolMapper.maxItems());
     }
     symbolListWidth(){
         return setting.windowCustom.symbolWidth;
@@ -2232,7 +2037,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
 
     createSymbolListWindow() {
         const pos = this.symbolListWindowRect();
-        const asw = new Window_InputSymbolList(pos);
+        const asw = new Window_InputSymbolList_V2(pos);
         asw.setHandler('ok', this.onSymbolListOk.bind(this));
         asw.setHandler('cancel', this.onSymbolListCancel.bind(this));
         asw.hide();
@@ -2276,12 +2081,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
     selectSymbol() {
         this._symbolListWindow.show();
         this._symbolListWindow.activate();
-        if (setting.symbolAutoSelect) {
-            this._symbolListWindow.selectSymbol(this.currentSymbol());
-        }
-        else {
-            this._symbolListWindow.select(0);
-        }
+        this._symbolListWindow.selectSymbol(this.currentSymbol());
     }
     /**
      * @return {Window_Selectable_InputConfigVer}
@@ -2485,6 +2285,7 @@ class Key_Base{
      */
     drawBasicChar(keyWindow,index){
         const rect = keyWindow.itemRect(index);
+        //編集中のkeymapperから取り出す必要があるのでこうする
         const symbol = keyWindow.symbol(index);
         keyWindow.drawItemRect(!!symbol,rect);
         keyWindow.drawKeyName(this.char,rect);
@@ -2758,6 +2559,10 @@ const KEYS ={
     SQUARE_BRACKETS_OPEN :keyinfo('[',219),
     SQUARE_BRACKETS_CLOSE :keyinfo(']',221),
 };
+
+
+//TODO Key_Commandクラスと初期化時のデータ保持のクラスを一体化する
+
 const KEY_COMMAND ={
     DEFAULT : new Key_Command("default",setting.commandText.default_,setting.commandWidth.DEFAULT),
     APPLY:new Key_Command("apply",setting.commandText.apply,setting.commandWidth.APPLY,setting.commandWidth.APPLY),
@@ -3286,6 +3091,7 @@ class Window_KeyConfig_MA extends Window_Selectable_InputConfigVer {
      */
     drawKeySymbol(index,rect){
         const symbolText = this.symbolText(index);
+
         if(symbolText){
             this.drawText(symbolText, rect.x, rect.y + this.lineHeight(), rect.width, 'center');
         }
@@ -3315,6 +3121,7 @@ class Window_KeyConfig_MA extends Window_Selectable_InputConfigVer {
      * @returns {String}
      */
     symbol(index) {
+
         const keyNumber = this.keyNumber(index);
         return this._map[keyNumber];
     }
@@ -3469,7 +3276,7 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
         const y=this.mainAreaTop();
         const width = Graphics.boxWidth;
         const lines = Utils.RPGMAKER_NAME =="MV" ? 12:10;
-        const height = this.calcWindowHeight(lines);
+        const height = this.calcWindowHeight(lines,true);
         return new Rectangle(x,y,width,height);
     }
     createKeyboradConfigWindow() {
@@ -3492,16 +3299,10 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
 
 
     Window_Options.prototype.addGamepadOptions_MA =function(){
-        if(setting.gamepadConfigEnabled){
-           // this._gamepadOptionIndex = this._list.length;
-            this.addCommand(setting.commandName,MA_GAMEPAD_CONFIG);
-        }
+        this.addCommand(setting.gamepadConfigCommandText.currentName(),MA_GAMEPAD_CONFIG);
     };
     Window_Options.prototype.addKeyboardConfig_MA=function(){
-        if(setting.keyboardConfigEnabled){
-            //this._keyboardConfigIndex = this._list.length;
-            this.addCommand(setting.keyConfigCommandName,MA_KEYBOARD_CONFIG);
-        }
+        this.addCommand(setting.keyConfigCommandText.currentName(),MA_KEYBOARD_CONFIG);
     };
     const Window_Options_addVolumeOptions=Window_Options.prototype.addVolumeOptions;
     Window_Options.prototype.addVolumeOptions=function(){
@@ -3557,24 +3358,13 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
         }
         Window_Options_processOk.call(this);       
     };
-
-
-function unknowSymbolAutoImport(){
-    if(setting.unknowSymbolAutoImport){
-        const unknowsKey = unknowSymbols(Input.keyMapper,setting.symbolList);
-        const symbols1 = setting.symbolList.concat(unknowsKey);
-        const unknowPad = unknowSymbols(Input.gamepadMapper,symbols1);
-        setting.symbolList  = symbols1.concat(unknowPad);
-    }
-}
-
-const Scene_Boot_create =Scene_Boot.prototype.create 
-Scene_Boot.prototype.create =function(){    
+const Scene_Boot_onDatabaseLoaded =Scene_Boot.prototype.onDatabaseLoaded;
+Scene_Boot.prototype.onDatabaseLoaded =function(){    
     MA_InputSymbolsEx_Import();
-    unknowSymbolAutoImport();
+    symbolMapper.onBoot();
     Mano_InputConfig.defaultGamepadMapper =Object.freeze( objectClone(Input.gamepadMapper));
     Mano_InputConfig.defaultKeyMapper= Object.freeze(objectClone(Input.keyMapper));
-    Scene_Boot_create.call(this);
+    Scene_Boot_onDatabaseLoaded.call(this);
 };
 if(Utils.RPGMAKER_NAME =="MV"){
     (function(){
@@ -3582,10 +3372,12 @@ if(Utils.RPGMAKER_NAME =="MV"){
         Scene_InputConfigBase_MA.prototype.mainAreaTop = function(){
             return 0;
         };
+        Window_Selectable_InputConfigVer.prototype.drawItemBackground =function(){};
 
         Window_Selectable_InputConfigVer.prototype.itemRectWithPadding = Window_Selectable_InputConfigVer.prototype.itemRectForText;
     })();
 }
+
 
 const exportClass ={
     Scene_ConfigBase:Scene_InputConfigBase_MA,
