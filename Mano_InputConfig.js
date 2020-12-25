@@ -1,17 +1,15 @@
 //=============================================================================
 // Mano_InputConfig.js
 // ----------------------------------------------------------------------------
-// Copyright (c) 2017-2017 Sigureya
+// Copyright (c) 2017-2021 Sigureya
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 4.0 2020/08/23
+// ver 5.2 2020/12/25
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
-
-
 
 
 /*:
@@ -164,7 +162,10 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
- * 2020/11/24 ver5.1
+ * 2020/12/25 ver5.2
+ * 拡張シンボル設定にバグがあったので修正
+ * 
+ * 2020/11/26 ver5.1
  * プラグインが起動できないバグがあったので修正
  * 
  * 2020/11/24 ver5.0
@@ -260,6 +261,10 @@
  * @value 2
  * @option 3(Y/△)
  * @value 3
+ * @option 4(L1)
+ * @value 4
+ * @option 5(R1)
+ * @value 5
  * @option 6(L2)
  * @value 6
  * @option 7(R2)
@@ -409,7 +414,7 @@
 */
  /*~struct~ColorDefine:
   * 
-  * @param move
+  * @param 
   * @desc コマンドの幅
   * @type number
   * @min 0
@@ -574,6 +579,9 @@ class InputDefine{
     isMandatory(){
         return this._mandatory;
     }
+    isEnabled(){
+        return !this.isEmpty();
+    }
     isEmpty(){
         return (!this._symbol);
     }
@@ -678,13 +686,27 @@ class InputDefine{
         }
         return null;
     }
+    /**
+     * @param {*} mapper 
+     * @param {String|Number} targetKey 
+     */
+    mapperWrite(mapper,targetKey){
+        if(!this._overwriteEnabled){
+            const oldSymbol =mapper[targetKey];
+            if(oldSymbol){
+                return;
+            }
+        }
+        mapper[targetKey]= this._symbol;
+    }
     fillSymbol(){
         if(!this._symbol){return;}
         if(!isNaN( this._buttonId)){
-            gamepadMapperOverwrite(this._buttonId,this._symbol);
+            this.mapperWrite(Input.gamepadMapper,this._buttonId);
         }
-        for (const iterator of this._keys) {
-            keyMapperOverwrite(iterator,this._symbol);
+        const len = this._keys.length;
+        for(let i =0; i< len;++i){
+            this.mapperWrite(Input.keyMapper,this._keys.charCodeAt(i));
         }
     }
     /**
@@ -696,10 +718,7 @@ class InputDefine{
     setupColor(){
         if(this.isEmpty()){
             this.setColor("#000000");
-        }
-
-
-        
+        }        
     }
     backColor(){
         if(this.isMandatory()){
@@ -709,6 +728,12 @@ class InputDefine{
             return "#000000";
         }
         return "#000000";
+    }
+}
+
+class SymbolDeleteObject extends InputDefine{
+    isEnabled(){
+        return true;
     }
 }
 
@@ -770,10 +795,7 @@ class SymbolMapper_T{
             def.setPadButtonId(Number(obj.button));
             def.setKeys(obj.keys);
             this._list.push(def);
-
         }
-
-
     }
 
     //インスタンスだけ先行して作成し、初期化は後にする
@@ -794,20 +816,19 @@ class SymbolMapper_T{
         this.importUnknowSymbols();
 
         //「設定を消去」を追加
-        this.makeRemoveSymbol();
+        this.makeRemoveCommand();
         //現在の言語設定に応じて表示を切り替え
         this.refreshLocal();
-
     }
     fillSymbol(){
         for (const iterator of this._list) {
             iterator.fillSymbol();
         }
     }
-    makeRemoveSymbol(){
+    makeRemoveCommand(){
         const param =getParam();
         const mtext = MultiLanguageText.create(param.mapperDelete)
-        const remove = new InputDefine(mtext);
+        const remove = new SymbolDeleteObject(mtext);
         remove.setSymbol(null);
         this._list.push(remove);
     }
@@ -1010,27 +1031,6 @@ function getParam(){
 function createMandatorySymbols(params){
     return ["ok","cancel","menu"];
 }
-
-/**
- * @returns {String[]}
- * @param {Object} mapper 
- * @param {String[]} KnownSymbolList 
- */
-function unknowSymbols(mapper,KnownSymbolList){
-    const result =[];
-    const systemKeys =new Set(["debug","control","tab","up","down","left","right"]);
-    for (const key in mapper) {
-      if (mapper.hasOwnProperty(key)) {
-        const value = mapper[key];
-          if(!systemKeys.has(value)){
-            if(!KnownSymbolList.contains(value)){
-              result.push(value);
-            }
-          }
-      }
-    }
-    return result;
-}
 /**
  * @param {String} text 
  * @returns {String}
@@ -1045,7 +1045,11 @@ function noteOrString(text){
     }
     return String(text);
 }
-
+/**
+ * 
+ * @param {String} symbol 
+ * @param {String} objText 
+ */
 function createDefaultKeyMapperItem(symbol,objText){
     const mtext = MultiLanguageText.create(objText);
     const def = new InputDefine(mtext);
@@ -1056,7 +1060,6 @@ function createDefaultKeyMapperItem(symbol,objText){
 
 const setting = (function(){
     const params = getParam();
-
     const keyText ={
         up:"↑",
         down:"↓",
@@ -1091,41 +1094,6 @@ const setting = (function(){
     return result;
 })();
 
-
-/**
- * @param {*} target 
- * @param {String} key 
- * @param {String} symbol 
- */
-function mapperOverwrite(target,key,symbol,targetName){
-
-    if(symbol ===""){ return;}
-    if(!symbol){ return;}
-    if(setting.overwriteWarning){
-        const preSymbor =target[key];
-        if(!!preSymbor && preSymbor !==symbol ){
-            // 警告機能
-            console.log('overwriteWarning/キー上書き警告 \n'+targetName+'['+key+']('+preSymbor+')='+symbol);
-        }
-    }
-    target[key] =symbol;
-}
-/**
- * @param {Number} key 
- * @param {String} symbol 
- */
-function keyMapperOverwrite(key,symbol){
-    mapperOverwrite(Input.keyMapper,key,symbol,"keyMapper");
-}
-/**
- * 
- * @param {String} buttonId 
- * @param {String} symbol 
- */
-function gamepadMapperOverwrite(buttonId,symbol){
-    mapperOverwrite(Input.gamepadMapper,buttonId,symbol,"gamepadMapper");
-}
-
 /**
  * @returns {String}
  * @param {String} symbol 
@@ -1141,16 +1109,6 @@ function symbolToButtonNumber(symbol){
 }
 
 /**
- * @param {String} symbol
- * @returns {String}
- * @desc シンボルからゲームパッドのボタン名を返します
- */
-function symbolToButtonName(symbol){
-    //削除予定？
-    return buttonName(symbolToButtonNumber(symbol));
-}
-
-/**
  * 
  * @param {String} symbol 
  * @return {string}
@@ -1159,13 +1117,6 @@ function symbolToText(symbol){
     return symbolMapper.actionName(symbol);
 };
 
-/**
- * @return {string}
- * @param {number} buttonNumber 
- */
-function buttonName(buttonNumber){
-    return setting.buttonInfo[buttonNumber].buttonName;
-}
 
 const IS_Atsumaru = location.hostname==="html5.nicogame.jp";
 
@@ -1183,7 +1134,6 @@ function makeCONFIG_KEY(base) {
 const MA_KEYBOARD_CONFIG =makeCONFIG_KEY('KEYBOARD_CONFIG');
 const MA_GAMEPAD_CONFIG = makeCONFIG_KEY('GAMEPAD_CONFIG');
 const MA_KEYBOARD_LAYOUT =makeCONFIG_KEY('KEYBOARD_LAYOUT');
-
 
 function readGamePadConfig( config ){
     const value = config[MA_GAMEPAD_CONFIG];
@@ -1351,7 +1301,7 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
         this.deselect();
     }
 
-    currentSymbol_V2(){
+    currentSymbolObject(){
         return this.symbol_V2(this.index());
     }
     /**
@@ -1392,9 +1342,17 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
     drawItem(index){
         const item = symbolMapper.item(index);
         if(item){
+            this.changePaintOpacity(this.isItemEnabled(index));
             const rect = this.itemRectWithPadding(index);
             this.drawText(item.name(), rect.x, rect.y, rect.width);
         }
+    }
+    isCurrentItemEnabled(){
+        return this.isItemEnabled(this._index);
+    }
+    isItemEnabled(index){
+        const symbol = this.symbol_V2(index);
+        return symbol.isEnabled();
     }
     moveCenter() {
         const x = Graphics.boxWidth / 2 - this.width / 2;
@@ -1455,6 +1413,9 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
     mapper(){
         return {}
     }
+    cloneMapper(){
+        return createNormalizedInputMapper(this.mapper());
+    }
 
 
 }
@@ -1492,10 +1453,12 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
     }
 
     makeCommandList() {
-        const  exit =CommandManager.exit();
+        const exit =CommandManager.exit();
+        const reset =CommandManager.reset()
+        const apply = CommandManager.apply();
         this._command =[
-            CommandManager.reset(),//default_,
-            CommandManager.apply(),
+            reset ,//default_,
+            apply,
             exit
         ];
         this._exitCommandIndex = this.buttonItems() + this._command.indexOf(exit);
@@ -1615,18 +1578,12 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
     mapper(){
         return this._map;
     }
-    cloneGamepadMapper() {
-        return createNormalizedInputMapper(this._map);
-    }
     /**
      * @param {string}  buttonNumber
      * @return {string} actionKey
      */
     getAction(buttonNumber) {
         return this._map[buttonNumber];
-    }
-    currentSymbol() {
-        return this.symbol(this.index());
     }
     /**
      * @param {number} index
@@ -1660,14 +1617,7 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
         return symbolMapper.actionName(s);
 
     }
-    addButtonItem(buttonNumber_) {
-        const index = this._list.length;
-        this._list.push({
-            name: buttonName(buttonNumber_),
-            buttonNumber: buttonNumber_
-        });
-        this.setButtonItem(index, buttonNumber_);
-    }
+
     setButtonItem(index, buttonNumber) {
         const action = this.getAction(buttonNumber);
         const text = symbolToText(action) || '';
@@ -1767,7 +1717,7 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
      * @return {boolean}
      */
     canApplySetting() {
-        return isValidMapper(this._map);
+        return symbolMapper.isValidMapper(this._map);
     }
     exitCommandIndex() {
         return this._exitCommandIndex;
@@ -1925,13 +1875,11 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
         super.update();
     }
 
-    currentSymbol() {
-        return '';
-    }
     selectSymbol() {
+        const currentSymbol = this.mainWidnow().currentSymbol();
         this._symbolListWindow.show();
         this._symbolListWindow.activate();
-        this._symbolListWindow.selectSymbol(this.currentSymbol());
+        this._symbolListWindow.selectSymbol(currentSymbol);
     }
     /**
      * @return {Window_InputConfigBase}
@@ -1986,10 +1934,10 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
     //オーバーライドしないこと！ここでデータの整合性チェックを行っている
     onSymbolListOk() {
         const mainWindow = this.mainWidnow();
-        const newSymbol = this._symbolListWindow.currentSymbol_V2();
+        const newSymbol = this._symbolListWindow.currentSymbolObject();
         const oldSymbol = this.mainWidnow().currentSymbol();
         if(newSymbol.symbol()!==oldSymbol){
-            this.changeSymbol_V2(this._symbolListWindow.currentSymbol_V2());
+            this.changeSymbol_V2(newSymbol);
             mainWindow.redrawApplyCommand(mainWindow.isValidMapper());
         }
 
@@ -2078,9 +2026,6 @@ class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
     mainWidnow() {
         return this._gamepadWindow;
     }
-    currentSymbol() {
-        return this._gamepadWindow.currentSymbol();
-    }
     playDefaultSound(){
         playDefaultSound();
     }
@@ -2091,7 +2036,7 @@ class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
     }
 
     saveGamepadMapper(){
-        Input.gamepadMapper = this._gamepadWindow.cloneGamepadMapper();
+        Input.gamepadMapper = this._gamepadWindow.cloneMapper();
     }
 
     isAnyPressed(){
@@ -2776,8 +2721,6 @@ const KEY_LAYOUT_US_V2 =(function(){
 
 
 class Window_KeyConfig_MA extends Window_InputConfigBase {
-
-
     mapper(){
         return this._map;
     }
@@ -2831,7 +2774,7 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
         this._map = objectClone(mapper);
     }
     canApplySetting() {
-        return isValidMapper(this._map);
+        return symbolMapper.isValidMapper(this.mapper());
     }
     cloneMapper() {
         return createNormalizedInputMapper(this._map);
@@ -2848,7 +2791,6 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
     exitCommandIndex(){
         return CommandManager.exit()._index;
     }
-
 
     playApplySound(){
         playApplySound();
@@ -2910,7 +2852,6 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
     numVisibleRows() {
         return this._layout._list.length;
     }
-
     /**
      * @param {Number} index 
      */
@@ -2942,7 +2883,6 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
      * @return {String}
      */
     keyNumber(index) {
-        
         return this.item(index).keycord;
     }
     currentKeyNumber() {
@@ -2951,7 +2891,6 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
     keyName(index) {
         return this.item(index).char;
     }
-
 
     /**
      * @param {Rectangle} rect
@@ -3015,7 +2954,6 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
         return this.textColor(4);
     }
     /**
-     * 
      * @param {String} keyname 
      * @param {Rectangle} rect 
      */
@@ -3102,14 +3040,9 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
 }
 
 
-Window_KeyConfig_MA.spaceItems =4;
-
 class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
     symbolCenter() {
         return true;
-    }
-    currentSymbol(){
-        return this._keyconfigWindow.currentSymbol();
     }
     create() {
         Scene_MenuBase.prototype.create.call(this);
@@ -3265,7 +3198,6 @@ const exportClass ={
     Window_InputSymbolList:Window_InputSymbolList,
     Window_GamepadConfig:Window_GamepadConfig_MA,
     Window_KeyConfig:Window_KeyConfig_MA,
-    symbolToButtonName:symbolToButtonName,
     symbolToButtonNumber:symbolToButtonNumber,
     defaultKeyMapper:{},
     defaultGamepadMapper:{},
@@ -3275,12 +3207,13 @@ const exportClass ={
     gotoGamepad:function(){
         SceneManager.push(Mano_InputConfig.Scene_GamepadConfig  );
     },
-    unknowButtons:function(){
-        return unknowSymbols(Input.gamepadMapper,setting.symbolList);
-    },
-    unknowKeys:function(){
-        return unknowSymbols(Input.keyMapper,setting.symbolList);
-    }
+    //削除予定
+    // unknowButtons:function(){
+    //     return unknowSymbols(Input.gamepadMapper,setting.symbolList);
+    // },
+    // unknowKeys:function(){
+    //     return unknowSymbols(Input.keyMapper,setting.symbolList);
+    // }
 };
 
 
@@ -3299,5 +3232,4 @@ return exportClass;
       //何かよくわからない関数が追加されているので、適当に追加する
       Input.isControllerConnected =Input.isControllerConnected||function(){return true;};
     }
-
 }
