@@ -553,6 +553,9 @@ class I_SymbolDefine{
     symbol(){
         return "";
     }
+    isMandatory(){
+        return false;
+    }
     isEmpty(){
         return !this.symbol();
     }
@@ -814,6 +817,7 @@ function allSymbols(){
         const mtext = MultiLanguageText.create(obj.name);
         const def = new InputDefine(mtext);
         def.setPadButtonId(Number(obj.button));
+        def.setMandatory(obj.mandatory ==="true")
         def.setKeys(obj.keys);
         list.push(def);
     }
@@ -1332,17 +1336,6 @@ function inputMapperHasSymbol(mapper,symbol){
         }
     }
     return false;
-}
-//TODO 判定がダメダメなので、作り直し
-//拡張設定の必須コマンドが機能してない
-function isValidMapper(mapper){
-    const len =setting.mandatorySymbols.length;
-    for(var i=0; i < len;++i){
-        if(!inputMapperHasSymbol( mapper , setting.mandatorySymbols[i])){
-            return false;
-        }
-    }
-    return true;
 }
 
 function playDefaultSound() {
