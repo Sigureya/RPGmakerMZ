@@ -20,6 +20,13 @@
  * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_InputConfig.js
  * 
  * @target MZ
+ * @command IsKeyboardValid
+ * @desc キーボードの設定が正しい場合、指定スイッチをONにします。
+ * @arg switchId
+ * @type switch
+ * @default 0
+ * @desc 結果を保存するスイッチ
+ * Where to save the results
  *  
  * @param mapperOk
  * @text 決定/ok
@@ -127,13 +134,6 @@
  * @type struct<MultiLangString>
  * @default {"en":"keyboard config","jp":"キーコンフィグ"}
  * 
- * @command IsKeyboardValid
- * @desc キーボードの設定が正しい場合、指定スイッチをONにします。
- * @arg switchId
- * @type switch
- * @default 0
- * @desc 結果を保存するスイッチ
- * Where to save the results
  * 
  * @help
  * ※日本語テキストは下の方にあるのでスクロールしてください
@@ -1493,8 +1493,8 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
      * @param {Rectangle} rect 
      */
     initialize(rect) {
-        super.initialize(rect);
         this.makeItemList();
+        super.initialize(rect);
         this.deactivate();
         this.deselect();
     }
@@ -3020,8 +3020,15 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
         return setting.keyWindowLineHeight;
     }
 
+    mainFontFace(){
+        if(Utils.RPGMAKER_NAME ==="MV"){
+            return this.standardFontFace();
+
+        }
+        return $gameSystem.mainFontFace();
+    }
     resetFontSettings(){
-        this.contents.fontFace = $gameSystem.mainFontFace();
+        this.contents.fontFace = this.mainFontFace();
         this.contents.fontSize = this.lineHeight()-2;//$gameSystem.mainFontSize();
         this.resetTextColor();
     }
@@ -3433,7 +3440,7 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
         }
         Window_Options_processOk.call(this);       
     };
-const Scene_Boot_onDatabaseLoaded =Scene_Boot.prototype.onDatabaseLoaded;
+const Scene_Boot_onDatabaseLoaded =Scene_Boot.prototype.onDatabaseLoaded ||(function(){});
 Scene_Boot.prototype.onDatabaseLoaded =function(){  
     symbolMapper.onBoot();
     Mano_InputConfig.defaultGamepadMapper =Object.freeze( objectClone(Input.gamepadMapper));
@@ -3442,10 +3449,16 @@ Scene_Boot.prototype.onDatabaseLoaded =function(){
 };
 if(Utils.RPGMAKER_NAME =="MV"){
     (function(){
-        //MV workaround
-        Scene_InputConfigBase_MA.prototype.mainAreaTop = function(){
-            return 0;
+        const Scene_Boot_start =Scene_Boot.prototype.start;
+        Scene_Boot.prototype.start =function(){
+            this.onDatabaseLoaded();
+
+            Scene_Boot_start.call(this);
         };
+        //MV workaround
+        // Scene_InputConfigBase_MA.prototype.mainAreaTop = function(){
+        //     return this._helpWindow.y + this._helpWindow.height;
+        // };
         Window_Selectable_InputConfigVer.prototype.drawItemBackground =function(){};
 
         Window_Selectable_InputConfigVer.prototype.itemRectWithPadding = Window_Selectable_InputConfigVer.prototype.itemRectForText;
