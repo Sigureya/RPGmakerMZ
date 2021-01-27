@@ -543,7 +543,6 @@ class MultiLanguageText{
         }
         return this.en_US;
     }
-
     name(){
         return this._defaultName;
     }
@@ -564,7 +563,6 @@ class SymbolColorManager_T{
 }
 const SymbolColorManager = new SymbolColorManager_T();
 class I_SymbolDefine{
-
     symbolBackColor(){
         return this.backColor();
     }
@@ -591,7 +589,6 @@ class I_SymbolDefine{
         }
         return SymbolColorManager.normalColor();
     }
-
     textColor(){
         return "#ffd530";
     }
@@ -858,16 +855,9 @@ function mapperFor(mapper,func){
 /**
  * @param {(key:String,value:String)=>void} func 
  */
-function gamepadMapperFor(func){
-    mapperFor(Input.gamepadMapper,func);
-}
-/**
- * @param {(key:String,value:String)=>void} func 
- */
 function keyMapperFor(func){
     mapperFor(Input.keyMapper,func);
 }
-
 
 class UnknowSymbol extends I_SymbolDefine{
     /**
@@ -900,7 +890,7 @@ class UnknowSymbol extends I_SymbolDefine{
         return "button:"+this._buttonId +"  keys:"+this._kesy;
     }
     helpText(){
-        return "不明なシンボルです 入力拡張に項目を追加してください\n"+this.paramSettingGuide();
+        return setting.unknowGuidText.currentName()+"\n" + this.paramSettingGuide();
     }
 }
 /**
@@ -997,7 +987,6 @@ class SymbolMapper_T{
         if(item){  return item.name();}
         return "unknow:"+symbol;
     }
-
     /**
      * @param {String} symbol 
      */
@@ -1028,14 +1017,12 @@ class SymbolMapper_T{
         }
         return false;
     }
-
     /**
      * @returns {I_SymbolDefine[]}
      */
     allMandatorySymbols(){
         return this.getSymbolList().filter( (def)=>{ return def.isMandatory()});
     }
-
     isValidMapper(mapper){
         /**
          * @type {Set<String>}
@@ -1133,11 +1120,6 @@ class Gamepad{
         if(b){ return b.name();}
         return "";
     }
-    createUnknowSymbolGuide(){
-        for (const button of this._list) {
-//            button.
-        }
-    }
 }
 
 function getParam(){
@@ -1183,9 +1165,10 @@ const setting = (function(){
     };
 
     const guid = new MultiLanguageText();
-    guid.setNameJP()
+    guid.setNameJP("不明なシンボルです 入力拡張に項目を追加してください");
+    guid.setNameEN("This is an unknown symbol. Add an item to the input extension");
     const result= {
-
+        unknowGuidText:guid,
         keyWindowLineHeight:22,
         gamepad :new Gamepad(),
         overwriteWarning:(params.overwriteWarning==='true'),
