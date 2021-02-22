@@ -6,18 +6,20 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 5.0.3 2020/12/30
+// ver 5.3.0 2021/02/23
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
 
+
 /*:
- * @plugindesc コントローラ(ゲームパッド)・キーボードの設定を変更できます。
- * ユーザーが入力を拡張する場合の補助も行います。
+ * @plugindesc ゲームの操作に関する機能をまとめて管理します。
+ * ユーザーによる拡張も支援します。
  * @author しぐれん(https://github.com/Sigureya/RPGmakerMV)
  * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_InputConfig.js
  * 
  * @target MZ
+ * 
  * @command IsKeyboardValid
  * @desc キーボードの設定が正しい場合、指定スイッチをONにします。
  * @arg switchId
@@ -25,7 +27,12 @@
  * @default 0
  * @desc 結果を保存するスイッチ
  * Where to save the results
- *  
+ * 
+ * @command callEvent
+ * @text callEvent/登録イベントの呼び出し
+ * @desc 拡張シンボルで設定したコモンイベントを呼び出します。
+ * Calls the CommonEvent set by the InputExtension.
+ * 
  * @param mapperOk
  * @text 決定/ok
  * @type struct<MultiLangString>
@@ -78,7 +85,6 @@
  * @desc このプラグインで割り当てたボタン設定が、既存の入力に対して上書きしている場合にconsoleへ警告を出します
  * @type boolean
  * @default true
- *
  * 
  * @param GamepadIsNotConnected
  * @text 未接続/GamepadIsNotConnected
@@ -157,6 +163,11 @@
  * 新しいプラグインを入れた場合、
  * ゲーム起動後にコンフィグを「初期設定に戻す」でリセットしてください。
  * 
+ * ■プラグインコマンド(MV用)
+ * ManoInputCall
+ * 現在の入力状態を確認し、それに応じたコモンイベントを呼び出します。
+ * イベントの設定はプラグインパラメータで行います。
+ * 
  * ■"?KEY:Symbol"のような変な文字が表示される場合の対処法
  * 他のプラグインによって追加された入力が不明なために発生します。
  * 上記のような表示が出ている場合、extendsMapperに要素を追加することで対応できます。
@@ -168,11 +179,13 @@
  * SceneManager.push(Mano_InputConfig.Scene_KeyConfig );       // キーボードコンフィグ
  * これで、指定されたシーンに移動できます。
  * 
- * 2021/01/27 ver 5.2
+ * 更新履歴
+ * 2021/02/23 ver 5.3.0
+ * ボタン入力がある時にコモンイベントを呼び出すプラグインコマンドを追加
+ * 
+ * 2021/01/27 ver 5.2.0
  * 不明なシンボルの表示機能を強化
  * 
- * 
- * 更新履歴
  * 2021/01/23 ver5.1.0
  * 画面レイアウトを変更
  * 必須シンボルの扱いを調整
@@ -249,11 +262,9 @@
 //該当のリストからsymbol/name間の対応表を作る
 //全てのシンボルを読み出し、対応表にないものにunknowで対応表に入れる
 
+
+
 /*~struct~InputDefine:
- * メモ：キーボードとボタンを結びつけつつ、シンボルを書かずに割り当て
- * キーとボタンのどちらかに設定があれば、もう一方へ取り込む
- * 両方にデータがある場合、エラーで落とす
- * 次回更新の目玉
  * 
  * @param keys
  * @text キー設定/keySetting
@@ -313,8 +324,25 @@
  * @type struct<MultiLangString>
  * @default {"jp":"","en":""}
  * 
+ * @param eventId
+ * @text 呼び出すイベント/event
+ * @desc プラグインコマンド「登録イベントの呼び出し」用のイベント
+ * @type common_event
+ * @default 0
+ * 
+ * @param inputType
+ * @text 入力方式/inputType
+ * @desc イベント専用機能
+ * @type select
+ * @option 押されている/pressed
+ * @value 0
+ * @option トリガー/triggerd
+ * @value 1
+ * @option リピート/repeated
+ * @value 2
+ * @default 0
+ * 
  */
-
 
 /*~struct~ButtonInfo:
  *
@@ -621,6 +649,17 @@ class I_SymbolDefine{
         }
         return "";
     }
+
+    isPressed(){
+        return Input.isPressed(this.symbol());
+    }
+    isRepeated(){
+        return Input.isRepeated(this.symbol());
+    }
+    isTriggered(){
+        return Input.isTriggered(this.symbol());
+    }
+    
 }
 class MoveDefine extends I_SymbolDefine{
     constructor(symbol,name){
@@ -726,12 +765,31 @@ class ExtendsSymbol extends I_SymbolDefine{
     constructor(actionName,buttonId,keys){
         super();
         this._symbol ="";
-        this._keys = keys ||"";
+        this._keys = (keys ||"");
         this._buttonId =buttonId;
         this._actionName = actionName;
         this._overwriteEnabled =false;
+        this.setEventId(0);
+        this.setInputType(0);
         this.setMandatory(false);
     }
+    /**
+     * 
+     * @param {Number} type 
+     */
+    setInputType(type){
+        this._inputType =type;
+    }
+    /**
+     * @param {Number} switchId 
+     */
+    setEventId(switchId){
+        this._eventId =switchId;
+    }
+    switchId(){
+        return this._eventId;
+    }
+
     setMandatory(value){
         this._mandatory = value;
     }
@@ -761,11 +819,26 @@ class ExtendsSymbol extends I_SymbolDefine{
         }
         return null;
     }
+    readMySymbol(){
+        const pad = this.padSymbol();
+        if(pad){
+            return pad;
+        }
+        const key =this.firstKeySymbol()
+        if(key){
+            return key;
+        }
+        if(this._eventId>0){
+            return "call"+this._eventId;
+        }
+        return "";
+    }
     loadSymbol(){
         if(!this._symbol){
-            const symbol =(this.padSymbol() || this.firstKeySymbol());
+            const symbol =this.readMySymbol();
             this._symbol = symbol;
         }
+
         if(this.isEmpty()){
             this.setMandatory(false);
         }
@@ -790,6 +863,19 @@ class ExtendsSymbol extends I_SymbolDefine{
             this.mapperWrite(Input.keyMapper,this._keys.charCodeAt(i));
         }
     }
+    eventId(){
+        return this._eventId;
+    }
+    needsEventCall(){
+        switch (this._inputType) {
+            case 1:
+                return this.isTriggered();
+        
+            case 2:
+                return this.isRepeated();
+        }
+        return this.isPressed();
+    }
 }
 
 function extendsSymbols(){
@@ -803,6 +889,8 @@ function extendsSymbols(){
         const mtext = MultiLanguageText.create(obj.name);
         const def = new ExtendsSymbol(mtext, Number(obj.button), String(obj.keys||""));
         def.setMandatory(obj.mandatory ==="true");
+        def.setEventId(Number(obj.eventId));
+        def.setInputType(Number(obj.inputType ||0))
         return def;
     });
     for (const iterator of listX) {
@@ -899,6 +987,28 @@ class UnknowSymbol extends I_SymbolDefine{
 function createUnknowSymbolObject(symbol){
     return new UnknowSymbol(symbol);
 }
+
+/**
+ * @param {Game_Interpreter} root 
+ * @param {Number[]} eventIdList 
+ */
+function eventMultiCall(root,eventIdList){
+    let target = root;
+    for (let index = eventIdList.length-1; index >=0; index--) {
+        const eventId = eventIdList[index];
+        const newEvent = $dataCommonEvents[eventId];
+        if(newEvent){
+            target.setupChild(newEvent.list,target.eventId());
+            target = target._childInterpreter;
+        }
+    }
+}
+
+
+function switchWrite(id,value){
+    $gameSwitches._data[id]=value;
+}
+
 class SymbolMapper_T{
     constructor(){
         /**
@@ -915,6 +1025,26 @@ class SymbolMapper_T{
         this.addDictionaryItems(this._basicSymbols);
         this.addDictionaryItems(this._moveSymbols);
     }
+
+
+    /**
+     * @param {Game_Interpreter} root 
+     */
+    callButtonEvent(root){
+        const eventList =[];
+        for (const iterator of this._extendSymbols) {
+            if(iterator.needsEventCall()){
+                const eventId = iterator.eventId();
+                if($dataCommonEvents[eventId]){
+                    eventList.push(eventId);
+                }
+            }
+        }
+        if(eventList.length >0){
+            eventMultiCall(root,eventList);
+        }
+    }
+
     onBoot(){
         this.loadExtendsSymbols();
         this.loadUnknowSymbols();
@@ -1043,7 +1173,7 @@ class SymbolMapper_T{
         return true;
     }
 }
-const symbolMapper = new SymbolMapper_T([]);
+const symbolMapper = new SymbolMapper_T();
 class GamepadButton{
     /**
      * @param {Number} buttonId 
@@ -1955,17 +2085,14 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
     isBottomHelpMode(){
         return false;
     }
-
     makeUnknowSymbolText(){
         //不明なSymbolの一覧を取得
         //ループして表示用の内容を作る
         //
-
     }
     makeHelpText(){
         this.makeUnknowSymbolText();
     }
-
     createHelpWindow(){
         this._helpWindow = new Window_Help(this.helpWindowInitParam());
         this.addWindow(this._helpWindow);
@@ -2538,7 +2665,6 @@ const WASD_KEYMAP={
     68:"right",     //D
 };
 
-
 const KEYS ={
     SPACE: new Key_Big("Space",32,4,1,false),
     ENTER_JIS: new Key_Big('Enter',13,2,2,true),
@@ -2885,7 +3011,6 @@ const KEY_LAYOUT_US =(function(){
     return Object.freeze( layout);
 })();
 
-
 class Window_KeyConfig_MA extends Window_InputConfigBase {
     mapper(){
         return this._map;
@@ -3157,9 +3282,6 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
             item.redraw(this,index);
         }
     }
-    // redrawApplyCommand(value){
-
-    // }
 
     commandBackColor() {
         return getColorSrc(this).gaugeBackColor();
@@ -3304,21 +3426,33 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
         }
         Window_Options_processOk.call(this);       
     };
-const Scene_Boot_onDatabaseLoaded =Scene_Boot.prototype.onDatabaseLoaded ||(function(){});
-Scene_Boot.prototype.onDatabaseLoaded =function(){  
+function setupDefaultMapper(){
     symbolMapper.onBoot();
     Mano_InputConfig.defaultGamepadMapper =Object.freeze( objectClone(Input.gamepadMapper));
     Mano_InputConfig.defaultKeyMapper= Object.freeze(objectClone(Input.keyMapper));
+}
+
+const Scene_Boot_onDatabaseLoaded =Scene_Boot.prototype.onDatabaseLoaded ||(function(){});
+Scene_Boot.prototype.onDatabaseLoaded =function(){  
+    setupDefaultMapper();
     Scene_Boot_onDatabaseLoaded.call(this);
 };
 if(Utils.RPGMAKER_NAME =="MV"){
     (function(){
         const Scene_Boot_start =Scene_Boot.prototype.start;
         Scene_Boot.prototype.start =function(){
-            this.onDatabaseLoaded();
-
+            setupDefaultMapper();
             Scene_Boot_start.call(this);
         };
+
+       const Game_Interpreter_pluginCommand =Game_Interpreter.prototype.pluginCommand;
+        Game_Interpreter.prototype.pluginCommand =function(command,args){
+            if(command ==="ManoInputCall"){
+                symbolMapper.callButtonEvent(this);
+            }
+            Game_Interpreter_pluginCommand.call(this,command,args);
+        };
+
         //MV workaround
         // Scene_InputConfigBase_MA.prototype.mainAreaTop = function(){
         //     return this._helpWindow.y + this._helpWindow.height;
@@ -3328,6 +3462,11 @@ if(Utils.RPGMAKER_NAME =="MV"){
         Window_Selectable_InputConfigVer.prototype.itemRectWithPadding = Window_Selectable_InputConfigVer.prototype.itemRectForText;
     })();
 }else{
+
+    PluginManager.registerCommand(PLUGIN_NAME,"callEvent",function(arg){
+        symbolMapper.callButtonEvent(this);
+    });
+
     PluginManager.registerCommand( PLUGIN_NAME,"IsGamepadValid",function(arg){
         const sid = (arg.switchId);
         const value = symbolMapper.isValidMapper(Input.gamepadMapper);
