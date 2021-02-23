@@ -659,7 +659,6 @@ class I_SymbolDefine{
     isTriggered(){
         return Input.isTriggered(this.symbol());
     }
-    
 }
 class MoveDefine extends I_SymbolDefine{
     constructor(symbol,name){
@@ -753,7 +752,6 @@ function basicSymbols(){
 
     const escapeText = MultiLanguageText.create(param.mapperEscape);
     const escape = new EscapeSymbol(escapeText);
-//    const escape =createDefaultKeyMapperItem("escape",param.mapperEscape);
     return [ok,cancel,shift,menu,pageup,pagedonw,escape];
 }
 class ExtendsSymbol extends I_SymbolDefine{
@@ -828,7 +826,7 @@ class ExtendsSymbol extends I_SymbolDefine{
         if(key){
             return key;
         }
-        if(this._eventId>0){
+        if(this._eventId > 0){
             return "call"+this._eventId;
         }
         return "";
@@ -852,7 +850,7 @@ class ExtendsSymbol extends I_SymbolDefine{
         }
         mapper[targetKey]= this._symbol;	
      }
-     //TODO:前回消してしまったので、作り直し
+
     fillSymbol(){
         if(!this._symbol){return;}
         if(!isNaN( this._buttonId)){
@@ -870,7 +868,6 @@ class ExtendsSymbol extends I_SymbolDefine{
         switch (this._inputType) {
             case 1:
                 return this.isTriggered();
-        
             case 2:
                 return this.isRepeated();
         }
@@ -1004,10 +1001,6 @@ function eventMultiCall(root,eventIdList){
     }
 }
 
-
-function switchWrite(id,value){
-    $gameSwitches._data[id]=value;
-}
 
 class SymbolMapper_T{
     constructor(){
@@ -1546,9 +1539,6 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
             this.select(0);
         }
     }
-    // backColor(index){
-    //     this.colorSrc()
-    // }
     /**
      * @param {Number} index 
      */
@@ -1697,7 +1687,7 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
         this.setMapper(Input.gamepadMapper);
         this.makeCommandList();
         super.initialize( rect);
-        this.defineNameWidth();
+        //this.defineNameWidth();
         this.defineSymbolTextWidth();
         this.select(0);
         this.refresh();
@@ -1708,7 +1698,7 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
         const reset =CommandManager.reset()
         const apply = CommandManager.apply();
         this._command =[
-            reset ,//default_,
+            reset ,
             apply,
             exit
         ];
@@ -1861,20 +1851,20 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
     symbolTextWidth() {
         return this._symbolTextWidth;
     }
-    defineNameWidth() {
-        const _this =this;
-        const w = setting.gamepad.buttons().map(function(button){
-            return _this.textWidth(button.text());
-        });
+    // defineNameWidth() {
+    //     const _this =this;
+    //     const w = setting.gamepad.buttons().map(function(button){
+    //         return _this.textWidth(button.text());
+    //     });
 
-        this._nameWidth = Math.max(...w);
-    }
-    /**
-     * @return {number}
-     */
-    nameWidth() {
-        return this._nameWidth;
-    }
+    //     this._nameWidth = Math.max(...w);
+    // }
+    // /**
+    //  * @return {number}
+    //  */
+    // nameWidth() {
+    //     return this._nameWidth;
+    // }
     /**
      * @param {number} index
      */
@@ -1896,36 +1886,37 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
         }
     }
     numberWidth(){
-        return 20;
-    }
-    //TODO:番号とボタン名・Symbol名の色を別々にするとき想定で作った気がする
-    drawButtonNumber(x,y,width,buttonNumber){
-        const text = buttonNumber +":";
-        this.drawText(text,x,y,width,"right");
+        return 26;
     }
 
-    button(index){
+    padButton(index){
         return setting.gamepad.button(index);
     }
 
     butttonNameWidth(){
-        return 60;
+        return 45;
     }
-    drawButton(index){
-        const button = this.button(index);
+    drawButton_V2(index){
+        const button = this.padButton(index);
         if(button){
             this.changeTextColor(getColorSrc(this).normalColor());
             const rect = this.itemRectWithPadding(index);
-            const nameWidth =this.nameWidth();
-            this.drawText(button.text(),rect.x,rect.y,nameWidth);
-            const symbolWidth = rect.width - nameWidth;
-            this.drawText(this.symbolText(index), rect.x + nameWidth + this.textPadding(), rect.y, symbolWidth);
+            const numberWidth = this.numberWidth();
+            this.drawText(button.buttonId()+":",rect.x,rect.y,numberWidth);
+
+            const nameWidth= this.butttonNameWidth();
+            const nameX = rect.x + numberWidth;
+            this.drawText(button.name(),nameX,rect.y,nameWidth);
+
+            const symbolWidth =rect.width - numberWidth -nameWidth;
+            const symbolX = nameX + nameWidth;
+            this.drawText(this.symbolText(index),symbolX,rect.y,symbolWidth);
         }
     }
 
     drawItem(index) {
         if(index< this.buttonItems()){
-            this.drawButton(index);
+            this.drawButton_V2(index);
             return;
         }
         this.drawCommand(index);
@@ -1947,11 +1938,6 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
             return;
         }
         this._helpWindow.clear();
-
-        // const c = this.command(this._index);
-        // if(c){
-        //     this._helpWindow.setText(c.helpText());
-        // }
     }
     /**
      * @return {boolean}
@@ -2313,11 +2299,6 @@ class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
 
     gamepadWindowRect(){
         return this.mainWindowRect();
-        // const width = setting.windowCustom.gamepadWidth*setting.cols;
-        // const height = this.calcWindowHeight(setting.numVisibleRows/2,true);
-        // const x = (Graphics.boxWidth/2) -(width/2);
-        // const y= this.mainAreaTop()
-        // return new Rectangle(x,y,width,height);
     }
 
     createGamepadConfigWindow() {
@@ -3343,12 +3324,6 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
     }
     keyconfigWindowRect(){
         return this.mainWindowRect();
-        const x = 0;
-        const y=this.mainAreaTop();
-        const width = Graphics.boxWidth;
-        const lines = Utils.RPGMAKER_NAME =="MV" ? 12:10;
-        const height =this.calcKeyWindowHeight() //this.calcWindowHeight(lines,true);
-        return new Rectangle(x,y,width,height);
     }
     calcKeyWindowHeight(){
         const lineHeight =0;
