@@ -26,7 +26,7 @@
  * 売却不能アイテムとして値段を0にしている場合、最適化で選ばれなくなってしまいます。
  * このタグを設定すると、値段ではなくここで指定した数値で評価します。
  * 
- * <OptimzizeLock>
+ * <OptimizeLock>
  * 指定した装備品が最強装備コマンドを使った場合もそのままになります。
  */
 
@@ -54,11 +54,8 @@ class OptimizeControle_T{
         if(!this._enablde){
             return false;
         }
-
-        return !!(equip.meta.OptimzizeLock)
+        return !!(equip.meta.OptimizeLock)
     }
-
-
     /**
      * @param {rm.types.EquipItem} item 
      */
@@ -96,6 +93,21 @@ Game_Actor.prototype.optimizeEquipments = function() {
     Game_Actor_optimizeEquipments.call(this);
     OptimizeControle.setState(false);
 };
+
+const Game_Actor_isEquipChangeOk =Game_Actor.prototype.isEquipChangeOk;
+Game_Actor.prototype.isEquipChangeOk =function(slotId){
+    const item = this._equips[slotId];
+    if(item){
+        const obj = item.object();
+        if(obj){
+            if(OptimizeControle.isLocked(obj)){
+                return false;
+            }    
+        }
+    }
+    return Game_Actor_isEquipChangeOk.call(this,slotId);
+};
+
 Game_Actor.prototype.calcEquipItemPerformance =function(item){
     return OptimizeControle.calcEquipItemPerformance(item);
 };
