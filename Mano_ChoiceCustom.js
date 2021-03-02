@@ -136,7 +136,7 @@
  * @type multiline_string
  * @default true
  * 
- * @command ActorCcehoi
+ * @command ActorChoice
  * @text アクターの選択
  * @desc パーティの内外を指定して、アクターの選択肢を表示します。
  * 
