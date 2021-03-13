@@ -57,7 +57,7 @@
   * @type variable
   * @default 0
   * 
-  * @param switch
+  * @param switchId
   * @text 有効化スイッチ/switch
   * @desc スイッチがONの場合のみ、このアイテムを表示します。
   * This item is displayed only when the switch is ON.
@@ -147,6 +147,12 @@ function argToShopItem(arg,itemType ,outList){
   const itemId = Number(obj.item);
   if(itemId===0){
     return;
+  }
+  const switchId = Number(obj.switchId);
+  if(switchId >0){
+    if(!$gameSwitches.value(switchId)){
+      return;
+    }
   }
   const variableId = Number(obj.price);
   const cusotmMode = ( variableId > 0) ? 1:0 ;
