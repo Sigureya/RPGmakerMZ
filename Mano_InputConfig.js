@@ -6,7 +6,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 5.3.0 2021/02/23
+// ver 5.3.1 2021/04/15
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -176,7 +176,7 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
- * 2021/04/17 ver 5.3.1
+ * 2021/04/15 ver 5.3.1
  * コモンイベント呼び出しを修正(簡単にしました)
  * イベントコマンドでコンフィグを開くと保存されない不具合を修正
  * 
@@ -3421,7 +3421,6 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
         }
         return false;
     }
-    
     const Window_Options_processOk = Window_Options.prototype.processOk;
     Window_Options.prototype.processOk =function(){
         if(this.isGamepadConfig(this._index)){
