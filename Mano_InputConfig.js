@@ -20,6 +20,12 @@
  * 
  * @target MZ
  * 
+ * @param AutoEventCall
+ * @text ボタンイベントの自動呼出し/AutoEventCall
+ * @desc 拡張設定で設定したコモンイベントを自動で呼び出します
+ * @type boolean
+ * @default true
+ * 
  * @command IsKeyboardValid
  * @desc キーボードの設定が正しい場合、指定スイッチをONにします。
  * @arg switchId
@@ -27,11 +33,6 @@
  * @default 0
  * @desc 結果を保存するスイッチ
  * Where to save the results
- * 
- * @command callEvent
- * @text callEvent/登録イベントの呼び出し
- * @desc 拡張シンボルで設定したコモンイベントを呼び出します。
- * Calls the CommonEvent set by the InputExtension.
  * 
  * @param mapperOk
  * @text 決定/ok
@@ -155,18 +156,13 @@
  * If the above display is displayed, you can handle it by adding an element to extendsMapper.
  * After adding the element, copy the character of the part corresponding to KEY and copy it to KeySetting. * 
  * 
- * ゲームの起動時の設定をデフォルト値として読み込みます。
+ * ゲームの起動時の設定を初期値として読み込みます。
  * プラグインの導入位置に関わらず、入力の変更を検知します。
  * 他のプラグインでボタンが改造されていてもOKです。
  * 
  * このプラグインで設定したコンフィグデータは、ファイルに記録されます。
  * 新しいプラグインを入れた場合、
  * ゲーム起動後にコンフィグを「初期設定に戻す」でリセットしてください。
- * 
- * ■プラグインコマンド(MV用)
- * ManoInputCall
- * 現在の入力状態を確認し、それに応じたコモンイベントを呼び出します。
- * イベントの設定はプラグインパラメータで行います。
  * 
  * ■"?KEY:Symbol"のような変な文字が表示される場合の対処法
  * 他のプラグインによって追加された入力が不明なために発生します。
@@ -180,6 +176,10 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 2021/04/17 ver 5.3.1
+ * コモンイベント呼び出しを修正(簡単にしました)
+ * イベントコマンドでコンフィグを開くと保存されない不具合を修正
+ * 
  * 2021/02/23 ver 5.3.0
  * ボタン入力がある時にコモンイベントを呼び出すプラグインコマンドを追加
  * 
@@ -257,10 +257,6 @@
  * 
  */
 /**
-//処理の流れ
-//パラメータから、命名済みのアクションをすべて設定する
-//該当のリストからsymbol/name間の対応表を作る
-//全てのシンボルを読み出し、対応表にないものにunknowで対応表に入れる
 
 
 
@@ -306,6 +302,10 @@
  * @option 16(center)
  * @value 16
  * 
+ * @param keyText
+ * @text キーの表示/keyText
+ * @desc キーコンフィグの際の表示名を定義します(空欄OK)
+ * @type string
  *
  * @param mandatory
  * @text 必須フラグ/mandatory
@@ -327,6 +327,7 @@
  * @param eventId
  * @text 呼び出すイベント/event
  * @desc プラグインコマンド「登録イベントの呼び出し」用のイベント
+ * 
  * @type common_event
  * @default 0
  * 
@@ -638,14 +639,16 @@ class I_SymbolDefine{
     isEmpty(){
         return !this.symbol();
     }
-    //TODO:将来的にキーコンフィグでのシンボル表示を改造できるようにするため
-    //今のところは準備工事にとどめる
-    displayName(){
+    displayKeyName(){
         return this.symbol();
     }
     helpText(){
         if(this.isEmpty()){
             return "シンボルが設定されていません\nプラグインパラメータから拡張設定の内容を確認してください";
+        }
+        const name = this.name();
+        if(!name){
+            return "表示用の名称が設定されていません\nsymbol:"+this.symbol();
         }
         return "";
     }
@@ -661,6 +664,10 @@ class I_SymbolDefine{
     }
 }
 class MoveDefine extends I_SymbolDefine{
+    /**
+     * @param {String} symbol 
+     * @param {String} name 
+     */
     constructor(symbol,name){
         super();
         this._symbol =symbol;
@@ -675,7 +682,7 @@ class MoveDefine extends I_SymbolDefine{
     name(){
         return this._name;
     }
-    displayName(){
+    displayKeyName(){
         return this._name;
     }
     // isMandatory(){
@@ -725,11 +732,13 @@ class StandardSymbol extends I_SymbolDefine{
     /**
      * @param {String} symbol 
      * @param {MultiLanguageText} name 
+     * @param {String} keyText
      */
-    constructor(symbol,name){
+    constructor(symbol,name,keyText){
         super();
         this._symbol = symbol;
         this._name =name;
+        this._keyText = keyText;
     }
     isMandatory(){
         return true;
@@ -739,6 +748,12 @@ class StandardSymbol extends I_SymbolDefine{
     }
     symbol(){
         return this._symbol;
+    }
+    displayKeyName(){
+        if(this._keyText){
+            return this._keyText;
+        }
+        return super.displayKeyName();
     }
 }
 function basicSymbols(){
@@ -754,22 +769,78 @@ function basicSymbols(){
     const escape = new EscapeSymbol(escapeText);
     return [ok,cancel,shift,menu,pageup,pagedonw,escape];
 }
+class EventCaller{
+    /**
+     * @param {Number} eventId 
+     * @param {Number} triggereType 
+     */
+    constructor(eventId,triggereType){
+        this._eventId = eventId;
+        this._inputType = triggereType;
+    }
+    eventId(){
+        return this._eventId;
+    }
+    callEvent(){
+        $gameTemp.reserveCommonEvent(this.eventId());
+    }
+    /**
+     * @param {String} symbol 
+     */
+    update(symbol){
+        if(this.needsEventCall(symbol)){
+            this.callEvent();
+        }
+    }
+    /**
+     * @param {String} symbol 
+     * @returns 
+     */
+    needsEventCall(symbol){
+        if(this._eventId > 0){
+            switch (this._inputType) {
+                case 1:
+                    return Input.isTriggered(symbol)
+                case 2:
+                    return Input.isRepeated(symbol);
+            }
+            return Input.isPressed(symbol);    
+        }
+        return false;
+    }
+}
+
 class ExtendsSymbol extends I_SymbolDefine{
     /**
      * @param {MultiLanguageText} actionName 
      * @param {Number} buttonId 
      * @param {String} keys 
+     * @param {EventCaller} event
      */
-    constructor(actionName,buttonId,keys){
+    constructor(actionName,buttonId,keys ,event){
         super();
+        this._event = event;
         this._symbol ="";
-        this._keys = (keys ||"");
+        this._keys = (keys ||"").toUpperCase();
         this._buttonId =buttonId;
         this._actionName = actionName;
         this._overwriteEnabled =false;
-        this.setEventId(0);
-        this.setInputType(0);
+        this.setKeyText("");
+        // this.setEventId(0);
+        // this.setInputType(0);
         this.setMandatory(false);
+    }
+    /**
+     * @param {String} keyText 
+     */
+    setKeyText(keyText){
+        this._keyText = keyText;
+    }
+    displayKeyName(){
+        if(this._keyText){
+            return this._keyText;
+        }
+        return super.displayKeyName();
     }
     /**
      * 
@@ -826,8 +897,9 @@ class ExtendsSymbol extends I_SymbolDefine{
         if(key){
             return key;
         }
-        if(this._eventId > 0){
-            return "call"+this._eventId;
+        const eventId =this._event.eventId()
+        if(eventId > 0){
+            return "call"+eventId;
         }
         return "";
     }
@@ -861,17 +933,23 @@ class ExtendsSymbol extends I_SymbolDefine{
             this.mapperWrite(Input.keyMapper,this._keys.charCodeAt(i));
         }
     }
+    updateEventCall(){
+        this._event.update(this.symbol());
+    }
     eventId(){
         return this._eventId;
     }
     needsEventCall(){
-        switch (this._inputType) {
-            case 1:
-                return this.isTriggered();
-            case 2:
-                return this.isRepeated();
+        if(this._eventId > 0){
+            switch (this._inputType) {
+                case 1:
+                    return this.isTriggered();
+                case 2:
+                    return this.isRepeated();
+            }
+            return this.isPressed();    
         }
-        return this.isPressed();
+        return false;
     }
 }
 
@@ -884,16 +962,16 @@ function extendsSymbols(){
     const listX = textList.map((text)=>{
         const obj = JSON.parse(text);
         const mtext = MultiLanguageText.create(obj.name);
-        const def = new ExtendsSymbol(mtext, Number(obj.button), String(obj.keys||""));
+        const keys =String(obj.keys||"");
+        const eventObj = new EventCaller(Number(obj.eventId),Number(obj.inputType ||0));
+        const def = new ExtendsSymbol(mtext, Number(obj.button), keys,eventObj);
         def.setMandatory(obj.mandatory ==="true");
-        def.setEventId(Number(obj.eventId));
-        def.setInputType(Number(obj.inputType ||0))
+        def.setKeyText(obj.keyText||"");
         return def;
     });
     for (const iterator of listX) {
         iterator.loadSymbol();
     }
-
     return listX;
 }
 /**
@@ -1000,7 +1078,11 @@ function eventMultiCall(root,eventIdList){
         }
     }
 }
-
+const Game_Map_setupStartingEvent =Game_Map.prototype.setupStartingEvent;
+Game_Map.prototype.setupStartingEvent =function(){
+    symbolMapper.callButtonEventV2();
+    return Game_Map_setupStartingEvent.call(this);
+};
 
 class SymbolMapper_T{
     constructor(){
@@ -1019,24 +1101,18 @@ class SymbolMapper_T{
         this.addDictionaryItems(this._moveSymbols);
     }
 
-
-    /**
-     * @param {Game_Interpreter} root 
-     */
-    callButtonEvent(root){
-        const eventList =[];
-        for (const iterator of this._extendSymbols) {
-            if(iterator.needsEventCall()){
-                const eventId = iterator.eventId();
-                if($dataCommonEvents[eventId]){
-                    eventList.push(eventId);
-                }
-            }
+    isEventCallble(){
+        return true;
+    }
+    callButtonEventV2(){
+        if(!this.isEventCallble()){
+            return;
         }
-        if(eventList.length >0){
-            eventMultiCall(root,eventList);
+        for (const iterator of this._extendSymbols) {
+            iterator.updateEventCall();
         }
     }
+
 
     onBoot(){
         this.loadExtendsSymbols();
@@ -1058,8 +1134,12 @@ class SymbolMapper_T{
          * @type {String}
          */
         const padSymbols = Object.values(Input.gamepadMapper);
-        const set = new Set(padSymbols);
-        for (const iterator of Object.values(Input.keyMapper)) {
+        /**
+         * @type {String}
+         */
+        const keySymbols =Object.values(Input.keyMapper)
+        const set = new Set(keySymbols);
+        for (const iterator of padSymbols) {
             set.add(iterator);
         }
         for (const iterator of this.getSymbolList()) {
@@ -1068,6 +1148,14 @@ class SymbolMapper_T{
                 set.delete(symbol);
             }
         }
+
+        for (const iterator of this._moveSymbols) {
+            const symbol = iterator.symbol();
+            if(symbol){
+                set.delete(symbol);
+            }
+        }
+
         for (const iterator of this.systemSymbols()) {
             set.delete(iterator);
         }
@@ -1118,14 +1206,18 @@ class SymbolMapper_T{
     }
 
     systemSymbols(){
-        //TODO:移動系シンボルをここから外しても動くように改造するかもしれない
-        return ["debug","control","tab","up","down","left","right"];
+        return ["debug","control","tab"];
     }
+    /**
+     * @returns {I_SymbolDefine[]}
+     */
     getMandatorySymbols(){
-        const src= this._list.
-        filter(function(def){return def.isMandatory()})
-        .map(function(def2){return def2.symbol()});
-        return new Set(src);
+        //使ってないのでいずれ消す
+        return []
+        // const src= this._list.
+        // filter(function(def){return def.isMandatory()})
+        // .map(function(def2){return def2.symbol()});
+        // return new Set(src);
     }
     /**
      * @param {String} symbol 
@@ -1173,21 +1265,10 @@ class GamepadButton{
      * @param {String} name 
      */
     constructor(buttonId,name){
-        this.setName(name);
-        this.setButtonId(buttonId);
-    }
-    /**
-     * @param {String} name 
-     */
-    setName(name){
         this._name =name;
-    }
-    /**
-     * @param {Number} buttonId 
-     */
-    setButtonId(buttonId){
         this._buttonId=buttonId;
     }
+
     name(){
         return this._name;
     }
@@ -1226,15 +1307,19 @@ class Gamepad{
     maxItems(){
         return this._list.length;
     }
-    indexOf(buttonNumber){
-        return -1;
-    }
+    // indexOf(buttonNumber){
+    //     return -1;
+    // }
+    /**
+     * @param {number} index
+     */
     button(index){
         return this._list[index];
     }
-    buttons(){
-        return this._list;
-    }
+    // buttons(){
+    //     return this._list;
+        
+    // }
     /**
      * @param {Number} index
      */
@@ -1248,6 +1333,7 @@ class Gamepad{
 function getParam(){
     return PluginManager.parameters(PLUGIN_NAME);
 }
+
 /**
  * @return {string[]}
  */
@@ -1275,7 +1361,9 @@ function noteOrString(text){
  */
 function createDefaultKeyMapperItem(symbol,objText){
     const mtext = MultiLanguageText.create(objText);
-    return new StandardSymbol(symbol,mtext);
+    //TODO:プラグインパラメータの修正が終わり次第、対応
+    const s= new StandardSymbol(symbol,mtext,"");
+    return s;
 }
 
 const setting = (function(){
@@ -1294,6 +1382,7 @@ const setting = (function(){
         unknowGuidText:guid,
         keyWindowLineHeight:22,
         gamepad :new Gamepad(),
+        autoEventCall:(params.AutoEventCall)==="true",
         overwriteWarning:(params.overwriteWarning==='true'),
         keyText:keyText,
         emptySymbolText:String(params.textEmpty),
@@ -1565,8 +1654,7 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
         return 4;
     }
     updateHelp(){
-        
-        const symbol = this.currentSymbolObject()//this.symbolObject(this.index());
+        const symbol = this.currentSymbolObject()
         if(symbol){
             this._helpWindow.setText(symbol.helpText());
         }else{
@@ -1576,7 +1664,7 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
 }
 
 class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
-    playDefaultSound(){
+    playResetSound(){
         SoundManager.playEquip();
     }
     playApplySound(){
@@ -1785,18 +1873,13 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
         }
     }
 
-    windowWidth() {
-        return setting.windowCustom.gamepadWidth * this.maxCols();
-    }
     maxCols() {
         return setting.cols;
     }
     numVisibleRows() {
         return Math.ceil(this.maxItems() / this.maxCols());
     }
-    windowHeight() {
-        return this.fittingHeight(Math.min(setting.numVisibleRows, this.numVisibleRows()));
-    }
+
     setMapper(map) {
         this._map = objectClone(map);
     }
@@ -1836,7 +1919,6 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
     symbolText(index) {
         const s =this.symbol(index)
         return symbolMapper.actionName(s);
-
     }
     defineSymbolTextWidth() {
         var width = 0;
@@ -1867,6 +1949,7 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
     // }
     /**
      * @param {number} index
+     * @param {String} newSymbol
      */
     changeKeyMap(index, newSymbol) {
         const buttonNumber = this.buttonNumber(index);
@@ -1889,6 +1972,9 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
         return 26;
     }
 
+    /**
+     *  @param {Number} index 
+     */
     padButton(index){
         return setting.gamepad.button(index);
     }
@@ -1896,7 +1982,10 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
     butttonNameWidth(){
         return 45;
     }
-    drawButton_V2(index){
+    /**
+     * @param {Number} index 
+     */
+    drawButton(index){
         const button = this.padButton(index);
         if(button){
             this.changeTextColor(getColorSrc(this).normalColor());
@@ -1916,7 +2005,7 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
 
     drawItem(index) {
         if(index< this.buttonItems()){
-            this.drawButton_V2(index);
+            this.drawButton(index);
             return;
         }
         this.drawCommand(index);
@@ -1967,17 +2056,6 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
         this.drawText(CommandManager.getApplyText(), rect.x, rect.y, rect.width);
         this.changePaintOpacity(true);
     }
-    /**
-     * @param {number} index
-     * @return {ButtonActionItem}
-     */
-    item(index) {
-        const item = this._list[index];
-        if (item) {
-            return item;
-        }
-        return null;
-    }
     bottom(){
         return this.y +this.height;
     }
@@ -1997,6 +2075,9 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
         return !!this._helpWindow._text;
     }
 
+    /**
+     * @param {String} text 
+     */
     setHelpText(text){
         this._helpWindow.setText(text)
     }
@@ -2085,7 +2166,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
         this.makeHelpText();
     }
     mainWindowHeight(){
-        return this.symbolListWindowTop()-this.mainAreaTop();
+        return this.symbolListWindowTop() - this.mainAreaTop();
     }
 
     mainWindowRect(){
@@ -2130,7 +2211,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
     resetMapper(){
         const mainWindow = this.mainWidnow();
         mainWindow.resetMapper();
-        mainWindow.playDefaultSound();
+        mainWindow.playResetSound();
         mainWindow.refresh();
         mainWindow.redrawApplyCommand(mainWindow.isValidMapper());
         mainWindow.activate();
@@ -2242,9 +2323,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
         this._symbolListWindow.hide();
         this.mainWidnow().activate();
     }
-    symbolCenter() {
-        return false;
-    }
+
     mapper(){
         return {};
     }
@@ -2252,9 +2331,13 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
         super.terminate();
         if(this._applyOnExit){
             this.saveMapper();
+            ConfigManager.save();
         }
     }
     saveMapper(){
+        //override
+    }
+    saveConfig(){
         //override
     }
     testMapperValid(){
@@ -2277,14 +2360,11 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
 }
 
 class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
-    symbolCenter() {
-        return false;
-    }
     /**
      * @param {object} [gamepadMapper] 読み込むコンフィグデータ 無指定の場合、現在の設定値を読み込む
      */
     setGamepadMapper(gamepadMapper) {
-        if (this._gamepadWindow) {
+        if(this._gamepadWindow){
             this._gamepadWindow.setMapper(gamepadMapper);
             this._gamepadWindow.refresh();
         }
@@ -3006,16 +3086,16 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
         this.setMapper(Input.keyMapper);
         this.setKeyLayout(ConfigManager.keyLayout_MA);
         super.initialize(rect);
-        this.initElementsSize();
+        //this.initElementsSize();
         this.refresh();
         this.activate();
         this.select(0);
     }
-    initElementsSize() {
-        const x = Graphics.boxWidth;
-        const p = this.textPadding();
-        this._itemWidth = Math.round((x - p * 6) / this.maxCols());
-    }
+    // initElementsSize() {
+    //     const x = Graphics.boxWidth;
+    //     const p = this.textPadding();
+    //     this._itemWidth = Math.round((x - p * 6) / this.maxCols());
+    // }
 
     lineHeight(){
         return setting.keyWindowLineHeight;
@@ -3110,9 +3190,9 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
     itemHeight() {
         return this.lineHeight() * 2;
     }
-    itemWidth() {
-        return this._itemWidth;
-    }
+    // itemWidth() {
+    //     return this._itemWidth;
+    // }
     maxPageRows() {
         return 100;
     }
@@ -3216,7 +3296,7 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
         this.drawText(key.char,rect.x,rect.y,rect.width,"center");
         if(inputDef && !inputDef.isEmpty()){
             const symbolY = rect.y + this.lineHeight()-6;
-            this.drawText(inputDef.displayName(),rect.x,symbolY,rect.width,"center");
+            this.drawText(inputDef.displayKeyName(),rect.x,symbolY,rect.width,"center");
         }
     }
 
@@ -3282,9 +3362,7 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
 }
 
 class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
-    symbolCenter() {
-        return true;
-    }
+
     helpWindowLines(){
         return 2;
     }
@@ -3314,10 +3392,12 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
     saveMapper(){
         Input.keyMapper = this._keyconfigWindow.cloneMapper();
     }
-    terminate() {
-        ConfigManager.setKeyLayoutMA(this._keyconfigWindow.getKeyLayout());
-        super.terminate();
-    }
+    //TODO:次回更新でコメントアウト部分含めて消す
+    //シーン直接呼出しを想定して、保存方法を変更
+    // terminate() {
+    //     ConfigManager.setKeyLayoutMA(this._keyconfigWindow.getKeyLayout());
+    //     super.terminate();
+    // }
     setWASD_Move(){
         this._keyconfigWindow.setWASD_Move();
         this._keyconfigWindow.playApplySound();
@@ -3412,6 +3492,7 @@ Scene_Boot.prototype.onDatabaseLoaded =function(){
     setupDefaultMapper();
     Scene_Boot_onDatabaseLoaded.call(this);
 };
+
 if(Utils.RPGMAKER_NAME =="MV"){
     (function(){
         const Scene_Boot_start =Scene_Boot.prototype.start;
@@ -3419,15 +3500,6 @@ if(Utils.RPGMAKER_NAME =="MV"){
             setupDefaultMapper();
             Scene_Boot_start.call(this);
         };
-
-       const Game_Interpreter_pluginCommand =Game_Interpreter.prototype.pluginCommand;
-        Game_Interpreter.prototype.pluginCommand =function(command,args){
-            if(command ==="ManoInputCall"){
-                symbolMapper.callButtonEvent(this);
-            }
-            Game_Interpreter_pluginCommand.call(this,command,args);
-        };
-
         //MV workaround
         // Scene_InputConfigBase_MA.prototype.mainAreaTop = function(){
         //     return this._helpWindow.y + this._helpWindow.height;
@@ -3437,10 +3509,6 @@ if(Utils.RPGMAKER_NAME =="MV"){
         Window_Selectable_InputConfigVer.prototype.itemRectWithPadding = Window_Selectable_InputConfigVer.prototype.itemRectForText;
     })();
 }else{
-
-    PluginManager.registerCommand(PLUGIN_NAME,"callEvent",function(arg){
-        symbolMapper.callButtonEvent(this);
-    });
 
     PluginManager.registerCommand( PLUGIN_NAME,"IsGamepadValid",function(arg){
         const sid = (arg.switchId);
@@ -3461,7 +3529,8 @@ const exportClass ={
     Window_InputSymbolList:Window_InputSymbolList,
     Window_GamepadConfig:Window_GamepadConfig_MA,
     Window_KeyConfig:Window_KeyConfig_MA,
-    symbolToButtonNumber:symbolToButtonNumber,
+    //削除予定・非推奨　返事が無ければ消す
+    //symbolToButtonNumber:symbolToButtonNumber,
     defaultKeyMapper:{},
     defaultGamepadMapper:{},
     gotoKey:function(){
