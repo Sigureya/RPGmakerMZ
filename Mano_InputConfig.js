@@ -1063,6 +1063,7 @@ function createUnknowSymbolObject(symbol){
     return new UnknowSymbol(symbol);
 }
 
+//TODO:Mv用に残すかもしれない
 /**
  * @param {Game_Interpreter} root 
  * @param {Number[]} eventIdList 
@@ -1307,19 +1308,12 @@ class Gamepad{
     maxItems(){
         return this._list.length;
     }
-    // indexOf(buttonNumber){
-    //     return -1;
-    // }
     /**
      * @param {number} index
      */
     button(index){
         return this._list[index];
     }
-    // buttons(){
-    //     return this._list;
-        
-    // }
     /**
      * @param {Number} index
      */
@@ -1422,19 +1416,6 @@ const MA_KEYBOARD_CONFIG =makeCONFIG_KEY('KEYBOARD_CONFIG');
 const MA_GAMEPAD_CONFIG = makeCONFIG_KEY('GAMEPAD_CONFIG');
 const MA_KEYBOARD_LAYOUT =makeCONFIG_KEY('KEYBOARD_LAYOUT');
 
-/**
- * @returns {String}
- * @param {String} symbol 
- * @desc シンボルからゲームパッドのボタン番号を文字列で返します
- */
-function symbolToButtonNumber(symbol){
-    for(var key in Input.gamepadMapper){
-        if(Input.gamepadMapper[key]===symbol){
-            return key;
-        }
-    }
-    return ''
-}
 
 function readGamePadConfig( config ){
     const value = config[MA_GAMEPAD_CONFIG];
@@ -1775,7 +1756,6 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
         this.setMapper(Input.gamepadMapper);
         this.makeCommandList();
         super.initialize( rect);
-        //this.defineNameWidth();
         this.defineSymbolTextWidth();
         this.select(0);
         this.refresh();
@@ -1933,20 +1913,6 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
     symbolTextWidth() {
         return this._symbolTextWidth;
     }
-    // defineNameWidth() {
-    //     const _this =this;
-    //     const w = setting.gamepad.buttons().map(function(button){
-    //         return _this.textWidth(button.text());
-    //     });
-
-    //     this._nameWidth = Math.max(...w);
-    // }
-    // /**
-    //  * @return {number}
-    //  */
-    // nameWidth() {
-    //     return this._nameWidth;
-    // }
     /**
      * @param {number} index
      * @param {String} newSymbol
@@ -3086,16 +3052,10 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
         this.setMapper(Input.keyMapper);
         this.setKeyLayout(ConfigManager.keyLayout_MA);
         super.initialize(rect);
-        //this.initElementsSize();
         this.refresh();
         this.activate();
         this.select(0);
     }
-    // initElementsSize() {
-    //     const x = Graphics.boxWidth;
-    //     const p = this.textPadding();
-    //     this._itemWidth = Math.round((x - p * 6) / this.maxCols());
-    // }
 
     lineHeight(){
         return setting.keyWindowLineHeight;
@@ -3190,9 +3150,6 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
     itemHeight() {
         return this.lineHeight() * 2;
     }
-    // itemWidth() {
-    //     return this._itemWidth;
-    // }
     maxPageRows() {
         return 100;
     }
@@ -3529,8 +3486,6 @@ const exportClass ={
     Window_InputSymbolList:Window_InputSymbolList,
     Window_GamepadConfig:Window_GamepadConfig_MA,
     Window_KeyConfig:Window_KeyConfig_MA,
-    //削除予定・非推奨　返事が無ければ消す
-    //symbolToButtonNumber:symbolToButtonNumber,
     defaultKeyMapper:{},
     defaultGamepadMapper:{},
     gotoKey:function(){
