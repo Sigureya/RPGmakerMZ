@@ -6,7 +6,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 5.3.1 2021/04/15
+// ver 5.4.0 2021/04/22
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -176,6 +176,9 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 2021/04/22 ver 5.4.0
+ * MZのみ:タッチボタンの表示機能を試験的に実装
+ * 
  * 2021/04/15 ver 5.3.1
  * コモンイベント呼び出しを修正(簡単にしました)
  * イベントコマンドでコンフィグを開くと保存されない不具合を修正
@@ -258,14 +261,31 @@
  */
 /**
 
+/*~struct~TouchButton:
+ * @param image
+ * @type file
+ * @dir img/
+ * @desc 通常時は上の半分、押されている間は下の半分が使われます。
+ * upper is used normally, and lower is used when pressed.
+ * @default system
+ * 
+ * @param x
+ * @type number
+ * @default 0
+ * 
+ * @param y
+ * @type number
+ * @default 0
+ * 
+*/
 
 
 /*~struct~InputDefine:
  * 
  * @param keys
  * @text キー設定/keySetting
- * @desc 半角英字で設定。例：ASD
- * Set the key corresponding to the action (ex:ASD)
+ * @desc 半角英字で設定。例 Ef65
+ * Set the key corresponding to the action (ex:Ef65)
  * 
  * @param button
  * @text パッドボタン/padButton
@@ -326,8 +346,8 @@
  * 
  * @param eventId
  * @text 呼び出すイベント/event
- * @desc プラグインコマンド「登録イベントの呼び出し」用のイベント
- * 
+ * @desc ボタンを押した際に呼び出すコモンイベント
+ * Common event to call when a button is pressed
  * @type common_event
  * @default 0
  * 
@@ -343,30 +363,13 @@
  * @value 2
  * @default 0
  * 
+ * @param touchButton
+ * @text タッチボタン/touchButton
+ * @type struct<TouchButton>
+ * @desc MZのみ:画面上にタッチUI向けのボタンを追加します
  */
 
-/*~struct~ButtonInfo:
- *
- * @param buttonName
- * @text ボタンの名前
- * @desc ボタンの名前
- * 
- * @param action
- * @desc 割り当てる機能
- * @type combo
- * @option ok
- * @option cancel
- * @option shift
- * @option menu
- * @option pageup
- * @option pagedown
- * @default 
- * 
- * @param keys
- * @text キーボード設定(SHIFTなどは不可)
- * @desc 入力を設定するキーボードの一覧です。(英数指定)
- * ASDと書いた場合、ASDの3つのキーにシンボルが入ります。
- */
+
  /*~struct~MultiLangNote:
   * @param jp
   *  @text 日本語
@@ -537,7 +540,6 @@ class MultiLanguageText{
         const mtext = new MultiLanguageText();
         mtext.setNameJP(obj.jp);
         mtext.setNameEN(obj.en);
-
         return mtext;
     }
     /**
@@ -576,7 +578,108 @@ class MultiLanguageText{
         return this._defaultName;
     }
 }
+class TouchButton{
+    /**
+     * @param {String} filePath 
+     * @param {Number} x 
+     * @param {Number} y 
+     */
+    constructor(filePath,x,y){
+        const result= (/(.*)\/(.*)/).exec(filePath);
+        if(result){
+            this.setFilePath("img/"+result[1]+"/",result[2]);
+        }else{
+            this.setFilePath("","");
+        }
+        this._x = x;
+        this._y = y;
+    }
+    /**
+     * @param {String} folder 
+     * @param {String} fileName 
+     */
+    setFilePath(folder,fileName){
+        this._folder =folder;
+        this._fileName = fileName;
+    }
+    isValid(){
+        return !!this._fileName;
+    }
+    /**
+     * @param {ExtendsSymbol} symbol 
+     */
+    setSymbolObject(symbol){
+        this._symbol = symbol;
+    }
+    isVisible(){
+        return true;
+    }
+    bitmap(){
+        return ImageManager.loadBitmap(this._folder,this._fileName);
+    }
+    rect(){
+        return new Rectangle();
+    }
+    symbol(){
+        return this._symbol.symbol();
+    }
+    symbolObject(){
+        return this._symbol;
+    }
+    x(){
+        return this._x;
+    }
+    y(){
+        return this._y;
+    }
+    isEnabled(){
+        return true;
+    }
+    clearPress(){
+        const symbol = this.symbol();
+        Input._currentState[symbol]=false;
+    }
+    virtualPress(){
+        const symbol = this.symbol();
+        if(!Input._currentState[symbol]){
+            Input._currentState[symbol]=TouchInput.isPressed();
+        }
+    }
+}
+class ButtonManager_T{
+    constructor(){
+        this.setList([]);
+    }
+    /**
+     * 
+     * @param {TouchButton[]} list 
+     */
+    setList(list){
+        this._list =list;
+    }
+    getList(){
+        return this._list;
+    }
+
+    /**
+     * @param {TouchButton} button 
+     */
+    addButton(button){
+        this._list.push(button);
+    }
+    isTouchButtonEnabled(){
+        return  Utils.RPGMAKER_NAME ==="MZ" && this._list.length > 0;
+    }
+}
+const ButtonManager = new ButtonManager_T();
+
+
+
 class SymbolColorManager_T{
+
+    paramatorInvalidColor(){
+        return "#FF00FF";
+    }
     emptyColor(){
         return "#000000";
     }
@@ -590,8 +693,21 @@ class SymbolColorManager_T{
         return this.mandatoryColor();
     }
 }
+
 const SymbolColorManager = new SymbolColorManager_T();
 class I_SymbolDefine{
+    isParamatorValid(){
+        if(!this.symbol()){
+            return false;
+        }
+        if(!this.name()){
+            return false;
+        }
+        if(this.isUnknow()){
+            return false;
+        }
+        return true;
+    }
     symbolBackColor(){
         return this.backColor();
     }
@@ -782,7 +898,9 @@ class EventCaller{
         return this._eventId;
     }
     callEvent(){
-        $gameTemp.reserveCommonEvent(this.eventId());
+        if(!$gameTemp.isCommonEventReserved()){
+            $gameTemp.reserveCommonEvent(this.eventId());
+        }
     }
     /**
      * @param {String} symbol 
@@ -798,6 +916,9 @@ class EventCaller{
      */
     needsEventCall(symbol){
         if(this._eventId > 0){
+
+            //return Input.isTriggered(symbol);
+
             switch (this._inputType) {
                 case 1:
                     return Input.isTriggered(symbol)
@@ -807,6 +928,15 @@ class EventCaller{
             return Input.isPressed(symbol);    
         }
         return false;
+    }
+    typeIsPressed(){
+        return this._inputType === 0;
+    }
+    typeIsTriggered(){
+        return this._inputType === 1;
+    }
+    typeIsRepeated(){
+        return this._inputType === 2;
     }
 }
 
@@ -826,8 +956,6 @@ class ExtendsSymbol extends I_SymbolDefine{
         this._actionName = actionName;
         this._overwriteEnabled =false;
         this.setKeyText("");
-        // this.setEventId(0);
-        // this.setInputType(0);
         this.setMandatory(false);
     }
     /**
@@ -842,23 +970,9 @@ class ExtendsSymbol extends I_SymbolDefine{
         }
         return super.displayKeyName();
     }
-    /**
-     * 
-     * @param {Number} type 
-     */
-    setInputType(type){
-        this._inputType =type;
+    eventCaller(){
+        return this._event;
     }
-    /**
-     * @param {Number} switchId 
-     */
-    setEventId(switchId){
-        this._eventId =switchId;
-    }
-    switchId(){
-        return this._eventId;
-    }
-
     setMandatory(value){
         this._mandatory = value;
     }
@@ -890,17 +1004,11 @@ class ExtendsSymbol extends I_SymbolDefine{
     }
     readMySymbol(){
         const pad = this.padSymbol();
-        if(pad){
-            return pad;
-        }
+        if(pad){ return pad; }
         const key =this.firstKeySymbol()
-        if(key){
-            return key;
-        }
+        if(key){ return key; }
         const eventId =this._event.eventId()
-        if(eventId > 0){
-            return "call"+eventId;
-        }
+        if(eventId > 0){ return "call"+eventId; }
         return "";
     }
     loadSymbol(){
@@ -908,7 +1016,6 @@ class ExtendsSymbol extends I_SymbolDefine{
             const symbol =this.readMySymbol();
             this._symbol = symbol;
         }
-
         if(this.isEmpty()){
             this.setMandatory(false);
         }
@@ -930,7 +1037,8 @@ class ExtendsSymbol extends I_SymbolDefine{
         }
         const len = this._keys.length;
         for(let i =0; i< len;++i){
-            this.mapperWrite(Input.keyMapper,this._keys.charCodeAt(i));
+            const key =this._keys.charCodeAt(i);
+            this.mapperWrite(Input.keyMapper,key);
         }
     }
     updateEventCall(){
@@ -953,27 +1061,6 @@ class ExtendsSymbol extends I_SymbolDefine{
     }
 }
 
-function extendsSymbols(){
-    const param = getParam();
-    /**
-     * @type {String[]}
-     */
-    const textList = JSON.parse(param.extendsMapper);
-    const listX = textList.map((text)=>{
-        const obj = JSON.parse(text);
-        const mtext = MultiLanguageText.create(obj.name);
-        const keys =String(obj.keys||"");
-        const eventObj = new EventCaller(Number(obj.eventId),Number(obj.inputType ||0));
-        const def = new ExtendsSymbol(mtext, Number(obj.button), keys,eventObj);
-        def.setMandatory(obj.mandatory ==="true");
-        def.setKeyText(obj.keyText||"");
-        return def;
-    });
-    for (const iterator of listX) {
-        iterator.loadSymbol();
-    }
-    return listX;
-}
 /**
  * @param {String} symbol 
  */
@@ -1063,25 +1150,9 @@ function createUnknowSymbolObject(symbol){
     return new UnknowSymbol(symbol);
 }
 
-//TODO:Mv用に残すかもしれない
-/**
- * @param {Game_Interpreter} root 
- * @param {Number[]} eventIdList 
- */
-function eventMultiCall(root,eventIdList){
-    let target = root;
-    for (let index = eventIdList.length-1; index >=0; index--) {
-        const eventId = eventIdList[index];
-        const newEvent = $dataCommonEvents[eventId];
-        if(newEvent){
-            target.setupChild(newEvent.list,target.eventId());
-            target = target._childInterpreter;
-        }
-    }
-}
 const Game_Map_setupStartingEvent =Game_Map.prototype.setupStartingEvent;
 Game_Map.prototype.setupStartingEvent =function(){
-    symbolMapper.callButtonEventV2();
+    symbolMapper.callButtonEvent();
     return Game_Map_setupStartingEvent.call(this);
 };
 
@@ -1095,20 +1166,20 @@ class SymbolMapper_T{
          * @type {UnknowSymbol[]}
          */
         this._unknowList=[];
+        this.setExtendSymbols([]);
         this._basicSymbols = basicSymbols();
-        this._extendSymbols = extendsSymbols();
         this._moveSymbols = createMoveSymbols();
         this.addDictionaryItems(this._basicSymbols);
         this.addDictionaryItems(this._moveSymbols);
     }
-
-    isEventCallble(){
-        return true;
+    /**
+     * @param {ExtendsSymbol[]} list 
+     */
+    setExtendSymbols(list){
+        this._extendSymbols =list;
     }
-    callButtonEventV2(){
-        if(!this.isEventCallble()){
-            return;
-        }
+
+    callButtonEvent(){
         for (const iterator of this._extendSymbols) {
             iterator.updateEventCall();
         }
@@ -1179,10 +1250,6 @@ class SymbolMapper_T{
         }
     }
 
-    getUnknowSymbols(){
-        return this.getSymbolList().filter((def)=>{ return def.isUnknow()})
-    }
-
     /**
      * @returns {I_SymbolDefine[]}
      */
@@ -1209,17 +1276,7 @@ class SymbolMapper_T{
     systemSymbols(){
         return ["debug","control","tab"];
     }
-    /**
-     * @returns {I_SymbolDefine[]}
-     */
-    getMandatorySymbols(){
-        //使ってないのでいずれ消す
-        return []
-        // const src= this._list.
-        // filter(function(def){return def.isMandatory()})
-        // .map(function(def2){return def2.symbol()});
-        // return new Set(src);
-    }
+
     /**
      * @param {String} symbol 
      */
@@ -1260,6 +1317,170 @@ class SymbolMapper_T{
     }
 }
 const symbolMapper = new SymbolMapper_T();
+//TODO:ボタン用の情報をどう持たせるのか　このタイミングではシンボルが確定していない
+function loadButtonDefine(objText){
+    const obj = JSON.parse(objText);
+    const x  =Number(obj.x);
+    const y = Number(obj.y);
+    const button = new TouchButton(obj.image,x,y);
+    return button;
+}
+
+function extendsSymbolsV2(){
+    const param = getParam();
+    /**
+     * @type {String[]}
+     */
+    const textList = JSON.parse(param.extendsMapper);
+    /**
+     * @type {TouchButton[]}
+     */
+    const buttonImage =[];
+    const listX = textList.map((text)=>{
+        const obj = JSON.parse(text);
+        const mtext = MultiLanguageText.create(obj.name);
+        const keys =String(obj.keys||"");
+        const eventObj = new EventCaller(Number(obj.eventId),Number(obj.inputType ||0));
+        const def = new ExtendsSymbol(mtext, Number(obj.button), keys,eventObj);
+
+        //タッチ操作用ボタン生成 パラメータの構成やシンボルの初期化の関係でここしかない
+        if(obj.touchButton ){
+            const button = loadButtonDefine(obj.touchButton);
+            if(button &&  button.isValid()){
+                button.setSymbolObject(def);
+                buttonImage.push(button);    
+            }
+        }
+
+        def.setMandatory(obj.mandatory ==="true");
+        def.setKeyText(obj.keyText||"");
+        return def;
+    });
+    for (const iterator of listX) {
+        iterator.loadSymbol();
+    }
+    return {
+        symbols:listX,
+        buttonImage:buttonImage,
+    };
+}
+
+
+{
+    const tmp=extendsSymbolsV2();
+    symbolMapper.setExtendSymbols(tmp.symbols);
+    ButtonManager.setList(tmp.buttonImage);
+}
+
+if(ButtonManager.isTouchButtonEnabled()){
+    class Sprite_EX_ButtonMZ extends Sprite_Clickable{
+        /**
+         * @param {TouchButton} touchButton 
+         */
+        constructor(touchButton){
+            super();
+            this._button = touchButton;
+            this._imageHeight =0;
+            this.loadBitmap();
+            this.refresh();
+        }
+        refresh(){
+            //this._button.isEnabled();
+            this.x = this._button.x();
+            this.y = this._button.y();
+        }
+        loadBitmap(){
+            this.bitmap = this._button.bitmap();
+            if(this.bitmap.isReady()){
+                this.onLoadeed();
+            }else{
+                this.bitmap.addLoadListener((bitmap)=>{
+                    this.onLoadeed();
+                } );
+            }
+        }
+        onLoadeed(){
+            //画像を上下半々で使うように設定
+            this._imageHeight=this.bitmap.height /2;
+            this.setColdFrame();
+        }
+        setColdFrame(){
+            this.setFrame(0,0,this.bitmap.width,this._imageHeight)
+        }
+        setHotFrame(){
+            this.setFrame(0,this._imageHeight,this.bitmap.width,this._imageHeight);
+        }
+        updateFrame(){
+            if(this.isPressed()){
+                this.setHotFrame();
+            }else{
+                this.setColdFrame();
+            }
+        }
+        update(){
+            super.update();
+            //動いているけど、これでいいのか不明
+            if(!this.isPressed()){
+                this._button.clearPress();
+            }
+            this.updateFrame();
+        }
+        onPress(){
+            this._button.virtualPress();
+        }
+        onClick(){
+            Input.virtualClick(this._button.symbol()  );
+        }
+    }
+    class Spriteset_TouchButton extends PIXI.Container{
+        constructor(){
+            super();
+            this._buttons =[];
+            const buttons = ButtonManager.getList();
+            for (const iterator of buttons) {
+                const sprite = new Sprite_EX_ButtonMZ(iterator);
+                this.addChild(sprite);
+                this._buttons.push(sprite);
+            }
+        }
+        get z(){
+            return 1;
+        }
+        update(){
+            for (const iterator of this._buttons) {
+                iterator.update();
+            }
+        }
+        isAnyButtonPressed(){
+            return this._buttons.some( (button)=>{
+                 return button.isPressed()
+            });
+        }
+    }
+
+    Scene_Map.prototype.createTouchButtonMA =function(){
+        const spriteset = new Spriteset_TouchButton();
+        this.addWindow(spriteset);
+        this._touchButtonsMA = spriteset;
+    };
+    const Scene_Map_createButtons = Scene_Map.prototype.createButtons;
+    Scene_Map.prototype.createButtons =function(){
+        Scene_Map_createButtons.call(this);
+        if(ConfigManager.touchUI){
+            this.createTouchButtonMA();
+        }
+    };
+    const Scene_Map_isAnyButtonPressed=Scene_Map.prototype.isAnyButtonPressed;
+    Scene_Map.prototype.isAnyButtonPressed =function(){
+        const result= Scene_Map_isAnyButtonPressed.call(this);
+        if(result){
+            return true;
+        }
+        return this._touchButtonsMA && this._touchButtonsMA.isAnyButtonPressed();
+    };
+
+}
+
 class GamepadButton{
     /**
      * @param {Number} buttonId 
@@ -1302,8 +1523,8 @@ class Gamepad{
             new GamepadButton(10,"L3"),
             new GamepadButton(11,"R3"),
             new GamepadButton(16,"center")
-        ];//.map(function(g){return Object.freeze(g)});
-        this._list = buttons;// Object.freeze(buttons);
+        ];
+        this._list = buttons;
     }
     maxItems(){
         return this._list.length;
@@ -1496,6 +1717,8 @@ function inputMapperHasSymbol(mapper,symbol){
     }
     return false;
 }
+
+
 
 const ColorSrc = window["ColorManager"] || null;
 /**
@@ -1736,21 +1959,10 @@ function createPadState(padId) {
     }
     const gamepads =navigator.getGamepads();
     if(!gamepads){return null}
-
     return  gamepads[padId];
 }
 
-/**
- * @param {Gamepad} pad 
- */
-function createPadinfoText(pad) {
-    if(pad){
-        const text= `${pad.id.replace("(","\n(")}
-        buttons:${pad.buttons.length} mapping:${pad.mapping}`;
-        return text;
-    }
-    return setting.gamepadIsNotConnected;
-}
+
 class Window_GamepadConfig_MA extends Window_InputConfigBase{
     initialize(rect) {
         this.setMapper(Input.gamepadMapper);
@@ -1837,9 +2049,7 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
     }
     processOk() {
         const index = this.index();
-        if (index < 0) {
-            return;
-        }
+        if (index < 0) { return; }
         if(this.isEnabledCommand(index)){
             this.processCommandOk();
             return;
@@ -2030,7 +2240,6 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
 class Scene_InputConfigBase_MA extends Scene_MenuBase{
     constructor(){
         super();
-        //メモ
         //popSceneModeとapplyOnExitは別
         //前者はシーン切り替え検知で、後者は一度設定が変更されたことの検知
         //混ぜてはいけない
@@ -2052,26 +2261,6 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
      */
     defaultMapper(){
         return {};
-    }
-    testDefaultMapperIsValid(){
-        if(this.hasHelpText()){
-            return;
-        }
-        const symbols= symbolMapper.getMandatorySymbols();
-
-        if(symbols.size <=0){
-            return;
-        }
-        //出力したいもの
-        //初期設定のmapperの中に無い、必須指定されているシンボル
-        const mapper= this.mainWidnow().defaultMapper();
-
-        for (const iterator of Object.values(mapper)) {
-            symbols.delete(iterator);
-        }
-        if(symbols.size >0){
-            this.setHelpText("初期設定に入っていない必須シンボルがあります");
-        }
     }
 
     symbolListWidth(){
@@ -2118,18 +2307,9 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
     isBottomHelpMode(){
         return false;
     }
-    makeUnknowSymbolText(){
-        //不明なSymbolの一覧を取得
-        //ループして表示用の内容を作る
-        //
-    }
-    makeHelpText(){
-        this.makeUnknowSymbolText();
-    }
     createHelpWindow(){
         this._helpWindow = new Window_Help(this.helpWindowInitParam());
         this.addWindow(this._helpWindow);
-        this.makeHelpText();
     }
     mainWindowHeight(){
         return this.symbolListWindowTop() - this.mainAreaTop();
@@ -2144,7 +2324,6 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
     }
 
     symbolListWindowTop(){
-
         return Graphics.boxHeight -this.symbolListWindowHeight();
     }
     symbolListWindowHeight(){
@@ -2252,23 +2431,6 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
         }
         return true;
     }
-    /**
-     * @desc TODO この複雑なテストは使用するか未定。全チェックで重いなら検討
-     * @param {I_SymbolDefine} newSymbol 
-     * @param {String} oldSymbol 
-     */
-    needSymbolTest(newSymbol,oldSymbol){
-        const oldIsMandatory = symbolMapper.isMandatorySymbol(oldSymbol);
-        if(newSymbol.isMandatory()){
-            if(this.mainWidnow().hasSymbol(newSymbol.symbol())){
-
-            }
-        }
-
-        if(symbolMapper.isMandatorySymbol(oldSymbol)){
-
-        }
-    }
 
     //オーバーライドしないこと！ここでデータの整合性チェックを行っている
     onSymbolListOk() {
@@ -2306,23 +2468,6 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
     saveConfig(){
         //override
     }
-    testMapperValid(){
-        const symbols = symbolMapper.getMandatorySymbols();
-        const mapper = this.mapper();
-        for (const key in mapper) {
-            if (mapper.hasOwnProperty(key)) {
-                const element = mapper[key];
-            }
-        }
-    }
-    showUnknowSymbols(){
-        const symbols = symbolMapper.getSymbolList().filter(function(s){
-            return s.isUnknow();
-        });
-        if(symbols.length <=0){
-            return;
-        }
-    }
 }
 
 class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
@@ -2342,11 +2487,9 @@ class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
         super.create();
         this.createAllWindows();
     }
-
     gamepadWindowRect(){
         return this.mainWindowRect();
     }
-
     createGamepadConfigWindow() {
         const rect = this.gamepadWindowRect();
         const gcw = new Window_GamepadConfig_MA(rect);
@@ -2373,11 +2516,6 @@ class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
     saveMapper(){
         Input.gamepadMapper = this._gamepadWindow.cloneMapper();
     }
-
-    isAnyPressed(){
-//        Input.
-//        Input.
-    }
     onConfigCancel() {
         SoundManager.playCancel();
         SceneManager.pop();
@@ -2387,9 +2525,6 @@ class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
         this.createGamepadConfigWindow();
         this.createSymbolListWindow();
         this._gamepadWindow.activate();
-    }
-    makeHelpText(){
-        super.makeHelpText();
     }
 }
 
@@ -2682,6 +2817,7 @@ const CommandManager = new Key_CommandManager_T();
 function keyinfo(char,keycord){
     return new Key_Char(char,keycord);
 }
+
 
 const WASD_KEYMAP={
     81:"pageup",    //Q
@@ -3038,6 +3174,7 @@ const KEY_LAYOUT_US =(function(){
     return Object.freeze( layout);
 })();
 
+//TODO:カーソル移動に異常があるので修正する
 class Window_KeyConfig_MA extends Window_InputConfigBase {
     mapper(){
         return this._map;
@@ -3064,7 +3201,6 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
     mainFontFace(){
         if(Utils.RPGMAKER_NAME ==="MV"){
             return this.standardFontFace();
-
         }
         return $gameSystem.mainFontFace();
     }
@@ -3243,13 +3379,27 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
         return this.textColor(4);
     }
     /**
+     * @param {I_SymbolDefine} inputDef 
+     * @param {Rectangle} rect 
+     */
+    drawKeyback(inputDef,rect){
+        if(!inputDef){
+            this.drawSymbolBack(rect,SymbolColorManager.emptyColor());
+            return;
+        }
+        if(inputDef.isParamatorValid()){
+            this.drawSymbolBack(rect,inputDef.backColor());
+        }else{
+            this.drawSymbolBack(rect,SymbolColorManager.paramatorInvalidColor());
+        }
+    }
+    /**
      * @param {Key_Base} key
      * @param {I_SymbolDefine} inputDef 
      * @param {Rectangle} rect 
      */
     drawInputDefine(key,inputDef,rect){
-        const backColor = inputDef ? inputDef.backColor() : SymbolColorManager.emptyColor();
-        this.drawSymbolBack(rect,backColor);
+        this.drawKeyback(inputDef,rect);
         this.drawText(key.char,rect.x,rect.y,rect.width,"center");
         if(inputDef && !inputDef.isEmpty()){
             const symbolY = rect.y + this.lineHeight()-6;
@@ -3319,7 +3469,6 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
 }
 
 class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
-
     helpWindowLines(){
         return 2;
     }
@@ -3349,12 +3498,6 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
     saveMapper(){
         Input.keyMapper = this._keyconfigWindow.cloneMapper();
     }
-    //TODO:次回更新でコメントアウト部分含めて消す
-    //シーン直接呼出しを想定して、保存方法を変更
-    // terminate() {
-    //     ConfigManager.setKeyLayoutMA(this._keyconfigWindow.getKeyLayout());
-    //     super.terminate();
-    // }
     setWASD_Move(){
         this._keyconfigWindow.setWASD_Move();
         this._keyconfigWindow.playApplySound();
@@ -3409,33 +3552,25 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
 
     Window_Options.prototype.isGamepadConfig=function(index){
         const elem= this._list[index];
-        if(elem &&elem.symbol ===MA_GAMEPAD_CONFIG){
-            return true;
-        }
-        return false;
+        return(elem &&elem.symbol ===MA_GAMEPAD_CONFIG);
     }
     Window_Options.prototype.isKeyboardConfig=function(index){
         const elem= this._list[index];
-        if(elem &&elem.symbol ===MA_KEYBOARD_CONFIG){
-            return true;
-        }
-        return false;
+        return (elem &&elem.symbol ===MA_KEYBOARD_CONFIG);
     }
     const Window_Options_processOk = Window_Options.prototype.processOk;
     Window_Options.prototype.processOk =function(){
         if(this.isGamepadConfig(this._index)){
             this.playOkSound();
             Mano_InputConfig.gotoGamepad();
-//            SceneManager.push(Scene_GamepadConfigMA);
             return;
         }
         if(this.isKeyboardConfig(this._index)){
             this.playOkSound();
             Mano_InputConfig.gotoKey();
-//            SceneManager.push(Scene_KeyConfig_MA);
             return;
         }
-        Window_Options_processOk.call(this);       
+        Window_Options_processOk.call(this);
     };
 function setupDefaultMapper(){
     symbolMapper.onBoot();
@@ -3456,16 +3591,11 @@ if(Utils.RPGMAKER_NAME =="MV"){
             setupDefaultMapper();
             Scene_Boot_start.call(this);
         };
-        //MV workaround
-        // Scene_InputConfigBase_MA.prototype.mainAreaTop = function(){
-        //     return this._helpWindow.y + this._helpWindow.height;
-        // };
         Window_Selectable_InputConfigVer.prototype.drawItemBackground =function(){};
 
         Window_Selectable_InputConfigVer.prototype.itemRectWithPadding = Window_Selectable_InputConfigVer.prototype.itemRectForText;
     })();
 }else{
-
     PluginManager.registerCommand( PLUGIN_NAME,"IsGamepadValid",function(arg){
         const sid = (arg.switchId);
         const value = symbolMapper.isValidMapper(Input.gamepadMapper);
