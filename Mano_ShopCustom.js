@@ -6,7 +6,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 1.0.0 2021/03/14
+// ver 1.1.0 2021/05/04
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -37,14 +37,28 @@
  * @type boolean
  * @default false
  * 
+ * @param priceZero
+ * @text 値段0の扱い/
+ * @type boolean
+ * @on 表示する
+ * @off 表示しない
+ * @default true
+ * 
  * @help
  * 値段を変数で決められるショップ
  * プラグインコマンドを呼び出すのみです。
  * それ以外の機能はありません。
  * 
+ * アイテムの値段が0である場合、表示されなくなります。
+ * 
  * Shops where prices can be determined by variables
  * Just call the plugin command.
  * There is no other function.
+ * 
+ * 更新履歴
+ * 2021/05/04
+ * 値段が0の際の扱いを調整可能に
+ * 
  * */
  /*~struct~Item:
   * @param item
@@ -109,6 +123,14 @@
 (function(){
     'use strict';
 const PLUGIN_NAME='Mano_ShopCustom';
+function getParam(){ return PluginManager.parameters('Mano_ShopCustom');  }
+const setting = (function(){
+    const param =getParam();
+    const result ={
+      priceZero:(param.priceZero)==="true",
+    };
+    return result;
+})();
 /**
  * @param {Number} itemType 
  */
@@ -146,11 +168,13 @@ function argToShopItem(arg,itemType ,outList){
   const obj = JSON.parse(arg);
   const itemId = Number(obj.item);
   if(itemId===0){
+    //    console.log("itemIdが0なので消す")
     return;
   }
   const switchId = Number(obj.switchId);
   if(switchId >0){
     if(!$gameSwitches.value(switchId)){
+    //  console.log("switchがOFFなので消す")
       return;
     }
   }
@@ -159,7 +183,10 @@ function argToShopItem(arg,itemType ,outList){
 
   const price =( cusotmMode ===1) ? $gameVariables.value(variableId) : getItemPrice(itemId,itemType);
   if(price <=0){
-    return;
+      if(!setting.priceZero){
+          console.log("値段が0なので消す")
+          return;
+      }
   }
   const result= [
     itemType,
@@ -199,6 +226,7 @@ PluginManager.registerCommand(PLUGIN_NAME,"shop",(arg)=>{
      xx(items,0,goods);
      xx(weapons,1,goods);
      xx(armors,2,goods);
+
      SceneManager.push(Scene_Shop);
      SceneManager.prepareNextScene(goods,arg.buyOnly ==="true");
 });
