@@ -20,12 +20,7 @@
  * 
  * @target MZ
  * 
- * @param AutoEventCall
- * @text ボタンイベントの自動呼出し/AutoEventCall
- * @desc 拡張設定で設定したコモンイベントを自動で呼び出します
- * @type boolean
- * @default true
- * 
+
  * @command IsKeyboardValid
  * @desc キーボードの設定が正しい場合、指定スイッチをONにします。
  * @arg switchId
@@ -139,6 +134,9 @@
  * @type struct<MultiLangString>
  * @default {"en":"keyboard config","jp":"キーコンフィグ"}
  * 
+ * @param gamepadBackground
+ * @type file
+ * @dir img/background
  * 
  * @help
  * ※日本語テキストは下の方にあるのでスクロールしてください
@@ -176,6 +174,9 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 2021/05/05 ver5.9.0
+ * 次回の新機能実装のため、内部実装を修正
+ * 
  * 2021/04/22 ver 5.4.0
  * MZのみ:タッチボタンの表示機能を試験的に実装
  * 
@@ -459,23 +460,6 @@
   * @default {}
   * 
 */
- /*~struct~ColorDefine:
-  * 
-  * @param 
-  * @desc コマンドの幅
-  * @type number
-  * @min 0
-  * @max 10
-  * @default 3
-  * 
-  * @param mandatory
-  * @default 
-  * 
-  * @param extends
-  * @type struct<MultiLangString>
-  * @default {}
-  * 
-*/
 
 var Imported = Imported || {};
 if(Imported.Mano_InputConfig){
@@ -673,8 +657,6 @@ class ButtonManager_T{
 }
 const ButtonManager = new ButtonManager_T();
 
-
-
 class SymbolColorManager_T{
 
     paramatorInvalidColor(){
@@ -696,6 +678,7 @@ class SymbolColorManager_T{
 
 const SymbolColorManager = new SymbolColorManager_T();
 class I_SymbolDefine{
+
     isParamatorValid(){
         if(!this.symbol()){
             return false;
@@ -716,7 +699,6 @@ class I_SymbolDefine{
      */
     keyBackColor(){
         return "#ffd530" ;
-        return this.backColor();
     }
     customBackColor(){
         return "";
@@ -916,9 +898,6 @@ class EventCaller{
      */
     needsEventCall(symbol){
         if(this._eventId > 0){
-
-            //return Input.isTriggered(symbol);
-
             switch (this._inputType) {
                 case 1:
                     return Input.isTriggered(symbol)
@@ -988,7 +967,7 @@ class ExtendsSymbol extends I_SymbolDefine{
     padSymbol(){
         return Input.gamepadMapper[this._buttonId];
     }
-        /**
+    /**
      * @returns {String}
      */
     firstKeySymbol(){
@@ -1066,15 +1045,13 @@ class ExtendsSymbol extends I_SymbolDefine{
  */
 function KeyWithTheSymbolPlaced(symbol){
     let keys ="";
-    keyMapperFor(function(key,value){
-        if(value===symbol){
-            const keyN =Number(key);
-            if(keyN >=48 && keyN<=90){
-                const k=String.fromCodePoint(key);
-                keys+=k;
-            }
+    for (const iterator of Object.entries(Input.keyMapper)) {
+        if(iterator[1]===symbol){
+            const keyN =Number(iterator[0]);
+            const char = String.fromCodePoint(keyN);    
+            keys +=char;
         }
-    });
+    }
     return keys;
 }
 
@@ -1088,25 +1065,6 @@ function buttonWithTheSymbolPlaced(symbol){
         }
     }
     return NaN;
-}
-
-/**
- * @param {any} mapper 
- * @param {(key:String,value:String)=>void} func 
- */
-function mapperFor(mapper,func){
-    for (const key in mapper) {
-        if (mapper.hasOwnProperty(key)) {
-            const element = mapper[key];
-            func(key,element);
-        }
-    }
-}
-/**
- * @param {(key:String,value:String)=>void} func 
- */
-function keyMapperFor(func){
-    mapperFor(Input.keyMapper,func);
 }
 
 class UnknowSymbol extends I_SymbolDefine{
@@ -1184,8 +1142,6 @@ class SymbolMapper_T{
             iterator.updateEventCall();
         }
     }
-
-
     onBoot(){
         this.loadExtendsSymbols();
         this.loadUnknowSymbols();
@@ -1296,6 +1252,25 @@ class SymbolMapper_T{
     allMandatorySymbols(){
         return this.getSymbolList().filter( (def)=>{ return def.isMandatory()});
     }
+    /**
+     * @param {TemporaryMappper} mapper 
+     */
+    isValidMapper2(mapper){
+        const set = mapper.valuesSet();
+        const m=this.allMandatorySymbols()
+        for (const iterator of m) {
+            const symbol = iterator.symbol();
+            if(Input._isEscapeCompatible(symbol)){
+                if(set.has("escape")){
+                    continue;
+                }
+            }
+            if(!set.has(symbol)){
+                return false;
+            }
+        }
+        return true;
+    }
     isValidMapper(mapper){
         /**
          * @type {Set<String>}
@@ -1326,7 +1301,7 @@ function loadButtonDefine(objText){
     return button;
 }
 
-function extendsSymbolsV2(){
+function extendsSymbols(){
     const param = getParam();
     /**
      * @type {String[]}
@@ -1365,32 +1340,25 @@ function extendsSymbolsV2(){
     };
 }
 
-
 {
-    const tmp=extendsSymbolsV2();
+    const tmp=extendsSymbols();
     symbolMapper.setExtendSymbols(tmp.symbols);
     ButtonManager.setList(tmp.buttonImage);
 }
 
 if(ButtonManager.isTouchButtonEnabled()){
-    class Sprite_EX_ButtonMZ extends Sprite_Clickable{
+
+    class Sprite_EX_Base extends Sprite_Clickable{
         /**
-         * @param {TouchButton} touchButton 
+         * @param {Bitmap} bitmap 
          */
-        constructor(touchButton){
+        constructor(bitmap){
             super();
-            this._button = touchButton;
+            this.bitmap =bitmap;
             this._imageHeight =0;
-            this.loadBitmap();
-            this.refresh();
+            this.setupBitmapOnLoad();
         }
-        refresh(){
-            //this._button.isEnabled();
-            this.x = this._button.x();
-            this.y = this._button.y();
-        }
-        loadBitmap(){
-            this.bitmap = this._button.bitmap();
+        setupBitmapOnLoad(){
             if(this.bitmap.isReady()){
                 this.onLoadeed();
             }else{
@@ -1417,19 +1385,34 @@ if(ButtonManager.isTouchButtonEnabled()){
                 this.setColdFrame();
             }
         }
-        update(){
-            super.update();
-            //動いているけど、これでいいのか不明
-            if(!this.isPressed()){
-                this._button.clearPress();
-            }
-            this.updateFrame();
+    }
+
+    class Sprite_EX_ButtonMZ extends Sprite_EX_Base{
+        /**
+         * @param {TouchButton} touchButton 
+         */
+         constructor(touchButton){
+             super(touchButton.bitmap());
+             this._button = touchButton;
+             this.resetPosition();
+
+        }
+        resetPosition(){
+            this.x = this._button.x();
+            this.y = this._button.y();
         }
         onPress(){
             this._button.virtualPress();
         }
         onClick(){
             Input.virtualClick(this._button.symbol()  );
+        }
+        update(){
+            super.update();
+            if(!this.isPressed()){
+                this._button.clearPress();
+            }
+            this.updateFrame();
         }
     }
     class Spriteset_TouchButton extends PIXI.Container{
@@ -1480,13 +1463,24 @@ if(ButtonManager.isTouchButtonEnabled()){
     };
 
 }
+//ボタンとキーの共通基底クラス
+class InputButtonBase{
 
-class GamepadButton{
+    name(){
+        return "";
+    }
+    mapperId(){
+        return NaN;
+    }
+}
+
+class GamepadButton extends InputButtonBase{
     /**
      * @param {Number} buttonId 
      * @param {String} name 
      */
     constructor(buttonId,name){
+        super();
         this._name =name;
         this._buttonId=buttonId;
     }
@@ -1494,6 +1488,10 @@ class GamepadButton{
     name(){
         return this._name;
     }
+    mapperId(){
+        return this.buttonId();
+    }
+    
     buttonId(){
         return this._buttonId;
     }
@@ -1597,7 +1595,6 @@ const setting = (function(){
         unknowGuidText:guid,
         keyWindowLineHeight:22,
         gamepad :new Gamepad(),
-        autoEventCall:(params.AutoEventCall)==="true",
         overwriteWarning:(params.overwriteWarning==='true'),
         keyText:keyText,
         emptySymbolText:String(params.textEmpty),
@@ -1637,7 +1634,6 @@ const MA_KEYBOARD_CONFIG =makeCONFIG_KEY('KEYBOARD_CONFIG');
 const MA_GAMEPAD_CONFIG = makeCONFIG_KEY('GAMEPAD_CONFIG');
 const MA_KEYBOARD_LAYOUT =makeCONFIG_KEY('KEYBOARD_LAYOUT');
 
-
 function readGamePadConfig( config ){
     const value = config[MA_GAMEPAD_CONFIG];
     if(value){
@@ -1657,7 +1653,8 @@ ConfigManager.setKeyLayoutMA =function(layout){
 };
 
 function defaultKeyLayout() {
-    if($gameSystem.isJapanese()){
+    //オプション系プラグインで先行してmakeData()するタイプへの対策
+    if($gameSystem && $gameSystem.isJapanese()){
         return 'JIS';
     }
     return 'US';
@@ -1687,39 +1684,6 @@ ConfigManager.applyData =function(config){
     Input.clear();
 };
 
-function createNormalizedInputMapper(mapper){
-    const result={};
-    for(const key in mapper){
-        const val =mapper[key];
-        if(val){
-            result[key] = val
-        }
-    }
-    return result;
-}
-/**
- * @return {boolean}
- * @param {[Number:string]} mapper 
- * @param {string} symbol 
- */
-function inputMapperHasSymbol(mapper,symbol){
-    for(var key in mapper){
-        if(mapper[key]===symbol){
-            return true;
-        }
-    }
-    if(Input._isEscapeCompatible(symbol)){
-        for(var key in mapper){
-            if(mapper[key]==='escape'){
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-
-
 const ColorSrc = window["ColorManager"] || null;
 /**
  * @returns {Window_Base}
@@ -1727,6 +1691,76 @@ const ColorSrc = window["ColorManager"] || null;
  */
 function getColorSrc(window_base){
     return ColorSrc||window_base;
+}
+class TemporaryMappper{
+    /**
+     * @returns {Map<Number,String>}
+     * @param {*} mapper 
+     */
+    static createMap(mapper){
+        const map =new Map();
+        for (const iterator of Object.entries(mapper)) {
+            const code = Number(iterator[0]);
+            if(!isNaN(code)){
+                map.set(code,iterator[1]);
+            }
+        }
+        return map;
+    }
+    constructor(mapper){
+        this.reset(mapper);
+    }
+    valuesSet(){
+        const set =new Set(this._map.values());
+        return set;
+    }
+    reset(mapper){
+        this._map = TemporaryMappper.createMap(mapper);
+    }
+    /**
+     * @param {Number} code 
+     * @param {String} symbol 
+     */
+    change(code,symbol){
+        this._map.set( Number(code),symbol);
+    }
+    createNormalizedMapper(){
+        const result ={};
+        for (const iterator of this._map) {
+            result[iterator[0]] = iterator[1];
+        }
+        return result;
+    }
+    symbolObjectFromCode(codeId){
+        const symbol = this._map.get(codeId);
+        return symbolMapper.findSymbol(symbol);
+    }
+    /**
+     * 
+     * @param {Number} code 
+     * @returns {String}
+     */
+    findFromCod(code){
+        return this._map.get(code);
+    }
+    /**
+     * @param {String} symbol 
+     */
+    hasSymbol(symbol){
+        const isEscapeCompatible = Input._isEscapeCompatible(symbol);
+        for (const iterator of this._map.values()) {
+            if(iterator ===symbol){
+                return true;
+            }
+            if(isEscapeCompatible){
+                if(iterator ==="escape"){
+                    return true;
+                }
+            }
+        }
+        return false;
+
+    }
 }
 
 class Window_Selectable_InputConfigVer extends Window_Selectable{
@@ -1867,7 +1901,18 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
     }
 }
 
+class Window_SymbolList_ALT extends Window_InputSymbolList{
+    findXXX(){
+        //ボタンとキーを同じインターフェースに揃える
+    }
+    drawItem(index){
+        super.drawItem(index);
+    }
+}
 class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
+    initialize(rect){
+        super.initialize(rect);
+    }
     playResetSound(){
         SoundManager.playEquip();
     }
@@ -1879,6 +1924,12 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
     }
     exitCommandIndex(){
         return -1;
+    }
+    /**
+     * @returns {Number}
+     */
+    currentButtonCode(){
+        throw (new Error("not imple"));
     }
     /**
      * @param {Number} index 
@@ -1919,16 +1970,19 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
      * @param {String} symbol 
      */
     hasSymbol(symbol){
-        return inputMapperHasSymbol(this.mapper(),symbol);
+        return this._mapper2.hasSymbol(symbol);
     }
     canApplySetting(){
         return this.isValidMapper();
     }
     isValidMapper(){
-        return symbolMapper.isValidMapper(this.mapper());
+        return symbolMapper.isValidMapper2(this._mapper2);
     }
     setMapper(mapper){
-        throw new Error( "method not ipriments!")
+        if(!this._mapper2){
+            this._mapper2 = new TemporaryMappper({});
+        }
+        this._mapper2.reset(mapper);
     }
     resetMapper(){
         this.setMapper(this.defaultMapper());
@@ -1936,11 +1990,11 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
     defaultMapper(){
         return {}
     }
-    mapper(){
-        return {}
+    mapperClass(){
+        return this._mapper2;
     }
     cloneMapper(){
-        return createNormalizedInputMapper(this.mapper());
+        return this._mapper2.createNormalizedMapper();
     }
     updateHelp(){
         const symbol = this.currentSymbol();
@@ -1963,28 +2017,14 @@ function createPadState(padId) {
 }
 
 
-class Window_GamepadConfig_MA extends Window_InputConfigBase{
+
+class Window_GamepadButtons extends Window_InputConfigBase{
     initialize(rect) {
         this.setMapper(Input.gamepadMapper);
-        this.makeCommandList();
         super.initialize( rect);
-        this.defineSymbolTextWidth();
         this.select(0);
         this.refresh();
     }
-
-    makeCommandList() {
-        const exit =CommandManager.exit();
-        const reset =CommandManager.reset()
-        const apply = CommandManager.apply();
-        this._command =[
-            reset ,
-            apply,
-            exit
-        ];
-        this._exitCommandIndex = this.buttonItems() + this._command.indexOf(exit);
-    }
-
     /**
      * @param {Number} index 
      */
@@ -2007,6 +2047,7 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
     isEnabledCommand(index){
         return index >= this.buttonItems();
     }
+
 
     cursorDown(wrap) {
         const index = this.index();
@@ -2069,13 +2110,6 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
     numVisibleRows() {
         return Math.ceil(this.maxItems() / this.maxCols());
     }
-
-    setMapper(map) {
-        this._map = objectClone(map);
-    }
-    mapper(){
-        return this._map;
-    }
     defaultMapper(){
         return Mano_InputConfig.defaultGamepadMapper;
     }
@@ -2086,6 +2120,9 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
     buttonNumber(index) {
         const button= setting.gamepad.button(index);
         return button.buttonId();
+    }
+    currentButtonCode(){
+        return this.buttonNumber(this._index);
     }
     /**
      * @param {number} index
@@ -2100,7 +2137,7 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
      */
     symbol(index) {
         const buttonNumber = this.buttonNumber(index);
-        return this._map[buttonNumber];
+        return this._mapper2.findFromCod(buttonNumber);
     }
     /**
      * @param {number} index
@@ -2109,29 +2146,6 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
     symbolText(index) {
         const s =this.symbol(index)
         return symbolMapper.actionName(s);
-    }
-    defineSymbolTextWidth() {
-        var width = 0;
-        for (var key in setting.symbolText) {
-            width = Math.max(width, this.textWidth(setting.symbolText[key]));
-        }
-        this._symbolTextWidth = width;
-    }
-    /**
-     * @return {number}
-     */
-    symbolTextWidth() {
-        return this._symbolTextWidth;
-    }
-    /**
-     * @param {number} index
-     * @param {String} newSymbol
-     */
-    changeKeyMap(index, newSymbol) {
-        const buttonNumber = this.buttonNumber(index);
-        this._map[buttonNumber] = newSymbol;
-        this.redrawItem(index);
-        this.redrawApplyCommand(this.canApplySetting());
     }
 
     //メモ ボタン一覧を示すリストと、保存などに使うコマンドは別の配列
@@ -2208,7 +2222,7 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
      * @return {boolean}
      */
     canApplySetting() {
-        return symbolMapper.isValidMapper(this._map);
+        return symbolMapper.isValidMapper2(this._mapper2);
     }
     exitCommandIndex() {
         return this._exitCommandIndex;
@@ -2237,6 +2251,38 @@ class Window_GamepadConfig_MA extends Window_InputConfigBase{
     }
 }
 
+class Window_GamepadConfig_MA extends Window_GamepadButtons{
+    initialize(rect){
+        this.makeCommandList();
+        super.initialize(rect);
+    }
+    makeCommandList() {
+        const exit =CommandManager.exit();
+        const reset =CommandManager.reset()
+        const apply = CommandManager.apply();
+        this._command =[
+            reset ,
+            apply,
+            exit
+        ];
+        this._exitCommandIndex = this.buttonItems() + this._command.indexOf(exit);
+    }
+}
+
+class Window_GamepadConfig_ALT extends Window_GamepadButtons{
+    makeCommandList() {
+        const exit =CommandManager.exit();
+        const reset =CommandManager.reset()
+        const apply = CommandManager.apply();
+        this._command =[
+//            reset ,
+//            apply,
+//            exit
+        ];
+        this._exitCommandIndex = this.buttonItems() + this._command.indexOf(exit);
+    }
+}
+
 class Scene_InputConfigBase_MA extends Scene_MenuBase{
     constructor(){
         super();
@@ -2255,6 +2301,22 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
      */
     setHelpText(text){
         this._helpWindow.setText(text)
+    }
+    /**
+     * @returns {Bitmap}
+     */
+    backBitmap(){
+        return null;
+    }
+    createBackground(){
+        const bitmap = this.backBitmap();
+        if(!bitmap){
+            super.createBackground();
+            return;
+        }
+        const sprite = new Sprite(bitmap);
+        this._backgroundSprite = sprite;
+        this.addChild(sprite);
     }
     /**
      * @desc 派生先クラスで定義すること 初期設定のコンフィグ
@@ -2354,7 +2416,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
     }
 
     resetMapper(){
-        const mainWindow = this.mainWidnow();
+        const mainWindow = this.controllerWidnow();
         mainWindow.resetMapper();
         mainWindow.playResetSound();
         mainWindow.refresh();
@@ -2363,7 +2425,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
     }
 
     applyConfig(){
-        const mainWindow = this.mainWidnow();
+        const mainWindow = this.controllerWidnow();
         if(mainWindow.isValidMapper()){
             mainWindow.playApplySound();
             this._applyOnExit = true;
@@ -2400,7 +2462,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
         this.selectSymbol();
     }
     selectSymbol() {
-        const currentSymbol = this.mainWidnow().currentSymbol();
+        const currentSymbol = this.controllerWidnow().currentSymbol();
         this._symbolListWindow.show();
         this._symbolListWindow.activate();
         this._symbolListWindow.selectSymbol(currentSymbol);
@@ -2408,14 +2470,22 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
     /**
      * @return {Window_InputConfigBase}
      */
-    mainWidnow() {
+    controllerWidnow() {
         return null;
     }
+    changeSymbol_vV2(){
+        const mainWindow = this.controllerWidnow();
+        const newSymbol = this._symbolListWindow.currentSymbolObject().symbol();
+        const oldSymbol = mainWindow.currentSymbol();
+        if(newSymbol!==oldSymbol){
+            this.mapperClass().change(
+                this.controllerWidnow().currentButtonCode(),
+                newSymbol
+            );
+            mainWindow.redrawCurrentItem();
+            mainWindow.redrawApplyCommand( mainWindow.canApplySetting() );
 
-    /**
-     * @param {I_SymbolDefine} symbol 
-     */
-    changeSymbol(symbol){
+        }
     }
 
     /**
@@ -2424,23 +2494,17 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
      */
     isMapperValid(newSymbol,oldSymbol){
         if(symbolMapper.isMandatorySymbol(oldSymbol)){
-            return this.mainWidnow().hasSymbol(oldSymbol);
+            return this.controllerWidnow().hasSymbol(oldSymbol);
         }
         if(newSymbol.isMandatory()){
-            return this.mainWidnow().isValidMapper();
+            return this.controllerWidnow().isValidMapper();
         }
         return true;
     }
 
     //オーバーライドしないこと！ここでデータの整合性チェックを行っている
     onSymbolListOk() {
-        const mainWindow = this.mainWidnow();
-        const newSymbol = this._symbolListWindow.currentSymbolObject();
-        const oldSymbol = this.mainWidnow().currentSymbol();
-        if(newSymbol.symbol()!==oldSymbol){
-            this.changeSymbol(newSymbol);
-            mainWindow.redrawApplyCommand(mainWindow.isValidMapper());
-        }
+        this.changeSymbol_vV2();
         this.endActionSelect();
     }
     onSymbolListCancel() {
@@ -2449,12 +2513,12 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
     endActionSelect() {
         this._symbolListWindow.deselect();
         this._symbolListWindow.hide();
-        this.mainWidnow().activate();
+        this.controllerWidnow().activate();
+    }
+    mapperClass(){
+        return this.controllerWidnow().mapperClass();
     }
 
-    mapper(){
-        return {};
-    }
     terminate(){
         super.terminate();
         if(this._applyOnExit){
@@ -2471,18 +2535,6 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
 }
 
 class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
-    /**
-     * @param {object} [gamepadMapper] 読み込むコンフィグデータ 無指定の場合、現在の設定値を読み込む
-     */
-    setGamepadMapper(gamepadMapper) {
-        if(this._gamepadWindow){
-            this._gamepadWindow.setMapper(gamepadMapper);
-            this._gamepadWindow.refresh();
-        }
-    }
-    mapper(){
-        return this._gamepadWindow.mapper();
-    }
     create() {
         super.create();
         this.createAllWindows();
@@ -2503,14 +2555,7 @@ class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
         this.addWindow(gcw);
     }
 
-    /**
-     * @param {I_SymbolDefine} symbolObject 
-     */
-    changeSymbol(symbolObject){
-        const index = this._gamepadWindow.index();
-        this._gamepadWindow.changeKeyMap(index, symbolObject.symbol());
-    }
-    mainWidnow() {
+    controllerWidnow() {
         return this._gamepadWindow;
     }
     saveMapper(){
@@ -2527,8 +2572,80 @@ class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
         this._gamepadWindow.activate();
     }
 }
+class Window_SymbolListALT extends Window_InputSymbolList{
+    symbolWidth(){
+        return 400;
+    }
+    buttonWidth(){
+        return 200;
+    }
+    xsss(){
+        //シンボルを取得
+        const s= this.symbolObject(0);
 
-class Key_Base{
+        //シンボルからゲームパッドのボタンオブジェクトを取得
+
+        //ボタンが存在すれば描画
+    }
+    onOkXXX(){
+        //シンボルを取得
+        //キー一覧を開く
+        //
+    }
+}
+//アクション→ボタンの順で設定するタイプ
+class Scene_GamepadConfig_ALT extends Scene_MenuBase{
+
+    createGamepadWindow(){
+        const gcw = new Window_GamepadConfig_ALT();
+
+        this._gamepadWindow =gcw;
+        this.addWindow(gcw);
+    }
+    controllerWindow(){
+        return this._gamepadWindow;
+    }
+    createSymbolListWindow(){
+        const slw = new Window_SymbolList_ALT();
+        slw.setHandler("ok",this.onSymbolListOk.bind(this));
+        this.addWindow(slw);
+        this._symbolListWindow =slw;
+    }
+    /**
+     * @param {String} symbol 
+     * @returns {String}
+     */
+    findCode(symbol){
+        const list =Object.entries(this.mapper());
+        for (const iterator of object) {
+            if(iterator[1]===symbol){
+                return iterator[0];
+            }
+        }
+        return "";
+    }
+
+    onSymbolListOk(){
+        //シンボルを取得
+        const symbol = this._symbolListWindow.currentSymbolObject();
+
+        //シンボルを基に、ボタンを探す
+        const code = this.findCode(symbol.symbol());
+        const cw = this.controllerWindow();
+        cw.activate();
+        cw.open();
+    }
+    callSymbolChange(){
+        
+    }
+
+    onControllerOk(){
+
+    }
+}
+
+
+class Key_Base extends InputButtonBase{
     /**
      * @returns {String}
      */
@@ -2546,6 +2663,12 @@ class Key_Base{
     }
     get keycord(){
         return 0;
+    }
+    name(){
+        return this.char;
+    }
+    mapperId(){
+        return this.keycord;
     }
     /**
      * @param {Window_KeyConfig_MA} keyWindow 
@@ -2938,9 +3061,7 @@ class Key_Layout{
         this._buttonItems = srcList.length;
         const list = srcList.concat(CommandManager.createCommandList_ForKeyLayout());
         Key_Layout.keylayout_SetupIndex(list);
-
         this._list =Object.freeze( list);
-        //要調整
         this._enterKeyIndex = this._list.indexOf(KEYS.ENTER_JIS)
     }
 
@@ -3176,9 +3297,7 @@ const KEY_LAYOUT_US =(function(){
 
 //TODO:カーソル移動に異常があるので修正する
 class Window_KeyConfig_MA extends Window_InputConfigBase {
-    mapper(){
-        return this._map;
-    }
+
     defaultMapper(){
         return Mano_InputConfig.defaultKeyMapper;
     }
@@ -3186,9 +3305,9 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
      * @param {Rectangle} rect 
      */
     initialize(rect) {
-        this.setMapper(Input.keyMapper);
         this.setKeyLayout(ConfigManager.keyLayout_MA);
         super.initialize(rect);
+        this.setMapper(Input.keyMapper);
         this.refresh();
         this.activate();
         this.select(0);
@@ -3209,21 +3328,11 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
         this.contents.fontSize = this.lineHeight()-2;//$gameSystem.mainFontSize();
         this.resetTextColor();
     }
-
-    /**
-     * @param {Number} index 
-     * @param {String} symbol 
-     */
-    changeKeyMap(index, symbol) {
-        const keyNumber = this.keyNumber(index);
-        this._map[keyNumber] = symbol;
-        this.redrawItem(index);
-    }
     setWASD_Move(){
         for (const key in WASD_KEYMAP) {
             if (WASD_KEYMAP.hasOwnProperty(key)) {
                 const element = WASD_KEYMAP[key];
-                this._map[key]=(element);
+                this._mapper2.change(key,element);
             }
         }
         this.refresh();
@@ -3236,9 +3345,6 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
     }
     getKeyLayout() {
         return this._layout._name;
-    }
-    setMapper(mapper) {
-        this._map = objectClone(mapper);
     }
     itemTextAlign() {
         return 'center';
@@ -3327,7 +3433,7 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
     keyNumber(index) {
         return this.item(index).keycord;
     }
-    currentKeyNumber() {
+    currentButtonCode() {
         return this.keyNumber(this.index());
     }
     keyName(index) {
@@ -3413,10 +3519,10 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
      */
     symbol(index) {
         const keyNumber = this.keyNumber(index);
-        return this._map[keyNumber];
+        return this.symbolFromKeyNumber(keyNumber);
     }
     symbolFromKeyNumber(keyNumber){
-        const symbol = this._map[keyNumber];
+        const symbol = this._mapper2.findFromCod(keyNumber)
         return symbolMapper.findSymbol(symbol);
     }
     
@@ -3427,7 +3533,6 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
         const symbol = this.symbol(index);
         return symbol;
     }
-
     /**
      * @param {Number} index 
      */
@@ -3482,13 +3587,6 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
         SoundManager.playCancel();
         SceneManager.pop();
     }
-    /**
-     * @param {I_SymbolDefine} symbol 
-     */
-    changeSymbol(symbol) {
-        const index = this._keyconfigWindow.index();
-        this._keyconfigWindow.changeKeyMap(index, symbol.symbol());
-    }
     onKeyLayoutOk(){
         this._keyconfigWindow.processChangeLayout();
     }
@@ -3523,7 +3621,7 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
         this.addWindow(kcw);
         this._keyconfigWindow = kcw;
     }
-    mainWidnow() {
+    controllerWidnow() {
         return this._keyconfigWindow;
     }
 }
