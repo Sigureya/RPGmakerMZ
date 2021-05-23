@@ -6,7 +6,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 5.5.0 2021/05/18
+// ver 6.0.0 2021/05/23
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -76,12 +76,6 @@
  * @type struct<InputDefine>[]
  * @default []
  * 
- * @param overwriteWarning
- * @text 上書き警告
- * @desc このプラグインで割り当てたボタン設定が、既存の入力に対して上書きしている場合にconsoleへ警告を出します
- * @type boolean
- * @default true
- * 
  * @param GamepadIsNotConnected
  * @text 未接続/GamepadIsNotConnected
  * @desc ゲームパッドが接続されていない場合の文章です。
@@ -113,6 +107,10 @@
  * @param WASD
  * @type struct<KeyconfigCommand>
  * @default {"width":"3","text":"{\"jp\":\"WASD\",\"en\":\"WASD\"}"}
+ * 
+ * @param style
+ * @type struct<KeyconfigCommand>
+ * @default {"width":"3","text":"{\"jp\":\"設定方法変更\",\"en\":\"Change setting style\"}"}
  * 
  * @param changeLayout
  * @text JIS/US
@@ -178,9 +176,11 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
- * 2021/05/18 ver5.5.0
- * 次回の新機能実装のため、内部実装を修正
- * 新機能実装は中止
+ * 
+ * 
+ * 2021/05/23 ver 6.0.0
+ * ゲームパッドにシンボルに対してボタンを割り当てる機能を実装。
+ * 
  * 
  * 2021/04/22 ver 5.4.0
  * MZのみ:タッチボタンの表示機能を試験的に実装
@@ -1209,7 +1209,11 @@ class SymbolMapper_T{
      * @returns {I_SymbolDefine[]}
      */
     getSymbolList(){
-        return this._basicSymbols.concat(this._extendSymbols,this._unknowList,[ new SymbolDeleteObject() ]);
+        return this._basicSymbols.concat(
+            this._extendSymbols,
+            this._unknowList
+            //,[ new SymbolDeleteObject() ]
+            );
     }
 
     /**
@@ -1533,10 +1537,29 @@ class GamepadButton extends InputButtonBase{
         return "#000000";
     }
 }
+class InputDeviceBase{
+    /**
+     * 
+     * @returns {InputButtonBase[]}
+     */
+    buttonList(){
+        return []
+    }
+    numButtons(){
+        return this.buttonList().length;
+    }
+    defaultMapper(){
+        return {};
+    }
+    currentMapper(){
+        return {}
+    }
+}
 //ボタンの名前を入れておくクラス
 //また、編集可能なボタンを制御する際にも使う
-class Gamepad{
+class Gamepad extends InputDeviceBase{
     constructor(){
+        super();
         const moves =[
             new GamepadButton(12,"↑"),
             new GamepadButton(13,"↓"),
@@ -1556,8 +1579,8 @@ class Gamepad{
             new GamepadButton(8,"select"),
             new GamepadButton(9,"start"),
             new GamepadButton(10,"L3"),
-            new GamepadButton(11,"R3"),
-            new GamepadButton(16,"center")
+            new GamepadButton(11,"R3")
+//          ,new GamepadButton(16,"center")
         ];
         this._list = buttons;
     }
@@ -1592,14 +1615,14 @@ class Gamepad{
     /**
      * @param {number} index
      */
-    button(index){
+    buttonAt(index){
         return this._list[index];
     }
     /**
      * @param {Number} index
      */
     buttonName(index){
-        const b = this.button(index);
+        const b = this.buttonAt(index);
         if(b){ return b.name();}
         return "";
     }
@@ -1611,6 +1634,15 @@ class Gamepad{
         return this._list.map( (button)=>{
             return new GGG_Button(button);
         })
+    }
+    buttonList(){
+        return this._list;
+    }
+    defaultMapper(){
+        return Mano_InputConfig.defaultGamepadMapper;
+    }
+    currentMapper(){
+        return Input.gamepadMapper;
     }
 }
 
@@ -1662,11 +1694,16 @@ const setting = (function(){
     const guid = new MultiLanguageText();
     guid.setNameJP("不明なシンボルです 入力拡張に項目を追加してください");
     guid.setNameEN("This is an unknown symbol. Add an item to the input extension");
+
+    const buttonUsedForALT =new MultiLanguageText();
+    buttonUsedForALT.setNameJP("このボタンには%1が割り当て済みです");
+    buttonUsedForALT.setNameEN("%1 has been assigned to this button")
+
     const result= {
+        buttonUsedForALT:buttonUsedForALT,
         unknowGuidText:guid,
         keyWindowLineHeight:22,
         gamepad :new Gamepad(),
-        overwriteWarning:(params.overwriteWarning==='true'),
         keyText:keyText,
         emptySymbolText:String(params.textEmpty),
         /**
@@ -1698,7 +1735,7 @@ function makeCONFIG_KEY(base) {
     }
     return base;
 }
-
+const MA_INPUTCONFIG_STYLE =makeCONFIG_KEY( "MA_INPUTCONFIG_STYLE");
 const MA_KEYBOARD_CONFIG =makeCONFIG_KEY('KEYBOARD_CONFIG');
 const MA_GAMEPAD_CONFIG = makeCONFIG_KEY('GAMEPAD_CONFIG');
 const MA_KEYBOARD_LAYOUT =makeCONFIG_KEY('KEYBOARD_LAYOUT');
@@ -1717,6 +1754,12 @@ function readKeyboardConfig(config){
     }
     return null;
 }
+/**
+ * @param {String} value 
+ */
+ConfigManager.setInputConfigStyle =function(value){
+    this[MA_INPUTCONFIG_STYLE]=value;
+};
 ConfigManager.setKeyLayoutMA =function(layout){
     ConfigManager.keyLayout_MA =layout;
 };
@@ -1732,6 +1775,7 @@ function defaultKeyLayout() {
 const  ConfigManager_makeData = ConfigManager.makeData;
 ConfigManager.makeData =function(){
     const result = ConfigManager_makeData.call(this);
+    result[MA_INPUTCONFIG_STYLE] = ConfigManager[MA_INPUTCONFIG_STYLE] ||"normal";
     result[MA_GAMEPAD_CONFIG] =Input.gamepadMapper;
     result[MA_KEYBOARD_CONFIG] = Input.keyMapper;
     result[MA_KEYBOARD_LAYOUT] = ConfigManager.keyLayout_MA ||defaultKeyLayout();
@@ -1749,6 +1793,7 @@ ConfigManager.applyData =function(config){
     if(keyMapper){
         Input.keyMapper =keyMapper;
     }
+    ConfigManager.setInputConfigStyle( config[MA_INPUTCONFIG_STYLE]);
     ConfigManager.setKeyLayoutMA(config[MA_KEYBOARD_LAYOUT]||'JIS');
     Input.clear();
 };
@@ -1834,12 +1879,19 @@ class TemporaryMappper extends TemporaryMappperBase{
         return symbolMapper.findSymbol(symbol);
     }
     /**
-     * 
      * @param {Number} code 
      * @returns {String}
      */
     findFromCode(code){
         return this._map.get(code);
+    }
+    /**
+     * @param {Number} code 
+     * @returns 
+     */
+    findObjectFromCode(code){
+        const symbolString = this.findFromCode(code);
+        return symbolMapper.findSymbol(symbolString);
     }
     /**
      * @param {String} symbol 
@@ -1860,10 +1912,19 @@ class TemporaryMappper extends TemporaryMappperBase{
      * @param {String} symbol 
      * @param {Number} code
      */
-    isSymbolPPP(symbol,code){
+    canSymbolChange(symbol,code){
+        return !this.areSymbolAndCode(symbol,code);
+    }
+    /**
+     * @param {String} symbol 
+     * @param {Number} code
+     */
+     areSymbolAndCode(symbol,code){
         const aa = this._map.get(code);
         return aa ===symbol;
     }
+
+
     /**
      * @param {String} symbol 
      */
@@ -1886,6 +1947,48 @@ class TemporaryMappper extends TemporaryMappperBase{
     }
 }
 
+class TemporaryMappperALT extends TemporaryMappper{
+    constructor(mapper){
+        super(mapper);
+        /**
+         * @type {Map<String,Number>}
+         */
+        this._reverseMap = new Map();
+        /**
+         * @type {Set<String>}
+         */
+        this._changeHistory  =new Set();
+    }
+    /**
+     * @param {Number} code 
+     * @param {String} symbol 
+     */
+    change(code,symbol){
+        const oldSymbol = this.findFromCode(code);
+        const finalSymbol = (oldSymbol===symbol) ? "":symbol;
+        super.change(code,finalSymbol);
+    }
+    canSymbolChange(symbol,code){
+        return true;
+    }
+    clearChangeHistory(){
+        this._changeHistory.clear();
+    }
+    hasChanged(symbol){
+        return this._changeHistory.has(symbol);
+    }
+
+    /**
+     * @param {String} symbolString 
+     * @returns 
+     */
+    bbb(symbolString){
+        for (const iterator of this._map.entries()) {
+            
+        }
+        return ""
+    }
+}
 
 class Window_Selectable_InputConfigVer extends Window_Selectable{
     /**
@@ -1976,6 +2079,92 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
     }
     initializeMapper(){
     }
+    
+    mainItems(){
+        return 0;
+    }
+
+    /**
+     * @returns {Key_Command[]}
+     */
+    commandList(){
+        return [];
+    }
+    /**
+     * @param {Number} index 
+     * @returns 
+     */
+    command(index){
+        const commandList = this.commandList();
+        const commandIndex = this.commandIndex(index);
+        return commandList[commandIndex];
+    }
+    commandLength(){
+        return this.commandList().length;
+    }
+
+    /**
+     * @param {Number} index 
+     */
+    commandIndex(index){
+        return index - this.mainItems();
+    }
+    exitCommandIndex(){
+        return -1;
+    }
+    /**
+     * @param {Number} index 
+     */
+    isExitCommand(index){
+        return this.exitCommandIndex() ===index;
+    }
+    /**
+     * 
+     * @param { Number} index 
+     */
+    drawCommand(index){
+        //メモ ボタン一覧を示すリストと、保存などに使うコマンドは別の配列
+        //なので、描画機能は分けてある
+        const command = this.command(index);
+        if(command){
+            this.changePaintOpacity(true);
+            const rect = this.itemRectWithPadding(index);
+            const text =command.text();
+            this.drawText(text,rect.x,rect.y,rect.width);
+        }
+    }
+    processCommandOk(){
+        const command = this.command(this.index());
+        if(command ){
+            if(this.isHandled(command.handle)){
+                this.updateInputData();
+                this.deactivate();
+                this.callHandler(command.handle);    
+            }
+        }else{
+            this.playBuzzerSound();
+        }
+    }
+    callDrawItem(index){
+
+    }
+    callDrawCommand(){
+
+    }
+    // /**
+    //  * @param {Number} index 
+    //  */
+    //  drawItem(index) {
+    //     if(index< this.buttonItems()){
+    //         this.callDrawButton(index);
+    //         return;
+    //     }
+    //     this.drawCommand(index);
+    // }
+
+    playLayoutChangeSound(){
+        SoundManager.playEquip();
+    }
     playResetSound(){
         SoundManager.playEquip();
     }
@@ -1985,9 +2174,6 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
     playSymbolSetSound(){
         SoundManager.playOk();
     }
-    exitCommandIndex(){
-        return -1;
-    }
     /**
      * @returns {Number}
      */
@@ -1995,12 +2181,6 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
         throw (new Error("not imple"));
     }
     
-    /**
-     * @param {Number} index 
-     */
-    isExitCommand(index){
-        return this.exitCommandIndex() ===index;
-    }
     processCancel() {
         this.updateInputData();
         if (this.isExitCommand(this._index)) {
@@ -2032,9 +2212,15 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
     redrawApplyCommand(value){
 
     }
-    buttonItems(){
-        return 0;
+    /**
+     * @returns {InputDeviceBase}
+     */
+    inputDevice(){
+        throw new Error("input device unknow!")
     }
+    // buttonItems(){
+    //     return 0;
+    // }
     /**
      * @returns {TemporaryMappper}
      */
@@ -2059,23 +2245,78 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
     resetMapper(){
         this.temporaryMappper().reset(this.defaultMapper());
     }
-    // srcMapper(){
-    //     return {};
-    // }
     defaultMapper(){
-        return {}
+        return this.inputDevice().defaultMapper();
+//        return {}
     }
     cloneMapper(){
         return this.temporaryMappper().createNormalizedMapper();
-//        return this._mapper2.createNormalizedMapper();
     }
     updateHelp(){
         const obj = this.currentSymbolObject();
-//        const obj = symbolMapper.findSymbol(symbol);
         if(obj){
             this._helpWindow.setText(obj.helpText());
         }else{
             this._helpWindow.clear();
+        }
+    }
+}
+//TODO:ゲームパッド用の一時しのぎ あとで調整して、基底クラスへ機能を移す
+//Gamepadのクラス2種で使えるように共通化する
+class Window_InputConfigBase_workaround extends Window_InputConfigBase{
+    applyCommandIndex() {
+        const index = this.commandList().indexOf(CommandManager.apply())
+        return this.mainItems() + index;
+    }
+    /**
+     * @desc シンボルを書き換えた場合の再描画で使う
+     * @param {Boolean} value 
+     */
+    redrawApplyCommand(value) {
+        const index =this.applyCommandIndex()
+        this.clearItem(index);
+        this.drawItemBackground(index);
+        this.changePaintOpacity(value);
+        const rect = this.itemRectWithPadding(index);
+        this.drawText(CommandManager.getApplyText(), rect.x, rect.y, rect.width);
+        this.changePaintOpacity(true);
+    }
+    
+    isEnabledCommand(index){
+        return index >= this.mainItems();
+    }
+    maxItems(){
+        return this.mainItems()+ this.commandLength();
+    }
+
+    processOk() {
+        const index = this.index();
+        if (index < 0) { return; }
+        if(this.isEnabledCommand(index)){
+            this.processCommandOk();
+            return;
+        }
+
+        if (this.isItemEnabled(index)) {
+            this.updateInputData();
+            this.deactivate();
+            this.playSymbolSetSound();
+            this.callOkHandler();
+        }
+    }
+
+    drawAllItems(){
+        const topIndex = this.topIndex();
+        for (let i = 0; i < this.maxVisibleItems(); i++) {
+            const index = topIndex + i;
+            if (index < this.maxItems()) {
+                this.drawItemBackground(index);
+                if(index< this.mainItems()){
+                    this.drawItem(index);
+                }else{
+                    this.drawCommand(index);
+                }
+            }
         }
     }
 }
@@ -2093,6 +2334,7 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
     }
     makeItemList(){
         this._list = symbolMapper.getSymbolList();
+        this._list.push(new SymbolDeleteObject());
     }
     maxItems(){
         return this._list.length;
@@ -2165,10 +2407,24 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
         }
     }
 }
-
-class Window_SymbolList_ALT extends Window_InputConfigBase{
+class ButtonsMediator{
+    /**
+     * @param {Window_GamepadConfig_ALT} xxxWindow 
+     */
+    constructor(xxxWindow){
+        this._window = xxxWindow;
+    }
+    /**
+     * @param {I_SymbolDefine} symbolObject 
+     */
+    setSymbol(symbolObject){
+        this._window.setSymbolObject(symbolObject);
+    }
+}
+class Window_SymbolList_ALT extends Window_InputConfigBase_workaround{
     initializeMapper(){
-        this._mapper = new TemporaryMappper(Input.gamepadMapper  );
+        const device = this.inputDevice();
+        this._mapper = new TemporaryMappperALT(device.currentMapper() );
     }
     temporaryMappper(){
         return this._mapper;
@@ -2176,55 +2432,107 @@ class Window_SymbolList_ALT extends Window_InputConfigBase{
     initialize(rect){
         this.initializeMapper();
         this.makeItemList();
+        this.makeCommandList();
         super.initialize(rect);
+    }
+    commandList(){
+        return this._commandList;
+    }
+    makeCommandList(){
+        this._commandList =CommandManager.createCommandList_ForGamepad();
+        if(this._list.length %2 !==0){
+            this._commandList.unshift(null);
+        }
     }
     makeItemList(){
         this._list = symbolMapper.getSymbolList();
     }
-    maxItems(){
-        return this._list.length
+    mainItems(){
+        return this._list.length;
     }
     maxCols(){
         return 2;
     }
-    findXXX(){
-        //ボタンとキーを同じインターフェースに揃える
-    }
     symbolTextWidth(){
         return 200;
     }
+    isCurrentItemEnabled(){
+        return this.isItemEnabled(this.index());
+    }
+    /**
+     * @param {Number} index 
+     * @returns 
+     */
     isItemEnabled(index){
         const item = this.symbolObject(index);
-        if(item && item.isEnabled()){
-            return true;
+        if(item  ){
+            return item.isEnabled();
         }
         return false;
     }
+
+    buttonName(symbolString){
+        return this._mapper.bbb(symbolString)
+
+    }
+    inputDevice(){
+        return setting.gamepad;
+    }
+    buttonList(){
+        return this.inputDevice().buttonList();
+    }
     /**
-     * 
      * @param {String}  symbolString
      * @returns {InputButtonBase}
      */
     buttonObject(symbolString){
-
-//        this._mapper.findFromSymbol()
-        return setting.gamepad._list[0];
-        //TODO:ボタン割り当てをどう探すか
-        this._mapper.findFromSymbol(symbolString);
+        if(!symbolString){
+            return null;
+        }
+        const buttons = this.buttonList();
+        for (const iterator of buttons) {
+            if(this._mapper.areSymbolAndCode( symbolString,iterator.buttonId()  )){
+                return iterator;
+            }
+        }
+        return null;
         
     }
     currentSymbolObject(){
         return this.symbolObject(this.index());
     }
+    /**
+     * @param {Number} index 
+     * @returns 
+     */
     symbolObject(index){
         return this._list[index];
     }
+    /**
+     * @param {Number} index 
+     * @returns {String}
+     */
     symbolString(index){
         const obj = this.symbolObject(index);
         if(obj){
             return obj.symbol();
         }
         return "";
+    }
+
+    /**
+     * @param {ButtonsMediator} mediator 
+     */
+    setMediator(mediator){
+        this._mediator = mediator;
+        this.reselect();
+    }
+    updateHelp(){
+        if(this._mediator){
+            const symbol = this.currentSymbolObject();
+            this._mediator.setSymbol(symbol);
+        }
+        super.updateHelp();
     }
 
 
@@ -2284,22 +2592,13 @@ class GGG_Button extends GGG_Base{
     }
 }
 
-class GGG_Command extends GGG_Base{
 
 
-}
-
-class Window_GamepadButtons extends Window_InputConfigBase{
+class Window_GamepadButtons extends Window_InputConfigBase_workaround{
     initialize(rect) {
         super.initialize( rect);
         this.select(0);
         this.refresh();
-    }
-    /**
-     * @returns {Key_Command}
-     */
-    commandList(){
-        return [];
     }
     initializeMapper(){
         this._mapper233 = new TemporaryMappper(Input.gamepadMapper);
@@ -2307,31 +2606,15 @@ class Window_GamepadButtons extends Window_InputConfigBase{
     temporaryMappper(){
         return this._mapper233;
     }
-
-    /**
-     * @param {Number} index 
-     */
-    command(index){
-        return this._command[this.commandIndex(index)];
+    mainItems(){
+        return this.buttonItems();
     }
 
-    commandIndex(index){
-        return index - this.buttonItems();
-    }
-    commandLength(){
-        return 0;
-    }
-    maxItems() {
-        return this.buttonItems() + this.commandLength();
-    }
     buttonItems(){
         return setting.gamepad.maxItems();
     }
     isItemEnabled(index){
         return index < this.buttonItems();
-    }
-    isEnabledCommand(index){
-        return index >= this.buttonItems();
     }
     currentButtonCode(){
         const button= this.padButton(this.index());
@@ -2341,24 +2624,6 @@ class Window_GamepadButtons extends Window_InputConfigBase{
         return -1;
     }
 
-
-    //TODO:大きいとうまく行かないので、いつか調整
-    // cursorDown(wrap) {
-    //     const index = this.index();
-    //     const maxItems = this.maxItems();
-    //     const maxCols = this.maxCols();
-    //     if (wrap || index < maxItems - maxCols) {
-    //         this.select((index + maxCols) % maxItems);
-    //     }
-    // }
-    // cursorUp(wrap) {
-    //     const index = this.index();
-    //     const maxItems = this.maxItems();
-    //     const maxCols = this.maxCols();
-    //     if (index >= maxCols || (wrap)) {
-    //         this.select((index - maxCols + maxItems) % maxItems);
-    //     }
-    // }
     callDefaultHandler() {
         this.callHandler('default');
     }
@@ -2371,16 +2636,6 @@ class Window_GamepadButtons extends Window_InputConfigBase{
             this._helpWindow.setText(this._padInfoText);
         }
         this.activate();
-    }
-    processCommandOk(){
-        const command = this.command(this.index());
-        if(command ){
-            this.updateInputData();
-            this.deactivate();
-            this.callHandler(command.handle);
-        }else{
-            this.playBuzzerSound();
-        }
     }
 
     processOk_V2(){
@@ -2400,37 +2655,17 @@ class Window_GamepadButtons extends Window_InputConfigBase{
         this.playSymbolSetSound();
         this.callOkHandler();
     }
-    processOk() {
-        const index = this.index();
-        if (index < 0) { return; }
-        if(this.isEnabledCommand(index)){
-            this.processCommandOk();
-            return;
-        }
-
-        if (this.isItemEnabled(index)) {
-            this.updateInputData();
-            this.deactivate();
-            this.playSymbolSetSound();
-            this.callOkHandler();
-        }
-    }
 
     maxCols() {
         return setting.cols;
     }
-    numVisibleRows() {
-        return Math.ceil(this.maxItems() / this.maxCols());
-    }
-    defaultMapper(){
-        return Mano_InputConfig.defaultGamepadMapper;
-    }
+
     /**
      * @param {number} index
      * @return {string} buttonNumber
      */
     buttonNumber(index) {
-        const button= setting.gamepad.button(index);
+        const button= setting.gamepad.buttonAt(index);
         return button.buttonId();
     }
     currentButtonCode(){
@@ -2460,22 +2695,12 @@ class Window_GamepadButtons extends Window_InputConfigBase{
         return symbolMapper.actionName(s);
     }
 
-    //メモ ボタン一覧を示すリストと、保存などに使うコマンドは別の配列
-    //なので、描画機能は分けてある
-    drawCommand(index){
-        const command = this.command(index);
-        if(command){
-            this.changePaintOpacity(true);
-            const rect = this.itemRectWithPadding(index);
-            this.drawText(command.text(),rect.x,rect.y,rect.width);
-        }
-    }
 
     /**
      *  @param {Number} index 
      */
     padButton(index){
-        return setting.gamepad.button(index);
+        return setting.gamepad.buttonAt(index);
     }
 
     butttonNameWidth(){
@@ -2505,7 +2730,6 @@ class Window_GamepadButtons extends Window_InputConfigBase{
      */
     callDrawButton(index){
         const rect = this.itemRectWithPadding(index);
-
         //TODO:ボタン描画をいい感じに分離する
 
         this.drawButton_V2(this.padButton(index),this.symbolText(index),rect.x,rect.y,rect.width);
@@ -2517,11 +2741,7 @@ class Window_GamepadButtons extends Window_InputConfigBase{
      * @param {Number} index 
      */
      drawItem(index) {
-        if(index< this.buttonItems()){
-            this.callDrawButton(index);
-            return;
-        }
-        this.drawCommand(index);
+        this.callDrawButton(index);
     }
     makePadInfoText(){
         const pad = createPadState(0);
@@ -2543,29 +2763,13 @@ class Window_GamepadButtons extends Window_InputConfigBase{
     }
 
     exitCommandIndex() {
-        return this._exitCommandIndex;
+        const index = this.commandList().lastIndexOf(CommandManager.exit());
+        return index +this.buttonItems();
+//        return this._exitCommandIndex;
     }
     applyCommandIndex() {
-        return this.buttonItems() + 1;
-    }
-    defaultCommandIndex() {
-        return this.buttonItems();
-    }
-    /**
-     * @desc シンボルを書き換えた場合の再描画で使う
-     * @param {Boolean} value 
-     */
-    redrawApplyCommand(value) {
-        const index =this.applyCommandIndex()
-        this.clearItem(index);
-        this.drawItemBackground(index);
-        this.changePaintOpacity(value);
-        const rect = this.itemRectWithPadding(index);
-        this.drawText(CommandManager.getApplyText(), rect.x, rect.y, rect.width);
-        this.changePaintOpacity(true);
-    }
-    bottom(){
-        return this.y +this.height;
+        const index = this.commandList().indexOf(CommandManager.apply())
+        return this.buttonItems() + index;
     }
 }
 //TODO:マッパー関連をこっちへ移動
@@ -2574,21 +2778,12 @@ class Window_GamepadConfig_MA extends Window_GamepadButtons{
         this.makeCommandList();
         super.initialize(rect);
     }
-
-    commandLength(){
-        return this._command.length;
+    inputDevice(){
+        return setting.gamepad;
     }
 
     makeCommandList() {
-        const exit =CommandManager.exit();
-        const reset =CommandManager.reset()
-        const apply = CommandManager.apply();
-        this._command =[
-            reset ,
-            apply,
-            exit
-        ];
-        this._exitCommandIndex = this.buttonItems() + this._command.indexOf(exit);
+        this._command = CommandManager.createCommandList_ForGamepad();
     }
     commandList(){
         return this._command;
@@ -2610,6 +2805,20 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
         //前者はシーン切り替え検知で、後者は一度設定が変更されたことの検知
         //混ぜてはいけない
         this._popSceneMode=false;
+    }
+    isALTmode(){
+        return false;
+    }
+    /**
+     * @param {String} value 
+     */
+    setAltMode(value){
+        ConfigManager.setInputConfigStyle(value);
+    }
+    start(){
+        const mode = this.isALTmode() ? "ALT":"normal";
+        this.setAltMode(mode);
+        super.start();
     }
     /**
      * @param {String} text 
@@ -2633,11 +2842,8 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
         this._backgroundSprite = sprite;
         this.addChild(sprite);
     }
-    /**
-     * @desc 派生先クラスで定義すること 初期設定のコンフィグ
-     */
     defaultMapper(){
-        return {};
+        return this.mainWidnow().defaultMapper();
     }
 
     symbolListWidth(){
@@ -2778,6 +2984,10 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
     onConfigOk(){
         this.selectSymbol();
     }
+    onConfigCancel() {
+        SoundManager.playCancel();
+        SceneManager.pop();
+    }
     selectSymbol() {
         const currentSymbol = this.mainWidnow().currentSymbolString();
         this._symbolListWindow.show();
@@ -2806,7 +3016,14 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
         return -1;
     }
 
-    changeSymbol_v5(){
+    /**
+     * @param {String} symbol 
+     * @param {Number} code 
+     */
+    changeSymbolV9(symbol,code){
+
+    }
+    callChangeSymbol_v5(){
         const symbol =this.currentSymbolObject().symbol();
         if(!symbol){
             return;
@@ -2814,7 +3031,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
         const code  = this.currentButtonCode();
         if(code >=0){
             const mapper = this.mapperClass();
-            if(!mapper.isSymbolPPP(symbol,code)){
+            if(mapper.canSymbolChange(symbol,code)){
                 mapper.change(code,symbol);
                 this.redrawXXX();
             }    
@@ -2828,7 +3045,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
     }
 
     onSymbolListOk() {
-        this.changeSymbol_v5();
+        this.callChangeSymbol_v5();
         this.endSubWindowSelect();
     }
     onSymbolListCancel() {
@@ -2880,10 +3097,12 @@ class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
         gcw.setHandler(CommandManager.exit().handle, this.onConfigCancel.bind(this));
         gcw.setHandler(CommandManager.apply().handle, this.applyConfig.bind(this));
         gcw.setHandler(CommandManager.reset().handle, this.resetMapper.bind(this));
+        gcw.setHandler(CommandManager.alt().handle,this.gotoALT.bind(this));
         gcw.setHelpWindow(this._helpWindow);
         this._gamepadWindow = gcw;
         this.addWindow(gcw);
     }
+
     currentButtonCode(){
         return this._gamepadWindow.currentButtonCode();
     }
@@ -2897,18 +3116,18 @@ class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
     saveMapper(){
         Input.gamepadMapper = this._gamepadWindow.cloneMapper();
     }
-    onConfigCancel() {
-        SoundManager.playCancel();
-        SceneManager.pop();
-    }
     createAllWindows() {
         this.createHelpWindow();
         this.createGamepadConfigWindow();
         this.createSymbolListWindow();
         this._gamepadWindow.activate();
     }
+    gotoALT(){
+        this.mainWidnow().playLayoutChangeSound();
+        SceneManager.goto(Scene_GamepadConfig_ALT);
+    }
 }
-class Mediator_GamepadALT{
+class Mediator_Mapper{
     /**
      * @param {Window_SymbolList_ALT} symoblWindow 
      */
@@ -2924,9 +3143,9 @@ class Mediator_GamepadALT{
     /**
      * @param {Number} code 
      */
-    xxx(code){
+    isButtonUsed(code){
         const symbol = this._window.currentSymbolString();
-        return this._window.temporaryMappper().isSymbolPPP(symbol,code);
+        return this._window.temporaryMappper().canSymbolChange(symbol,code);
     }
 }
 class Window_GamepadConfig_ALT extends Window_Selectable_InputConfigVer{
@@ -2936,10 +3155,32 @@ class Window_GamepadConfig_ALT extends Window_Selectable_InputConfigVer{
      */
     constructor(rect){
         super(rect);
-        this.setMediator(null);
+        this.setSymbolObject(null);
+//        this.setMediator(null);
+        this.setMapper(null);
+    }
+    refresh(){
+        if(this._mapper && this._symbol){
+            super.refresh();
+        }
     }
     /**
-     * @param {Mediator_GamepadALT} mediator 
+     * @param {TemporaryMappperALT} mapper 
+     */
+    setMapper(mapper){
+        this._mapper =mapper;
+        this.refresh();
+    }
+
+    /**
+     * @param {I_SymbolDefine} symbol 
+     */
+    setSymbolObject(symbol){
+        this._symbol =symbol;
+        this.refresh();
+    }
+    /**
+     * @param {Mediator_Mapper} mediator 
      */
     setMediator(mediator){
         this._mediator = mediator;
@@ -2961,13 +3202,52 @@ class Window_GamepadConfig_ALT extends Window_Selectable_InputConfigVer{
      * @returns 
      */
     itemAt(index){
-        return setting.gamepad.button(index);
+        return this.inputDevice().buttonAt(index);
+    }
+    currentButton(){
+        return this.itemAt(this.index());
+    }
+
+    currentButtonCode(){
+        return this.currentButton().buttonId();
+    }
+    inputDevice(){
+        return setting.gamepad;
+    }
+
+    /**
+     * @param {Number} buttonId 
+     * @returns 
+     */
+    isButtonEnabled(buttonId){
+        const symbolString =this._symbol.symbol();
+        return this._mapper.areSymbolAndCode(symbolString,buttonId);
+    }
+    /**
+     * @param {I_SymbolDefine} symbolObject 
+     */
+    helpText(symbolObject){
+        if(!symbolObject){
+            return "";
+        }
+        if(symbolObject ===this._symbol){
+            return "";
+        }
+
+        const baseText = setting.buttonUsedForALT.currentName();
+        return baseText.format( symbolObject.name() );
+    }
+    updateHelp(){
+        const code = this.currentButtonCode();
+        const obj = this._mapper.findObjectFromCode(code);
+        const text = this.helpText(obj);
+        this._helpWindow.setText(text);
     }
 
     drawItem(index){
         const button = this.itemAt(index);
         if(button){
-            this.changePaintOpacity( this._mediator.xxx(button.buttonId()));
+            this.changePaintOpacity( this.isButtonEnabled(button.buttonId()));
             const rect = this.itemRectWithPadding(index);
             this.drawButton_V3(button,rect.x,rect.y,rect.width);
         }
@@ -2982,15 +3262,35 @@ class Scene_GamepadConfig_ALT extends Scene_InputConfigBase_MA{
         super.create();
         this.createAllWindows();
     }
+    backBitmap(){
+        if(setting.gamepadBackground){
+            return ImageManager.loadBattleback1(setting.gamepadBackground);
+        }
+        return null;
+    }
+    isALTmode(){
+        return true;
+    }
+    terminate(){
+        //相互参照している部分があるので、終了時に参照を切る
+        this._gamepadWindow.setMediator(null);
+        super.terminate();
+    }
     createAllWindows(){
         this.createHelpWindow();
-        this.createSymbolListWindow();
         this.createGamepadWindow();
+        this.createSymbolListWindow();
+        this.setupMeditator();
+    }
+    setupMeditator(){
+        const symbolList = this.mainWidnow();
+        const mediator =new ButtonsMediator(this._gamepadWindow)
+        this._gamepadWindow.setMapper(  symbolList.temporaryMappper());
+        symbolList.setMediator(mediator);
     }
     createGamepadWindow(){
         const rect = this.subWindowRect();
         const gcw = new Window_GamepadConfig_ALT(rect);
-        gcw.setMediator( new Mediator_GamepadALT(this._symbolListWindow  )  );
         gcw.setHelpWindow(this._helpWindow);
         gcw.setHandler("cancel",this.onGamepadCancel.bind(this));
         gcw.setHandler("ok",this.onGamepadOk.bind(this));
@@ -3000,11 +3300,17 @@ class Scene_GamepadConfig_ALT extends Scene_InputConfigBase_MA{
         this.addWindow(gcw);
     }
     onGamepadOk(){
-        this.changeSymbol_v5();
-        this.endSubWindowSelect();
+        this.callChangeSymbol_v5();
+        this._gamepadWindow.redrawCurrentItem();
+        this._gamepadWindow.activate();
+//        this.endSubWindowSelect();
     }
     onGamepadCancel(){
         this.endSubWindowSelect();
+    }
+
+    currentButtonCode(){
+        return this._gamepadWindow.currentButtonCode();
     }
     subWindow(){
         return this._gamepadWindow;
@@ -3018,12 +3324,19 @@ class Scene_GamepadConfig_ALT extends Scene_InputConfigBase_MA{
         slw.setHelpWindow(this._helpWindow);
         slw.setHandler("ok",this.onSymbolListOk.bind(this));
         slw.setHandler("cancel",this.onSymbolListCancel.bind(this));
+        slw.setHandler(CommandManager.reset().handle,this.resetMapper.bind(this));
+        slw.setHandler(CommandManager.exit().handle,this.onConfigCancel.bind(this));
+        slw.setHandler(CommandManager.alt().handle,this.gotoNormalMode.bind(this));
+        slw.setHandler(CommandManager.apply().handle,this.applyConfig.bind(this));
         slw.activate();
         slw.select(0);
         slw.refresh()
         this.addWindow(slw);
         this._symbolListWindow =slw;
     }
+    /**
+     * @returns {Window_SymbolList_ALT}
+     */
     mainWidnow(){
         return this._symbolListWindow;
     }
@@ -3038,6 +3351,7 @@ class Scene_GamepadConfig_ALT extends Scene_InputConfigBase_MA{
         this.popScene();
     }
 
+
     
     onSymbolListOk(){
         //シンボルを取得
@@ -3050,20 +3364,25 @@ class Scene_GamepadConfig_ALT extends Scene_InputConfigBase_MA{
         cw.activate();
         cw.show();
     }
-    callSymbolChange(){
-        const mapper= this._symbolListWindow.temporaryMappper();
-        const symbol= this._symbolListWindow.currentSymbolObject()
-        const code = this._gamepadWindow;
 
-    }
-
-    onControllerOk(){
-
-
-    }
     onControllerCancel(){
         this.endSubWindowSelect();
     }
+    endSubWindowSelect(){
+        super.endSubWindowSelect();
+        const mainWidnow = this.mainWidnow();
+        mainWidnow.refresh();
+        mainWidnow.redrawApplyCommand(  mainWidnow.canApplySetting());
+    }
+
+    xxxxOnChange(){
+        //変更されたキーの一覧を得る
+    }
+    gotoNormalMode(){
+        this.mainWidnow().playLayoutChangeSound();
+        SceneManager.goto(Mano_InputConfig.Scene_GamepadConfig);
+    }
+
 }
 
 
@@ -3307,6 +3626,7 @@ class Key_CommandManager_T{
         this._changeLayout=Key_Command.create(params.changeLayout,"keylayout");
         this._exit=Key_Command.create(params.exit,"exit");
         this._reset=Key_Command.create(params.reset,"reset");
+        this._alt = Key_Command.create(params.style,"ALT")
     }
     keylayout(){
         return this._changeLayout;
@@ -3332,6 +3652,9 @@ class Key_CommandManager_T{
     getApplyText(){
         return this._apply.text();
     }
+    alt(){
+        return this._alt;
+    }
     exit(){
         return this._exit;
     }
@@ -3354,6 +3677,19 @@ class Key_CommandManager_T{
         }
         return result;
     }
+    createCommandList_ForGamepad(){
+        const exit =this.exit();
+        const reset =this.reset()
+        const alt = this.alt();
+        const apply = this.apply();
+        return [
+            apply,
+            reset,
+            alt,
+            exit
+        ];
+
+    }
 }
 const CommandManager = new Key_CommandManager_T();
 /**
@@ -3373,8 +3709,6 @@ const WASD_KEYMAP={
     83:"down",      //S
     68:"right",     //D
 };
-
-
 
 const KEYS ={
     SPACE: new Key_Big("Space",32,4,1,false),
@@ -3467,7 +3801,7 @@ const KEYS ={
     SQUARE_BRACKETS_CLOSE :keyinfo(']',221),
 };
 
-class Key_Layout{
+class Key_Layout extends InputDeviceBase{
     /**
      * @param {Key_Base[]} keyList 
      */
@@ -3482,6 +3816,7 @@ class Key_Layout{
      * @param {Key_Base[]} srcList 
      */
     constructor(layoutName,srcList){
+        super();
         this._name = layoutName;
         this._buttonItems = srcList.length;
         const list = srcList.concat(CommandManager.createCommandList_ForKeyLayout());
@@ -3490,10 +3825,10 @@ class Key_Layout{
         this._enterKeyIndex = this._list.indexOf(KEYS.ENTER_JIS)
     }
 
-    buttonItems(){
+    numButtons(){
         return this._buttonItems;
     }
-    list(){
+    buttonList(){
         return this._list;
     }
     /**
@@ -3501,6 +3836,12 @@ class Key_Layout{
      */
     setEnterKey(enter){
         this._enter=enter;
+    }
+    defaultMapper(){
+        return Mano_InputConfig.defaultKeyMapper;
+    }
+    currentMapper(){
+        return Input.keyMapper;
     }
 }
 
@@ -3723,11 +4064,9 @@ const KEY_LAYOUT_US =(function(){
 //TODO:カーソル移動に異常があるので修正する
 class Window_KeyConfig_MA extends Window_InputConfigBase {
 
-    defaultMapper(){
-        return Mano_InputConfig.defaultKeyMapper;
-    }
     initializeMapper(){
-        this._mapper217 = new TemporaryMappper(Input.keyMapper);
+        const device = this.inputDevice();
+        this._mapper217 = new TemporaryMappper(device.currentMapper());
     }
     temporaryMappper(){
         return this._mapper217;
@@ -3738,7 +4077,6 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
     initialize(rect) {
         this.setKeyLayout(ConfigManager.keyLayout_MA);
         super.initialize(rect);
-//        this.setMapper(Input.keyMapper);
         this.refresh();
         this.activate();
         this.select(0);
@@ -3774,6 +4112,9 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
     setKeyLayout(layoutText){
         this._layout = layoutText ==="JIS"? KEY_LAYOUT_JIS : KEY_LAYOUT_US;
     }
+    inputDevice(){
+        return this._layout;
+    }
     getKeyLayout() {
         return this._layout._name;
     }
@@ -3783,11 +4124,8 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
     exitCommandIndex(){
         return CommandManager.exit()._index;
     }
-    playJIS_US_ChangeSound(){
-        this.playApplySound();
-    }
     processChangeLayout() {
-        this.playJIS_US_ChangeSound();
+        this.playLayoutChangeSound();
         const L = this.getKeyLayout();
         if (L !== 'JIS') {
             this.setKeyLayout('JIS');
@@ -3848,11 +4186,8 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
         }
         return item.rect(this,index);
     }
-    buttonItems(){
-        return this._layout.buttonItems();
-    }
     maxItems() {
-        return this._layout.list().length;
+        return this._layout.buttonList().length;
     }
     spacing() {
         return 0;
@@ -3976,7 +4311,7 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
      * @param {Number} index 
      */
     item(index){
-        return this._layout.list()[index];
+        return this._layout.buttonList()[index];
     }
     /**
      * @param {Number} index 
@@ -4028,10 +4363,6 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
         this.createHelpWindow();
         this.createKeyboradConfigWindow();
         this.createSymbolListWindow();
-    }
-    onConfigCancel() {
-        SoundManager.playCancel();
-        SceneManager.pop();
     }
     onKeyLayoutOk(){
         this._keyconfigWindow.processChangeLayout();
@@ -4171,8 +4502,13 @@ const exportClass ={
     gotoKey:function(){
         SceneManager.push(Mano_InputConfig.Scene_KeyConfig );
     },
+    //TODO:名前をいずれ変更する ただし、VisuStail対策が必須
     gotoGamepad:function(){
-        SceneManager.push(Mano_InputConfig.Scene_GamepadConfig );
+        if(ConfigManager[MA_INPUTCONFIG_STYLE]==="ALT"){
+            SceneManager.push(Mano_InputConfig.Scene_GamepadConfig_ALT );
+        }else{
+            SceneManager.push(Mano_InputConfig.Scene_GamepadConfig );
+        }
     },
 };
 
