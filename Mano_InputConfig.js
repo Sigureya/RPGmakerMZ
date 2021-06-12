@@ -21,6 +21,45 @@
  * 
  * @target MZ
  * 
+ * @command GetButtonName
+ * @text ボタン名の取得/GetButton
+ * @desc 指定した操作がどのボタンにあるかを返します。
+ * Returns which button has the specified action.
+ * @arg symbol
+ * @type select
+ * @option ok(決定)
+ * @value ok
+ * @option cancel(取り消し)
+ * @value cancel
+ * @option shift(ダッシュ)
+ * @value shift
+ * @option menu(メニュー)
+ * @value menu
+ * @option pageup(前)
+ * @value pageup
+ * @option pagedown(次)
+ * @value pagedown
+ * @default ok
+ * 
+ * @arg nameVariable
+ * @desc ボタン名称を受け取る変数です。
+ * Variable to store the result.
+ * @type variable
+ * @default 0
+
+ * @command GetButtonNameEX
+ * @text ボタン名の取得/GetButtonEX
+ * @desc 指定した操作がどのボタンにあるかを返します。
+ * Returns which button has the specified action.
+ * @arg symbol
+ * @desc アクションのシンボル
+ * 
+ * @arg nameVariable
+ * @desc ボタン名称を受け取る変数です。
+ * Variable to store the result.
+ * @type variable
+ * @default 0
+* 
  * @command IsKeyboardValid
  * @desc キーボードの設定が正しい場合、指定スイッチをONにします。
  * @arg switchId
@@ -176,7 +215,8 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
- * 
+ * 2021/06/13 ver6.1.0
+ * シンボルからボタンの名称を取得するプラグインコマンドを追加(MZのみ)
  * 
  * 2021/05/23 ver 6.0.0
  * ゲームパッドにシンボルに対してボタンを割り当てる機能を実装。
@@ -1275,45 +1315,13 @@ class SymbolMapper_T{
         }
         return true;
     }
-    /**
-     * @param {TemporaryMappper} mapper 
-     */
-    isValidMapper2(mapper){
 
-        const set = mapper.createSymbolsSet();
-        return this.isValidMapper_V3(set);
-        // const m=this.allMandatorySymbols()
-        // for (const iterator of m) {
-        //     const symbol = iterator.symbol();
-        //     if(Input._isEscapeCompatible(symbol)){
-        //         if(set.has("escape")){
-        //             continue;
-        //         }
-        //     }
-        //     if(!set.has(symbol)){
-        //         return false;
-        //     }
-        // }
-        // return true;
-    }
     isValidMapper(mapper){
         /**
          * @type {Set<String>}
          */
         const set  = new Set(Object.values(mapper));
-        const m=this.allMandatorySymbols()
-        for (const iterator of m) {
-            const symbol = iterator.symbol();
-            if(Input._isEscapeCompatible(symbol)){
-                if(set.has("escape")){
-                    continue;
-                }
-            }
-            if(!set.has(symbol)){
-                return false;
-            }
-        }
-        return true;
+        return this.isValidMapper_V3(set);
     }
 }
 const symbolMapper = new SymbolMapper_T();
@@ -1538,12 +1546,26 @@ class GamepadButton extends InputButtonBase{
     }
 }
 class InputDeviceBase{
+
     /**
-     * 
+     * @desc ABC順に並んだリスト
+     * @returns {InputButtonBase[]}
+     */
+    indexList(){
+        return [];
+    }
+    /**
      * @returns {InputButtonBase[]}
      */
     buttonList(){
         return []
+    }
+    /**
+     * @param {Number} buttonId 
+     * @returns {InputButtonBase}
+     */
+    button(buttonId){
+        return null
     }
     numButtons(){
         return this.buttonList().length;
@@ -1554,6 +1576,27 @@ class InputDeviceBase{
     currentMapper(){
         return {}
     }
+
+    /**
+     * @param {String} symbol 
+     * @returns 
+     */
+    buttonFromSymbol(symbol){
+        if(!symbol){
+            return null;
+        }
+        const mapper = this.currentMapper();
+        const indexList = this.indexList();
+        for (const button of indexList) {
+            const id = button.mapperId();
+            if(symbol===mapper[id]){
+                return button;;
+            }
+        }
+        return null;
+    }
+
+    
 }
 //ボタンの名前を入れておくクラス
 //また、編集可能なボタンを制御する際にも使う
@@ -1584,6 +1627,12 @@ class Gamepad extends InputDeviceBase{
         ];
         this._list = buttons;
     }
+    button(buttonId){
+        return this._list[buttonId];
+    }
+    indexList(){
+        return this._list;
+    }
     findNormalButton(code){
         const buttonA = this._list[code];
         if(buttonA.buttonId()===code){
@@ -1596,7 +1645,6 @@ class Gamepad extends InputDeviceBase{
             
         }
         return;
-
     }
     /**
      * @param {Number} code 
@@ -1644,6 +1692,19 @@ class Gamepad extends InputDeviceBase{
     currentMapper(){
         return Input.gamepadMapper;
     }
+    isConected(){
+        const pad = createPadState(0);
+        return !!pad;
+    }
+    deviceName(){
+        const pad = createPadState(0);
+        if(pad){
+            return pad.id
+        }
+        return "";
+    }
+
+
 }
 
 function getParam(){
@@ -2481,23 +2542,6 @@ class Window_SymbolList_ALT extends Window_InputConfigBase_workaround{
     buttonList(){
         return this.inputDevice().buttonList();
     }
-    /**
-     * @param {String}  symbolString
-     * @returns {InputButtonBase}
-     */
-    buttonObject(symbolString){
-        if(!symbolString){
-            return null;
-        }
-        const buttons = this.buttonList();
-        for (const iterator of buttons) {
-            if(this._mapper.areSymbolAndCode( symbolString,iterator.buttonId()  )){
-                return iterator;
-            }
-        }
-        return null;
-        
-    }
     currentSymbolObject(){
         return this.symbolObject(this.index());
     }
@@ -2545,7 +2589,7 @@ class Window_SymbolList_ALT extends Window_InputConfigBase_workaround{
             const rect = this.itemRectWithPadding(index);
             const symbolTextWidth = this.symbolTextWidth();
             this.drawSymbolObject(item,rect.x ,rect.y,symbolTextWidth);
-            const button =this.buttonObject(item.symbol());
+            const button =this.inputDevice().buttonFromSymbol(item.symbol());
             if(button){
                 const buttonTextWidth = rect.width - symbolTextWidth;
                 const buttonX = rect.x + symbolTextWidth;
@@ -2638,24 +2682,6 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
         this.activate();
     }
 
-    processOk_V2(){
-        const item = this.itemAt(this.index());
-
-        //コマンド用のシンボルを持っているならそっち
-        const handlerSymbol = item.handlerSymbol();
-        if(handlerSymbol){
-            if(handlerSymbol !=="ok"){
-                this.callHandler(handlerSymbol);
-                return;
-            }
-        }
-        //ボタン側が選択されたので、通常のokに流す。
-        this.updateInputData();
-        this.deactivate();
-        this.playSymbolSetSound();
-        this.callOkHandler();
-    }
-
     maxCols() {
         return setting.cols;
     }
@@ -2731,10 +2757,7 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
     callDrawButton(index){
         const rect = this.itemRectWithPadding(index);
         //TODO:ボタン描画をいい感じに分離する
-
         this.drawButton_V2(this.padButton(index),this.symbolText(index),rect.x,rect.y,rect.width);
-
-
     }
 
     /**
@@ -2787,13 +2810,6 @@ class Window_GamepadConfig_MA extends Window_GamepadButtons{
     }
     commandList(){
         return this._command;
-    }
-    /**
-     * @param {Number} index 
-     */
-    callDrawButton(index){
-        const rect = this.itemRectWithPadding(index);
-        this.drawButton_V2(this.padButton(index),this.symbolText(index),rect.x,rect.y,rect.width);
     }
 }
 
@@ -3358,7 +3374,7 @@ class Scene_GamepadConfig_ALT extends Scene_InputConfigBase_MA{
         const symbol = this._symbolListWindow.currentSymbolObject();
 
         //シンボルを基に、ボタンを探す
-        const code = this.findCode(symbol.symbol());
+        //const code = this.findCode(symbol.symbol());
         const cw = this.subWindow();
         cw.select(0);
         cw.activate();
@@ -3374,17 +3390,11 @@ class Scene_GamepadConfig_ALT extends Scene_InputConfigBase_MA{
         mainWidnow.refresh();
         mainWidnow.redrawApplyCommand(  mainWidnow.canApplySetting());
     }
-
-    xxxxOnChange(){
-        //変更されたキーの一覧を得る
-    }
     gotoNormalMode(){
         this.mainWidnow().playLayoutChangeSound();
         SceneManager.goto(Mano_InputConfig.Scene_GamepadConfig);
     }
-
 }
-
 
 class Key_Base extends InputButtonBase{
     /**
@@ -3811,6 +3821,24 @@ class Key_Layout extends InputDeviceBase{
             element.setIndex(index);
         }
     }
+
+    static keyXX =[
+        KEYS.A,KEYS.B,KEYS.C,KEYS.D,
+        KEYS.E,KEYS.F,KEYS.G,
+        KEYS.H,KEYS.I,KEYS.J,KEYS.K,
+        KEYS.L,KEYS.M,KEYS.N,
+        KEYS.O,KEYS.P,KEYS.Q,KEYS.R,
+        KEYS.S,KEYS.T,KEYS.U,
+        KEYS.V,KEYS.W, KEYS.X,KEYS.Y,KEYS.Z,
+        KEYS._0,KEYS._1,KEYS._2,KEYS._3,KEYS._4,
+        KEYS._5,KEYS._6,KEYS._7,KEYS._8,KEYS._9
+    ];
+    indexList(){
+        return Key_Layout.keyXX;
+    }
+    button(buttonCode){
+        return null;
+    }
     /**
      * @param {String} layoutName
      * @param {Key_Base[]} srcList 
@@ -4061,6 +4089,15 @@ const KEY_LAYOUT_US =(function(){
     return Object.freeze( layout);
 })();
 
+/**
+ * @returns {Readonly<InputDeviceBase>}
+ */
+function getCurrentDevice(){
+    if(setting.gamepad.isConected()){
+        return setting.gamepad;
+    }
+    return KEY_LAYOUT_JIS;
+}
 //TODO:カーソル移動に異常があるので修正する
 class Window_KeyConfig_MA extends Window_InputConfigBase {
 
@@ -4487,6 +4524,19 @@ if(Utils.RPGMAKER_NAME =="MV"){
         const value = symbolMapper.isValidMapper(Input.keyMapper);
         $gameSwitches.setValue(sid,value);
     });
+    /**
+     * @param {{symbol:String nameVariable:Number}} arg 
+     */
+    const GetButtonName =function(arg){
+        const device =getCurrentDevice();
+        const button = device.buttonFromSymbol(arg.symbol);
+        if(button){
+            $gameVariables.setValue(arg.nameVariable,button.name());
+        }
+    };
+    PluginManager.registerCommand( PLUGIN_NAME,"GetButtonName",GetButtonName);
+    PluginManager.registerCommand( PLUGIN_NAME,"GetButtonNameEX",GetButtonName);
+    
 }
 
 const exportClass ={
