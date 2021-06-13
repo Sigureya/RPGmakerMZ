@@ -724,6 +724,9 @@ class SymbolColorManager_T{
 const SymbolColorManager = new SymbolColorManager_T();
 class I_SymbolDefine{
 
+    isDeleter(){
+        return false;
+    }
     isParamatorValid(){
         if(!this.symbol()){
             return false;
@@ -841,6 +844,9 @@ function createMoveSymbols(){
 }
 class SymbolDeleteObject extends I_SymbolDefine{
     isEnabled(){
+        return true;
+    }
+    isDeleter(){
         return true;
     }
     name(){
@@ -2034,6 +2040,12 @@ class TemporaryMappper extends TemporaryMappperBase{
         const aa = this._map.get(code);
         return aa ===symbol;
     }
+    /**
+     * @param {Number} code 
+     */
+    daleteByCode(code){
+        this._map.delete(code);
+    }
 
 
     /**
@@ -2484,6 +2496,13 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
     }
     isCurrentItemEnabled(){
         return this.isItemEnabled(this._index);
+    }
+    currentItemIsDeleter(){
+        const item = this.symbolObject(this.index());
+        if(item){
+            //有効化されていて、シンボルがnullなのはdeleteにしかない
+            return item.isEnabled() && (!item.symbol());
+        }
     }
     /**
      * @param {Number} index 
@@ -3056,19 +3075,30 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
     changeSymbolV9(symbol,code){
 
     }
+
     callChangeSymbol_v5(){
-        const symbol =this.currentSymbolObject().symbol();
+
+
+        const symbol =this.currentSymbolObject();//.symbol();
         if(!symbol){
             return;
         }
-        const code  = this.currentButtonCode();
-        if(code >=0){
-            const mapper = this.mapperClass();
-            if(mapper.canSymbolChange(symbol,code)){
-                mapper.change(code,symbol);
-                this.redrawXXX();
-            }    
+        const code  = this.currentButtonCode();        
+        if(isNaN(code)){
+            return;
         }
+        const mapper = this.mapperClass();
+        if(symbol.isDeleter()){
+            mapper.daleteByCode(code);
+            this.redrawXXX();
+            return;
+        }
+
+        const symbolString = symbol.symbol();
+        if(mapper.canSymbolChange(symbolString,code)){
+            mapper.change(code,symbolString);
+            this.redrawXXX();
+        }    
     }
     redrawXXX(){
         const mainWindow = this.mainWidnow();
@@ -4154,7 +4184,7 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
         for (const key in WASD_KEYMAP) {
             if (WASD_KEYMAP.hasOwnProperty(key)) {
                 const element = WASD_KEYMAP[key];
-                this._mapper2.change(key,element);
+                this._mapper217.change(key,element);
             }
         }
         this.refresh();
