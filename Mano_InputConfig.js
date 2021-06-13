@@ -1028,11 +1028,19 @@ class ExtendsSymbol extends I_SymbolDefine{
     }
     readMySymbol(){
         const pad = this.padSymbol();
-        if(pad){ return pad; }
+        if(pad){
+            return pad;
+        }
         const key =this.firstKeySymbol()
-        if(key){ return key; }
-        const eventId =this._event.eventId()
-        if(eventId > 0){ return "call"+eventId; }
+        if(key){
+            return key; 
+        }
+        if(this._event){
+            const eventId =this._event.eventId()
+            if(eventId > 0){
+                 return "call"+eventId;
+            }    
+        }
         return "";
     }
     loadSymbol(){
@@ -1044,7 +1052,7 @@ class ExtendsSymbol extends I_SymbolDefine{
             this.setMandatory(false);
         }
     }
-     mapperWrite(mapper,targetKey){
+    mapperWrite(mapper,targetKey){
         if(!this._overwriteEnabled){
             const oldSymbol =mapper[targetKey];	
             if(oldSymbol){
@@ -1052,7 +1060,7 @@ class ExtendsSymbol extends I_SymbolDefine{
             }
         }
         mapper[targetKey]= this._symbol;	
-     }
+    }
 
     fillSymbol(){
         if(!this._symbol){return;}
@@ -1066,23 +1074,25 @@ class ExtendsSymbol extends I_SymbolDefine{
         }
     }
     updateEventCall(){
-        this._event.update(this.symbol());
-    }
-    eventId(){
-        return this._eventId;
-    }
-    needsEventCall(){
-        if(this._eventId > 0){
-            switch (this._inputType) {
-                case 1:
-                    return this.isTriggered();
-                case 2:
-                    return this.isRepeated();
-            }
-            return this.isPressed();    
+        if(this._event){
+            this._event.update(this.symbol());
         }
-        return false;
     }
+    // eventId(){
+    //     return this._eventId;
+    // }
+    // needsEventCall(){
+    //     if(this._eventId > 0){
+    //         switch (this._inputType) {
+    //             case 1:
+    //                 return this.isTriggered();
+    //             case 2:
+    //                 return this.isRepeated();
+    //         }
+    //         return this.isPressed();    
+    //     }
+    //     return false;
+    // }
 }
 
 /**
@@ -1507,14 +1517,6 @@ class InputButtonBase{
     }
 }
 
-class InputButtonMock extends InputButtonBase{
-    name(){
-        return "ABCD"
-    }
-    mapperId(){
-        return 1;
-    }
-}
 
 class GamepadButton extends InputButtonBase{
     /**
@@ -1545,7 +1547,41 @@ class GamepadButton extends InputButtonBase{
         return "#000000";
     }
 }
-class InputDeviceBase{
+
+class ReadonlyMapper{
+    /**
+     * @param {Number} buttonId 
+     * @returns 
+     */
+    symbolString(buttonId){
+        return "";
+    }
+    /**
+     * @param {String} symbol 
+     * @param {InputButtonBase[]} buttonList
+     * @returns 
+     */
+     buttonFromSymbol_XX(symbol,buttonList){
+        if(!symbol){
+            return null;
+        }
+        for (const button of buttonList) {
+            const id = button.mapperId();
+            if(symbol===this.symbolString(id)){
+                return button;;
+            }
+        }
+        return null;
+    }
+}
+
+
+class DefaultMapper {
+    setup(){
+
+    }
+}
+class InputDeviceBase extends ReadonlyMapper{
 
     /**
      * @desc ABC順に並んだリスト
@@ -1581,19 +1617,26 @@ class InputDeviceBase{
      * @param {String} symbol 
      * @returns 
      */
-    buttonFromSymbol(symbol){
-        if(!symbol){
-            return null;
-        }
-        const mapper = this.currentMapper();
+    getButtonBySymbol(symbol){
         const indexList = this.indexList();
-        for (const button of indexList) {
-            const id = button.mapperId();
-            if(symbol===mapper[id]){
-                return button;;
-            }
+
+        return this.buttonFromSymbol_XX(symbol,indexList);
+    }
+    /**
+     * @param {Number} buttonId 
+     * @returns {String}
+     */
+    symbolString(buttonId){
+        const mapper = this.currentMapper();
+        const symbol = mapper[buttonId];
+        if(symbol){
+            return symbol;
         }
-        return null;
+        return "";
+    }
+    createTemporaryMapper(){
+        const tmp = new TemporaryMappper(this.currentMapper());
+        return tmp;
     }
 
     
@@ -1649,7 +1692,7 @@ class Gamepad extends InputDeviceBase{
     /**
      * @param {Number} code 
      */
-    fromCode(code){
+    getButtonByCode(code){
         if(code <=11){
             return this.findNormalButton(code);
         }
@@ -1674,15 +1717,6 @@ class Gamepad extends InputDeviceBase{
         if(b){ return b.name();}
         return "";
     }
-    /**
-     * 
-     * @returns {GGG_Base[]}
-     */
-    ggg(){
-        return this._list.map( (button)=>{
-            return new GGG_Button(button);
-        })
-    }
     buttonList(){
         return this._list;
     }
@@ -1703,8 +1737,10 @@ class Gamepad extends InputDeviceBase{
         }
         return "";
     }
-
-
+    defaultMapper_v2(){
+        const tmp = new TemporaryMappper(this.defaultMapper());
+        return tmp;
+    }
 }
 
 function getParam(){
@@ -1868,7 +1904,7 @@ function getColorSrc(window_base){
     return ColorSrc||window_base;
 }
 
-class TemporaryMappperBase{
+class TemporaryMappperBase extends ReadonlyMapper{
     /**
      * 
      * @param {String} symbol 
@@ -1935,36 +1971,50 @@ class TemporaryMappper extends TemporaryMappperBase{
         }
         return result;
     }
-    symbolObjectFromCode(codeId){
+    /**
+     * @param {Number} codeId 
+     * @returns 
+     */
+    getSymbolObjectByCode(codeId){
         const symbol = this._map.get(codeId);
         return symbolMapper.findSymbol(symbol);
+    }
+    /**
+     * @param {Number} codeId 
+     */
+    symbolString(codeId){
+        const symbol = this.getSymbolObjectByCode(codeId);
+        if(symbol){
+            return symbol.symbol();
+        }
+        return ""
     }
     /**
      * @param {Number} code 
      * @returns {String}
      */
-    findFromCode(code){
+    findSymbolByCode(code){
         return this._map.get(code);
     }
     /**
      * @param {Number} code 
      * @returns 
      */
-    findObjectFromCode(code){
-        const symbolString = this.findFromCode(code);
+    findObjectByCode(code){
+        const symbolString = this.findSymbolByCode(code);
         return symbolMapper.findSymbol(symbolString);
     }
-    /**
-     * @param {String} symbol 
-     */
-    findFromSymbol(symbol){
-        for (const iterator of this._map.entries()) {
-            if(iterator[1]===symbol){
-                return iterator[0];
-            }
-        }
-        return NaN;
-    }
+    // /**
+    //  * @param {String} symbol 
+    //  */
+    // findFromSymbol(symbol){
+    //     for (const iterator of this._map.entries()) {
+    //         if(iterator[1]===symbol){
+    //             return iterator[0];
+    //         }
+    //     }
+    //     return NaN;
+    // }
     findObjectFromSymbol(symbolString){
         
     }
@@ -2025,7 +2075,7 @@ class TemporaryMappperALT extends TemporaryMappper{
      * @param {String} symbol 
      */
     change(code,symbol){
-        const oldSymbol = this.findFromCode(code);
+        const oldSymbol = this.findSymbolByCode(code);
         const finalSymbol = (oldSymbol===symbol) ? "":symbol;
         super.change(code,finalSymbol);
     }
@@ -2039,16 +2089,6 @@ class TemporaryMappperALT extends TemporaryMappper{
         return this._changeHistory.has(symbol);
     }
 
-    /**
-     * @param {String} symbolString 
-     * @returns 
-     */
-    bbb(symbolString){
-        for (const iterator of this._map.entries()) {
-            
-        }
-        return ""
-    }
 }
 
 class Window_Selectable_InputConfigVer extends Window_Selectable{
@@ -2308,7 +2348,6 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
     }
     defaultMapper(){
         return this.inputDevice().defaultMapper();
-//        return {}
     }
     cloneMapper(){
         return this.temporaryMappper().createNormalizedMapper();
@@ -2532,9 +2571,13 @@ class Window_SymbolList_ALT extends Window_InputConfigBase_workaround{
         return false;
     }
 
-    buttonName(symbolString){
-        return this._mapper.bbb(symbolString)
-
+    /**
+     * @param {String} symbolString 
+     * @returns 
+     */
+    buttonFromSymbol(symbolString){
+        const buttons = this.inputDevice().indexList();
+        return this._mapper.buttonFromSymbol_XX(symbolString,buttons);
     }
     inputDevice(){
         return setting.gamepad;
@@ -2589,7 +2632,8 @@ class Window_SymbolList_ALT extends Window_InputConfigBase_workaround{
             const rect = this.itemRectWithPadding(index);
             const symbolTextWidth = this.symbolTextWidth();
             this.drawSymbolObject(item,rect.x ,rect.y,symbolTextWidth);
-            const button =this.inputDevice().buttonFromSymbol(item.symbol());
+            const button =this.buttonFromSymbol(item.symbol());
+            //this.inputDevice().buttonFromSymbol(item.symbol());
             if(button){
                 const buttonTextWidth = rect.width - symbolTextWidth;
                 const buttonX = rect.x + symbolTextWidth;
@@ -2597,7 +2641,6 @@ class Window_SymbolList_ALT extends Window_InputConfigBase_workaround{
                 this.drawButton_V3(button,buttonX,buttonY,buttonTextWidth);
             }
         }
-
     }
 }
 
@@ -2610,33 +2653,6 @@ function createPadState(padId) {
     return  gamepads[padId];
 }
 
-class GGG_Base{
-    handlerSymbol(){
-        return "";
-    }
-    text(){
-        return "";
-    }
-
-}
-class GGG_Button extends GGG_Base{
-
-    /**
-     * @param {GamepadButton} button 
-     */
-    constructor(button){
-        super();
-        this._button = button;
-    }
-    handlerSymbol(){
-        return "ok";
-    }
-    text(){
-        return this._button.name();
-    }
-}
-
-
 
 class Window_GamepadButtons extends Window_InputConfigBase_workaround{
     initialize(rect) {
@@ -2645,7 +2661,8 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
         this.refresh();
     }
     initializeMapper(){
-        this._mapper233 = new TemporaryMappper(Input.gamepadMapper);
+        const device = this.inputDevice();
+        this._mapper233 =device.createTemporaryMapper();  //new TemporaryMappper(Input.gamepadMapper);
     }
     temporaryMappper(){
         return this._mapper233;
@@ -2710,7 +2727,7 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
      */
     symbolString(index) {
         const buttonNumber = this.buttonNumber(index);
-        return this.temporaryMappper().findFromCode(buttonNumber);
+        return this.temporaryMappper().findSymbolByCode(buttonNumber);
     }
     /**
      * @param {number} index
@@ -3052,7 +3069,6 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
                 this.redrawXXX();
             }    
         }
-
     }
     redrawXXX(){
         const mainWindow = this.mainWidnow();
@@ -3255,7 +3271,7 @@ class Window_GamepadConfig_ALT extends Window_Selectable_InputConfigVer{
     }
     updateHelp(){
         const code = this.currentButtonCode();
-        const obj = this._mapper.findObjectFromCode(code);
+        const obj = this._mapper.findObjectByCode(code);
         const text = this.helpText(obj);
         this._helpWindow.setText(text);
     }
@@ -3810,7 +3826,17 @@ const KEYS ={
     SQUARE_BRACKETS_OPEN :keyinfo('[',219),
     SQUARE_BRACKETS_CLOSE :keyinfo(']',221),
 };
-
+const keyXXXX =[
+    KEYS.A,KEYS.B,KEYS.C,KEYS.D,
+    KEYS.E,KEYS.F,KEYS.G,
+    KEYS.H,KEYS.I,KEYS.J,KEYS.K,
+    KEYS.L,KEYS.M,KEYS.N,
+    KEYS.O,KEYS.P,KEYS.Q,KEYS.R,
+    KEYS.S,KEYS.T,KEYS.U,
+    KEYS.V,KEYS.W, KEYS.X,KEYS.Y,KEYS.Z,
+    KEYS._0,KEYS._1,KEYS._2,KEYS._3,KEYS._4,
+    KEYS._5,KEYS._6,KEYS._7,KEYS._8,KEYS._9
+];
 class Key_Layout extends InputDeviceBase{
     /**
      * @param {Key_Base[]} keyList 
@@ -3822,19 +3848,8 @@ class Key_Layout extends InputDeviceBase{
         }
     }
 
-    static keyXX =[
-        KEYS.A,KEYS.B,KEYS.C,KEYS.D,
-        KEYS.E,KEYS.F,KEYS.G,
-        KEYS.H,KEYS.I,KEYS.J,KEYS.K,
-        KEYS.L,KEYS.M,KEYS.N,
-        KEYS.O,KEYS.P,KEYS.Q,KEYS.R,
-        KEYS.S,KEYS.T,KEYS.U,
-        KEYS.V,KEYS.W, KEYS.X,KEYS.Y,KEYS.Z,
-        KEYS._0,KEYS._1,KEYS._2,KEYS._3,KEYS._4,
-        KEYS._5,KEYS._6,KEYS._7,KEYS._8,KEYS._9
-    ];
     indexList(){
-        return Key_Layout.keyXX;
+        return keyXXXX;
     }
     button(buttonCode){
         return null;
@@ -4103,7 +4118,8 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
 
     initializeMapper(){
         const device = this.inputDevice();
-        this._mapper217 = new TemporaryMappper(device.currentMapper());
+        this._mapper217 = device.createTemporaryMapper();
+         //new TemporaryMappper(device.currentMapper());
     }
     temporaryMappper(){
         return this._mapper217;
@@ -4321,7 +4337,7 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
      */
     symbolString(index){
         const keyNumber = this.keyNumber(index);
-        return this.temporaryMappper().findFromCode(keyNumber);
+        return this.temporaryMappper().findSymbolByCode(keyNumber);
     }
     /**
      * @param {Number} index 
@@ -4332,7 +4348,7 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
     }
 
     symbolObjectFromKeyNumber(keyNumber){
-        const symbol = this.temporaryMappper().findFromCode(keyNumber)
+        const symbol = this.temporaryMappper().findSymbolByCode(keyNumber)
         return symbolMapper.findSymbol(symbol);
     }
 
@@ -4492,6 +4508,7 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
     };
 function setupDefaultMapper(){
     symbolMapper.onBoot();
+    //TODO:これの型を変更する 変数の保存場所も変更する
     Mano_InputConfig.defaultGamepadMapper =Object.freeze( objectClone(Input.gamepadMapper));
     Mano_InputConfig.defaultKeyMapper= Object.freeze(objectClone(Input.keyMapper));
 }
@@ -4501,9 +4518,36 @@ Scene_Boot.prototype.onDatabaseLoaded =function(){
     setupDefaultMapper();
     Scene_Boot_onDatabaseLoaded.call(this);
 };
+/**
+ * @param {String} symbol 
+ * @returns 
+ */
+const GetButtonNameMV =function(symbol){
+    const device = getCurrentDevice();
+    const button = device.getButtonBySymbol(symbol);
+    if(button){
+        return button.name();
+    }
+    return "";
+};
+
+/**
+ * @param {{symbol:String nameVariable:Number}} arg 
+ */
+const GetButtonName =function(arg){
+    const device =getCurrentDevice();
+    const button = device.getButtonBySymbol(arg.symbol);
+    if(button){
+        $gameVariables.setValue(arg.nameVariable,button.name());
+    }
+};
+
+
 
 if(Utils.RPGMAKER_NAME =="MV"){
     (function(){
+
+
         const Scene_Boot_start =Scene_Boot.prototype.start;
         Scene_Boot.prototype.start =function(){
             setupDefaultMapper();
@@ -4511,6 +4555,10 @@ if(Utils.RPGMAKER_NAME =="MV"){
         };
         Window_Selectable_InputConfigVer.prototype.drawItemBackground =function(){};
 
+        Window_Selectable_InputConfigVer.prototype.maxVisibleItems =function(){
+            const visibleRows = Math.ceil(this.contentsHeight() / this.itemHeight());
+            return visibleRows * this.maxCols();        
+        };
         Window_Selectable_InputConfigVer.prototype.itemRectWithPadding = Window_Selectable_InputConfigVer.prototype.itemRectForText;
     })();
 }else{
@@ -4524,22 +4572,13 @@ if(Utils.RPGMAKER_NAME =="MV"){
         const value = symbolMapper.isValidMapper(Input.keyMapper);
         $gameSwitches.setValue(sid,value);
     });
-    /**
-     * @param {{symbol:String nameVariable:Number}} arg 
-     */
-    const GetButtonName =function(arg){
-        const device =getCurrentDevice();
-        const button = device.buttonFromSymbol(arg.symbol);
-        if(button){
-            $gameVariables.setValue(arg.nameVariable,button.name());
-        }
-    };
     PluginManager.registerCommand( PLUGIN_NAME,"GetButtonName",GetButtonName);
     PluginManager.registerCommand( PLUGIN_NAME,"GetButtonNameEX",GetButtonName);
-    
 }
 
 const exportClass ={
+    //MV用・ヘルプへの記載予定なし
+    GetButtonNameMV:GetButtonNameMV,
     Scene_ConfigBase:Scene_InputConfigBase_MA,
     Scene_KeyConfig:Scene_KeyConfig_MA,
     Scene_GamepadConfig: Scene_GamepadConfigMA,
