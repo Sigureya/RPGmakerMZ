@@ -179,6 +179,10 @@
  * @type file
  * @dir img/background/
  * 
+ * @param SettingsForYEP_OptionsCore
+ * @type struct<DisguiseAsYEP>
+ * @default {"gamepad":"true","Keyboard":"true"}
+ * 
  * @help
  * ※日本語テキストは下の方にあるのでスクロールしてください
  * 
@@ -335,8 +339,8 @@
  * 
  * @param button
  * @text パッドボタン/padButton
- * @desc ゲームパッドのボタン設定です。
- * スタンダードレイアウト基準(PSコン基準でも可)
+ * @desc ゲームパッドのボタン。スタンダードレイアウトを想定。
+ * Gamepad buttons. Assuming a standard layout.
  * @type select
  * @default NaN
  * @option none
@@ -387,6 +391,7 @@
  * @param name
  * @text 行動名/actionName
  * @desc 言語別に行動の説明を入力します
+ * Enter a description of the action by language
  * @type struct<MultiLangString>
  * @default {"jp":"","en":""}
  * 
@@ -399,7 +404,8 @@
  * 
  * @param inputType
  * @text 入力方式/inputType
- * @desc イベント専用機能
+ * @desc イベント専用機能。呼び出し時のボタンの入力形式。
+ * Set when using an event call.
  * @type select
  * @option 押されている/pressed
  * @value 0
@@ -505,6 +511,17 @@
   * @default {}
   * 
 */
+/*~struct~DisguiseAsYEP:
+ * @param gamepad
+ * @desc Impersonate the configuration as if it were GamepadConfig.js (by Yanfly).
+ * @type boolean
+ * @default true
+ * 
+ * @param Keyboard
+ * @desc Impersonate the configuration as if it were YEP_KeyboardConfig.js (by Yanfly).
+ * @type boolean
+ * @default true
+ */
 
 var Imported = Imported || {};
 if(Imported.Mano_InputConfig){
@@ -514,7 +531,10 @@ Imported.Mano_InputConfig = true;
 
 var Mano_InputConfig=( function(){
     'use strict'
-    const  PLUGIN_NAME='Mano_InputConfig';
+    /**
+     * @type {String}
+     */
+    const  PLUGIN_NAME= ("Mano_InputConfig");
     const IS_Atsumaru = location.hostname==="html5.nicogame.jp";
 
 /**
@@ -3088,6 +3108,8 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
             return;
         }
         const mapper = this.mapperClass();
+        //明示的な削除処理をあらかじめ用意する
+        //実装を変える時にミスしがちなので、こうする
         if(symbol.isDeleter()){
             mapper.daleteByCode(code);
             this.redrawXXX();
@@ -4635,13 +4657,23 @@ return exportClass;
 })();
 
 {
-    if(!!PluginManager.parameters("Yep_OptionCore")){
-      //インポート情報を偽装し、GamepadConfig/KeybordConfigと認識させる
-      Imported.GamepadConfig = true;
-      Imported.YEP_KeyboardConfig = true;
-      window["Scene_KeyConfig"] = Mano_InputConfig.Scene_KeyConfig;
-      window["Scene_GamepadConfig"] =Mano_InputConfig.Scene_GamepadConfig;
-      //何かよくわからない関数が追加されているので、適当に追加する
-      Input.isControllerConnected =Input.isControllerConnected||function(){return true;};
+//Sorry for the dirty implementation.
+//Since there were many questions from users who use YEP_OptionCore together on how to set plug-in parameters, we are responding by the following method.
+    const param = PluginManager.parameters("Mano_InputConfig");
+    if(param && param.SettingsForYEP_OptionsCore){
+        const obj =JSON.parse(param.SettingsForYEP_OptionsCore);
+
+        //インポート情報を偽装し、GamepadConfig/KeybordConfigと認識させる
+        if(obj.gamepad==="true"){
+            Imported.GamepadConfig = true;
+            window["Scene_GamepadConfig"] =Mano_InputConfig.Scene_GamepadConfig;
+            //何かよくわからない関数が追加されているので、適当に追加する
+            Input.isControllerConnected =Input.isControllerConnected||function(){return true;};
+        }
+        if(obj.Keyboard==="true"){
+            Imported.YEP_KeyboardConfig = true;
+            window["Scene_KeyConfig"] = Mano_InputConfig.Scene_KeyConfig;    
+        }
     }
 }
+
