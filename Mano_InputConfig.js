@@ -925,6 +925,9 @@ class StandardSymbol extends I_SymbolDefine{
         return super.displayKeyName();
     }
 }
+/**
+ * @returns {I_SymbolDefine[]}
+ */
 function basicSymbols(){
     const param = getParam();
     const ok =createDefaultKeyMapperItem("ok",param.mapperOk);
@@ -1004,9 +1007,16 @@ class ExtendsSymbol extends I_SymbolDefine{
         this._keys = (keys ||"").toUpperCase();
         this._buttonId =buttonId;
         this._actionName = actionName;
-        this._overwriteEnabled =false;
+        this.setOverwriteEneabled(false);
         this.setKeyText("");
         this.setMandatory(false);
+    }
+    /**
+     * @param {Boolean} value 
+     */
+    setOverwriteEneabled(value){
+        this._overwriteEnabled=value;
+
     }
     /**
      * @param {String} keyText 
@@ -1036,7 +1046,11 @@ class ExtendsSymbol extends I_SymbolDefine{
      * @returns {String}
      */
     padSymbol(){
-        return Input.gamepadMapper[this._buttonId];
+        const symbol =Input.gamepadMapper[this._buttonId];
+        if(!symbolMapper.isBasicSymbol(symbol)){
+            return symbol;
+        }
+        return null;
     }
     /**
      * @returns {String}
@@ -1047,7 +1061,9 @@ class ExtendsSymbol extends I_SymbolDefine{
            const char_=  this._keys.charCodeAt(i);
            const symbol = Input.keyMapper[char_];
            if(symbol){
-               return symbol;
+                if(!symbolMapper.isBasicSymbol(symbol)){
+                    return symbol;
+                }
            }
         }
         return null;
@@ -1206,6 +1222,21 @@ class SymbolMapper_T{
         this.addDictionaryItems(this._moveSymbols);
     }
     /**
+     * @param {String} symbolString 
+     * @returns 
+    */
+    isBasicSymbol(symbolString){
+        if(!symbolString){
+            return false;
+        }
+        const symbolObect = this.findSymbol(symbolString);
+        if(symbolObect){
+            return this._basicSymbols.contains(symbolObect);
+        }
+        return false;
+    }
+    
+    /**
      * @param {ExtendsSymbol[]} list 
      */
     setExtendSymbols(list){
@@ -1337,6 +1368,7 @@ class SymbolMapper_T{
      * @returns 
      */
     isValidMapper_V3(set){
+        //TODO:escapeの扱いを何とかする
         const m=this.allMandatorySymbols()
         for (const iterator of m) {
             const symbol = iterator.symbol();
@@ -1386,6 +1418,7 @@ function extendsSymbols(){
         const keys =String(obj.keys||"");
         const eventObj = new EventCaller(Number(obj.eventId),Number(obj.inputType ||0));
         const def = new ExtendsSymbol(mtext, Number(obj.button), keys,eventObj);
+        def.setOverwriteEneabled(obj.overwrite==="true");
 
         //タッチ操作用ボタン生成 パラメータの構成やシンボルの初期化の関係でここしかない
         if(obj.touchButton ){
