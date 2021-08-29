@@ -6,7 +6,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 6.1.1 2021/07/17
+// ver 6.1.2 2021/08/30
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -219,6 +219,9 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 
+ * 2021/08/30 ver6.1.2
+ * 一部環境でラムダ式がエラーを起こすため、使用しない形に修正
  * 
  * 2021/07/17 ver6.1.1
  * 拡張入力の上書き設定が機能していないのを修正
@@ -541,6 +544,10 @@ var Mano_InputConfig=( function(){
     const  PLUGIN_NAME= ("Mano_InputConfig");
     const IS_Atsumaru = location.hostname==="html5.nicogame.jp";
 
+    function getParam(){
+        return PluginManager.parameters(PLUGIN_NAME);
+    }
+    
 /**
  * @param {Window_Base} window_ 
  * @param {Rectangle} rect 
@@ -1297,7 +1304,8 @@ class SymbolMapper_T{
         for (const iterator of this.systemSymbols()) {
             set.delete(iterator);
         }
-        set.forEach((symbol)=>{
+
+        set.forEach(function(symbol){
             const obj =new UnknowSymbol(symbol)
             this._unknowList.push( obj);
             this._symbolDictionary.set(symbol,obj);
@@ -1364,7 +1372,7 @@ class SymbolMapper_T{
      * @returns {I_SymbolDefine[]}
      */
     allMandatorySymbols(){
-        return this.getSymbolList().filter( (def)=>{ return def.isMandatory()});
+        return this.getSymbolList().filter( function(def){ return def.isMandatory()});
     }
 
     /**
@@ -1406,6 +1414,7 @@ function loadButtonDefine(objText){
     return button;
 }
 
+
 function extendsSymbols(){
     const param = getParam();
     /**
@@ -1416,7 +1425,8 @@ function extendsSymbols(){
      * @type {TouchButton[]}
      */
     const buttonImage =[];
-    const listX = textList.map((text)=>{
+    //メモ ラムダ記法禁止　MV用高速化nw.jsでエラーが発生する
+    const listX = textList.map(function(text){
         const obj = JSON.parse(text);
         const mtext = MultiLanguageText.create(obj.name);
         const keys =String(obj.keys||"");
@@ -1468,7 +1478,8 @@ if(ButtonManager.isTouchButtonEnabled()){
             if(this.bitmap.isReady()){
                 this.onLoadeed();
             }else{
-                this.bitmap.addLoadListener((bitmap)=>{
+                //ラムダ禁止
+                this.bitmap.addLoadListener(function(bitmap){
                     this.onLoadeed();
                 } );
             }
@@ -1541,7 +1552,8 @@ if(ButtonManager.isTouchButtonEnabled()){
             }
         }
         isAnyButtonPressed(){
-            return this._buttons.some( (button)=>{
+            //ラムダ禁止
+            return this._buttons.some(function (button){
                  return button.isPressed()
             });
         }
@@ -1804,10 +1816,6 @@ class Gamepad extends InputDeviceBase{
         const tmp = new TemporaryMappper(this.defaultMapper());
         return tmp;
     }
-}
-
-function getParam(){
-    return PluginManager.parameters(PLUGIN_NAME);
 }
 
 /**
