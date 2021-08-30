@@ -115,18 +115,20 @@
  * @type struct<InputDefine>[]
  * @default []
  * 
- * @param GamepadIsNotConnected
+ * 
+ * @param GamepadIsNotConnectedText
  * @text 未接続/GamepadIsNotConnected
  * @desc ゲームパッドが接続されていない場合の文章です。
- * @type note
- * @default "ゲームパッドが接続されていません\nボタンを押して再度試してください"
+ * This is the text when the gamepad is not connected.
+ * @type struct<MultiLangNote>
+ * @default {"jp":"\"ゲームパッドが接続されていません\\nボタンを押して再度試してください\"","en":"\"The gamepad is not connected.\\nPress the button and try again.\""}
  * 
- * @param needButtonDetouch
+ * @param needButtonDetouchText
  * @text ボタンから手を放すように促すメッセージ
  * @desc キーコンフィグはボタンから手を離さない限り終了しません。
  * 手を放すように促すメッセージを設定します。
- * @type note
- * @default "コンフィグを終了するためには\nボタンから手を放してください。"
+ * @type struct<MultiLangNote>
+ * @default {"jp":"\"コンフィグを終了するために、\\nボタンから手を放してください。\"","en":"\"Release the button to exit the config.\""}
  * 
  * @param apply
  * @text 設定の保存/apply
@@ -222,6 +224,7 @@
  * 
  * 2021/08/30 ver6.1.2
  * 一部環境でラムダ式がエラーを起こすため、使用しない形に修正
+ * 一部テキストが日本語のままだったのを英語対応
  * 
  * 2021/07/17 ver6.1.1
  * 拡張入力の上書き設定が機能していないのを修正
@@ -434,7 +437,6 @@
   *  @text 日本語
   *  @type multiline_string
   *  @type note
-
   *  @param en
   *  @type multiline_string
   *  @type note
@@ -474,6 +476,7 @@
   *  @type multiline_string
   *  @type note
  */
+
  /*~struct~MultiLangString:
   * @param jp
   * @text 日本語
@@ -598,8 +601,8 @@ class MultiLanguageText{
     static create(objText){
         const obj = JSON.parse(objText);
         const mtext = new MultiLanguageText();
-        mtext.setNameJP(obj.jp);
-        mtext.setNameEN(obj.en);
+        mtext.setNameJP( noteOrString( obj.jp));
+        mtext.setNameEN( noteOrString(obj.en));
         return mtext;
     }
     /**
@@ -1850,6 +1853,7 @@ function createDefaultKeyMapperItem(symbol,objText){
     return s;
 }
 
+
 const setting = (function(){
     const params = getParam();
     const keyText ={
@@ -1874,14 +1878,8 @@ const setting = (function(){
         gamepad :new Gamepad(),
         keyText:keyText,
         emptySymbolText:String(params.textEmpty),
-        /**
-         * @type {String}
-         */
-        needButtonDetouch:noteOrString(params.needButtonDetouch),
-        /**
-         * @type {String}
-         */
-        gamepadIsNotConnected: noteOrString(params.GamepadIsNotConnected),
+        needButtonDetouch:MultiLanguageText.create(params.needButtonDetouchText),
+        gamepadIsNotConnected: MultiLanguageText.create(params.GamepadIsNotConnectedText),
         mandatorySymbols:createMandatorySymbols(params),
         windowSymbolListWidht:Number(params.windowSymbolListWidth),
         gamepadConfigCommandText:MultiLanguageText.create(params.gamepadConfigCommandText),
@@ -2875,7 +2873,7 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
             this._helpWindow.setText(text);
             return;
         }
-        this._helpWindow.setText(setting.gamepadIsNotConnected);
+        this._helpWindow.setText(setting.gamepadIsNotConnected.currentName());
     }
 
     updateHelp(){
@@ -3084,7 +3082,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
         if(this._popSceneMode ){
             if(this.isAnyButtonLongPressed()){
                 if(this._helpWindow){
-                    this._helpWindow.setText(setting.needButtonDetouch);
+                    this._helpWindow.setText(setting.needButtonDetouch.currentName());
                 }
             }
             if(this.isAllButtonDetouch()){
