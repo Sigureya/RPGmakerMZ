@@ -567,6 +567,33 @@ function window_initializeMVMZ(window_,rect,initFuncton){
     }
     throw( new Error("Unknow RPG MAKER:"+Utils.RPGMAKER_NAME));
 }
+class Scene_MenuBaseMVMZ extends Scene_MenuBase{
+    bottomAreaHeight(){
+        return 20;
+    }
+    /**
+     * @returns {Number}
+     */
+    mainAreaTop(){
+        if(Utils.RPGMAKER_NAME ==="MV"){
+            return this._helpWindow.y + this._helpWindow.height;
+        }
+        return super.mainAreaTop();
+    }
+    isBottomButtonMode(){
+        return false;
+    }
+    helpAreaHeight(){
+        return this.calcWindowHeight(this.helpWindowLines(), false);
+    }
+    isBottomHelpMode(){
+        return false;
+    }
+    helpWindowLines(){
+        return 3;
+    }
+}
+
 
 function objectClone(obj){
     var result ={};
@@ -1333,7 +1360,8 @@ class SymbolMapper_T{
     getSymbolList(){
         return this._basicSymbols.concat(
             this._extendSymbols,
-            this._unknowList
+            this._unknowList,
+            this._moveSymbols
             //,[ new SymbolDeleteObject() ]
             );
     }
@@ -1639,14 +1667,14 @@ class ReadonlyMapper{
      * @param {InputButtonBase[]} buttonList
      * @returns 
      */
-     buttonFromSymbol_XX(symbol,buttonList){
+    buttonFromSymbol_XX(symbol,buttonList){
         if(!symbol){
             return null;
         }
         for (const button of buttonList) {
             const id = button.mapperId();
             if(symbol===this.symbolString(id)){
-                return button;;
+                return button;
             }
         }
         return null;
@@ -1654,11 +1682,6 @@ class ReadonlyMapper{
 }
 
 
-class DefaultMapper {
-    setup(){
-
-    }
-}
 class InputDeviceBase extends ReadonlyMapper{
 
     /**
@@ -1716,8 +1739,13 @@ class InputDeviceBase extends ReadonlyMapper{
         const tmp = new TemporaryMappper(this.currentMapper());
         return tmp;
     }
+}
 
-    
+class DefaultMapper {
+    readGamepad(){
+        
+    }
+
 }
 //ボタンの名前を入れておくクラス
 //また、編集可能なボタンを制御する際にも使う
@@ -2509,6 +2537,7 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
     }
     makeItemList(){
         this._list = symbolMapper.getSymbolList();
+        //TODO:初期設定に戻す(ボタン単位)を追加 原理的には可能
         this._list.push(new SymbolDeleteObject());
     }
     maxItems(){
@@ -2912,8 +2941,7 @@ class Window_GamepadConfig_MA extends Window_GamepadButtons{
     }
 }
 
-
-class Scene_InputConfigBase_MA extends Scene_MenuBase{
+class Scene_InputConfigBase_MA extends Scene_MenuBaseMVMZ{
     constructor(){
         super();
         //popSceneModeとapplyOnExitは別
@@ -2975,35 +3003,11 @@ class Scene_InputConfigBase_MA extends Scene_MenuBase{
         }
         return Window_Base.prototype.fittingHeight(numLines);
     }
-    bottomAreaHeight(){
-        return 20;
-    }
     helpWindowInitParam(){
         if(Utils.RPGMAKER_NAME ==="MV"){
             return this.helpWindowLines();;
         }
         return this.helpWindowRect();
-    }
-    /**
-     * @returns {Number}
-     */
-    mainAreaTop(){
-        if(Utils.RPGMAKER_NAME ==="MV"){
-            return this._helpWindow.y + this._helpWindow.height;
-        }
-        return super.mainAreaTop();
-    }
-    isBottomButtonMode(){
-        return false;
-    }
-    helpWindowLines(){
-        return 3;
-    }
-    helpAreaHeight(){
-        return this.calcWindowHeight(this.helpWindowLines(), false);
-    }
-    isBottomHelpMode(){
-        return false;
     }
     createHelpWindow(){
         this._helpWindow = new Window_Help(this.helpWindowInitParam());
@@ -4645,8 +4649,8 @@ if(Utils.RPGMAKER_NAME =="MV"){
 
         const Scene_Boot_start =Scene_Boot.prototype.start;
         Scene_Boot.prototype.start =function(){
-            setupDefaultMapper();
             Scene_Boot_start.call(this);
+            setupDefaultMapper();
         };
         Window_Selectable_InputConfigVer.prototype.drawItemBackground =function(){};
 
