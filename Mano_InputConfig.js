@@ -685,6 +685,18 @@ class TouchButton{
         this._y = y;
     }
     /**
+     * 
+     * @param {String} objText 
+     * @returns 
+     */
+    static create(objText){
+        const obj = JSON.parse(objText);
+        const x  =Number(obj.x);
+        const y = Number(obj.y);
+        const button = new TouchButton(obj.image,x,y);
+        return button;    
+    }
+    /**
      * @param {String} folder 
      * @param {String} fileName 
      */
@@ -1286,6 +1298,11 @@ class SymbolMapper_T{
 
     callButtonEvent(){
         for (const iterator of this._extendSymbols) {
+            //既に予約されている場合、あるいはupdateEventCall()で予約されたら処理を止める
+            if($gameTemp.isCommonEventReserved()){
+                break;
+            }
+
             iterator.updateEventCall();
         }
     }
@@ -1411,7 +1428,6 @@ class SymbolMapper_T{
      * @returns 
      */
     isValidMapper_V3(set){
-        //TODO:escapeの扱いを何とかする
         const m=this.allMandatorySymbols()
         for (const iterator of m) {
             const symbol = iterator.symbol();
@@ -1437,6 +1453,8 @@ class SymbolMapper_T{
 }
 const symbolMapper = new SymbolMapper_T();
 //TODO:ボタン用の情報をどう持たせるのか　このタイミングではシンボルが確定していない
+//方法が決まったので、次回消す
+//処理はcreateに移行済み
 function loadButtonDefine(objText){
     const obj = JSON.parse(objText);
     const x  =Number(obj.x);
@@ -1467,7 +1485,7 @@ function extendsSymbols(){
 
         //タッチ操作用ボタン生成 パラメータの構成やシンボルの初期化の関係でここしかない
         if(obj.touchButton ){
-            const button = loadButtonDefine(obj.touchButton);
+            const button =  TouchButton.create(obj.touchButton) ;//loadButtonDefine(obj.touchButton);
             if(button &&  button.isValid()){
                 button.setSymbolObject(def);
                 buttonImage.push(button);    
@@ -1920,6 +1938,13 @@ const setting = (function(){
     };
     return result;
 })();
+function currentGamepadConfigText(){
+    return setting.gamepadConfigCommandText.currentName();
+}
+function currentKeyConfigText(){
+    return setting.keyConfigCommandText.currentName();
+}
+
 /**
  * @param {String} base 
  */
@@ -4560,11 +4585,13 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
         return this._keyconfigWindow.currentButtonCode();
     }
 }
+
+
     Window_Options.prototype.addGamepadOptions_MA =function(){
-        this.addCommand(setting.gamepadConfigCommandText.currentName(),MA_GAMEPAD_CONFIG);
+        this.addCommand(currentGamepadConfigText(),MA_GAMEPAD_CONFIG);
     };
     Window_Options.prototype.addKeyboardConfig_MA=function(){
-        this.addCommand(setting.keyConfigCommandText.currentName(),MA_KEYBOARD_CONFIG);
+        this.addCommand(currentKeyConfigText(),MA_KEYBOARD_CONFIG);
     };
     const Window_Options_addVolumeOptions=Window_Options.prototype.addVolumeOptions;
     Window_Options.prototype.addVolumeOptions=function(){
@@ -4593,6 +4620,10 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
     }
     const Window_Options_processOk = Window_Options.prototype.processOk;
     Window_Options.prototype.processOk =function(){
+        Window_Options_processOk.call(this);
+        if(SceneManager.isSceneChanging()){
+            return;
+        }
         if(this.isGamepadConfig(this._index)){
             this.playOkSound();
             Mano_InputConfig.gotoGamepad();
@@ -4603,18 +4634,32 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
             Mano_InputConfig.gotoKey();
             return;
         }
-        Window_Options_processOk.call(this);
     };
+
+//const setupPP_Option_V2=(Imported.PP_Option) ? null : 
 function setupDefaultMapper(){
     symbolMapper.onBoot();
     //TODO:これの型を変更する 変数の保存場所も変更する
     Mano_InputConfig.defaultGamepadMapper =Object.freeze( objectClone(Input.gamepadMapper));
     Mano_InputConfig.defaultKeyMapper= Object.freeze(objectClone(Input.keyMapper));
 }
+Scene_Boot.prototype.PP_Option_InputConfig=function(){
+    if(PP_Option && PP_Option.Manager){
+        PP_Option.Manager.addOptionEX(MA_GAMEPAD_CONFIG, currentGamepadConfigText,function(w,s,i){
+            Mano_InputConfig.gotoGamepad();
+        });
+        PP_Option.Manager.addOptionEX(MA_KEYBOARD_CONFIG, currentKeyConfigText,function(w,s,i){
+            Mano_InputConfig.gotoKey();
+        });    
+    }
+}
 
 const Scene_Boot_onDatabaseLoaded =Scene_Boot.prototype.onDatabaseLoaded ||(function(){});
 Scene_Boot.prototype.onDatabaseLoaded =function(){  
     setupDefaultMapper();
+    if(Imported.PP_Option ){
+        this.PP_Option_InputConfig();
+    }
     Scene_Boot_onDatabaseLoaded.call(this);
 };
 /**
