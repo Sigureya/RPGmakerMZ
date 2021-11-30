@@ -3,6 +3,7 @@
  * @author しぐれん(siguren)
  * 
  * @target MZ
+ * @orderAfter VisuMZ_1_OptionsCore
  *  
  * @param lookupTable
  * @desc Set where to allocate the items to be added.
@@ -48,6 +49,7 @@
  * @plugindesc VisuMZ_1_OptionsCoreとの連携を提供します。
  * @author しぐれん
  * 
+ * @orderAfter VisuMZ_1_OptionsCore
  * @target MZ
  *  
  * @param lookupTable
@@ -173,15 +175,33 @@ const PP_Option= (function(){
          * @param {Window_Command} optionCategory 
          */
         loadLastState(option,optionCategory){
+            //TODO:スクロール位置が勝手に変わる問題は解決不能
+            //maxItemsが常に0を返すため、正しく動かすことができない。
+            //解決は不可能なので、カーソル位置が不便な状態は諦めてもらう
             if(this._optionIndex >=0 && this._categoryIndex >=0){
                 optionCategory.select(this._categoryIndex);
                 optionCategory.deactivate();
+                const items=option.maxItems();
+                if(option.setCategory){
+                    const listExt=optionCategory.currentExt()
+                    option.setCategory(listExt);
+                }
+                const items2=option.maxItems()
                 //TODO:
                 // A process that transitions to another scene during option operation and returns the cursor when it returns.
                 // Index can be set, but Window scrolling is not working.
                 // I think it's better to include this feature, but since there are current issues, we are considering removing it at the time of release.
-                option.forceSelect(this._optionIndex);
-                option.activate();
+                //option.forceSelect(8);
+                //TODO
+                //OptionCoreが勝手にスクロールさせているので、別の値で上書きする
+            option.clearScrollStatus()
+              option.forceSelect(this._optionIndex);
+              //このタイミングでWindow_Commandのlistが空になっている
+              //そのため、リストが空っぽでmaxItems=0である
+              option._scrollY =572;
+              //option._scrollDuration=0
+              option.updateOrigin()
+              option.active=true;
             }
             this.clear();
         }
@@ -348,6 +368,9 @@ const PP_Option= (function(){
      */
     function createVisuMZ_Data(ppOption){
         return {
+            Symbol:ppOption.symbol(),
+            TextStr:ppOption.itemName(),
+            Icon:ppOption.iconIndex(),
             CursorRightJS:function(xx){
                 ppOption.cursorRight();
             },
@@ -385,9 +408,6 @@ const PP_Option= (function(){
             TextJS:function(){
                 return ppOption.itemName();
             },
-            TextStr:ppOption.itemName(),
-            Symbol:ppOption.symbol(),
-            Icon:ppOption.iconIndex(),
         }
     }
 
@@ -634,24 +654,35 @@ const PP_Option= (function(){
         }
         return result;
     })();
+//TODO:シーンから抜けてきた場合のコマンド関連
+//いつかやる予定だけど、無理っぽいのであきらめ
+//資料としてソースは残しておく
+// const Window_Options_paint=Window_Options.prototype.paint;
+// Window_Options.prototype.paint =function(){
+//     Window_Options_paint.call(this);
 
-const Window_Options_addCommand=Window_Options.prototype.addCommand;
-Window_Options.prototype.addCommand =function(){
-    Window_Options_addCommand.apply(this,arguments);
-}
+// };
+// const Window_Options_addCommand=Window_Options.prototype.addCommand;
+// Window_Options.prototype.addCommand =function(){
+//     Window_Options_addCommand.apply(this,arguments);
+// }
+// const Scene_Options_start=Scene_Options.prototype.start;
+// Scene_Options.prototype.start =function(){
+//     Scene_Options_start.call(this);
+//     OptionSceneState.loadLastState(this._optionsWindow,this._categoryWindow);
+// }
+// const Scene_Options_terminate=Scene_Options.prototype.terminate;
+// Scene_Options.prototype.terminate =function(){
 
-const Scene_Options_start=Scene_Options.prototype.start;
-Scene_Options.prototype.start =function(){
-    Scene_Options_start.call(this);
-    OptionSceneState.loadLastState(this._optionsWindow,this._categoryWindow);
-}
-const Scene_Options_terminate=Scene_Options.prototype.terminate;
-Scene_Options.prototype.terminate =function(){
+//     OptionSceneState.saveLastState(this._optionsWindow,this._categoryWindow)
+//     Scene_Options_terminate.call(this);
 
-    OptionSceneState.saveLastState(this._optionsWindow,this._categoryWindow)
-    Scene_Options_terminate.call(this);
-
-}
+// }
+// const Scene_Options_popScene =Scene_Options.prototype.popScene;
+// Scene_Options.prototype.popScene =function(){
+//     OptionSceneState.clear();
+//     Scene_Options_popScene.call(this);
+// };
 const Scene_Boot_terminate=Scene_Boot.prototype.terminate;
 Scene_Boot.prototype.terminate=function(){
 
