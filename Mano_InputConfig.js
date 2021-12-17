@@ -22,7 +22,7 @@
  * @target MZ
  * 
  * @command GetButtonName
- * @text ボタン名の取得/GetButton
+ * @text GetButton/ボタン名の取得
  * @desc 指定した操作がどのボタンにあるかを返します。
  * Returns which button has the specified action.
  * @arg symbol
@@ -48,7 +48,7 @@
  * @default 0
 
  * @command GetButtonNameEX
- * @text ボタン名の取得/GetButtonEX
+ * @text GetButtonEX/ボタン名の取得
  * @desc 指定した操作がどのボタンにあるかを返します。
  * Returns which button has the specified action.
  * @arg symbol
@@ -67,6 +67,16 @@
  * @default 0
  * @desc 結果を保存するスイッチ
  * Where to save the results
+ * 
+ * @command GamepadScene
+ * @text GamepadScene/ゲームパッド設定を開く
+ * @desc ゲームパッド設定のシーンを開きます。
+ * Open the gamepad settings scene.
+ * 
+ * @command KeyboardScene
+ * @text KeyboardScene/キーボード設定を開く
+ * @desc キーボード設定のシーンを開きます。
+ * Open the keyboard settings scene.
  * 
  * @param mapperOk
  * @text 決定/ok
@@ -201,6 +211,12 @@
  * If the above display is displayed, you can handle it by adding an element to extendsMapper.
  * After adding the element, copy the character of the part corresponding to KEY and copy it to KeySetting. * 
  * 
+ * ■ If you want to control the transition with a script
+ * Used when modifying other plugins or switching scenes directly with a script.
+ * SceneManager.push (Mano_InputConfig.Scene_GamepadConfig); // Gamepad Config
+ * SceneManager.push (Mano_InputConfig.Scene_KeyConfig);     // Keyboard config
+ * You can now move to the specified scene.
+ * * 
  * ゲームの起動時の設定を初期値として読み込みます。
  * プラグインの導入位置に関わらず、入力の変更を検知します。
  * 他のプラグインでボタンが改造されていてもOKです。
@@ -221,6 +237,8 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 2021/12/18 ver6.2.1
+ * ラムダ式関連の記述を修正した際に、バグを埋め込んでいたのを修正。
  * 
  * 2021/11/30 ver6.2.0
  * ManoPP_VisuMZ_OptionCore対応を実装。
@@ -1354,11 +1372,12 @@ class SymbolMapper_T{
         for (const iterator of this.systemSymbols()) {
             set.delete(iterator);
         }
+        const seleObject=this;
 
         set.forEach(function(symbol){
             const obj =new UnknowSymbol(symbol)
-            this._unknowList.push( obj);
-            this._symbolDictionary.set(symbol,obj);
+            seleObject._unknowList.push( obj);
+            seleObject._symbolDictionary.set(symbol,obj);
         });
     }
 
@@ -1531,8 +1550,9 @@ if(ButtonManager.isTouchButtonEnabled()){
                 this.onLoadeed();
             }else{
                 //ラムダ禁止
+                const selfObject=this;
                 this.bitmap.addLoadListener(function(bitmap){
-                    this.onLoadeed();
+                    selfObject.onLoadeed();
                 } );
             }
         }
@@ -1675,7 +1695,7 @@ class GamepadButton extends InputButtonBase{
     }
 }
 
-class ReadonlyMapper{
+class I_ReadonlyMapper{
     /**
      * @param {Number} buttonId 
      * @returns 
@@ -1700,10 +1720,52 @@ class ReadonlyMapper{
         }
         return null;
     }
+    /**
+     * @description Map<>を生成するための補助関数
+     * @returns {Map<Number,String>}
+     * @param {*} mapper 
+     */
+    createMapSupport(mapper){
+        const map =new Map();
+        for (const iterator of Object.entries(mapper)) {
+            const code = Number(iterator[0]);
+            if(!isNaN(code)){
+                map.set(code,iterator[1]);
+            }
+        }
+        return map;
+    }
+    createDic(){
+
+    }
+    cloneMapper(){
+        throw new Error("未実装")
+    }
+}
+class DefaultMapper extends I_ReadonlyMapper{
+    constructor(obj){
+        super();
+        this._mapper= Object.freeze( objectClone(obj));
+    }
+    mapper(){
+        return this._mapper;
+    }
+ 
 }
 
 
-class InputDeviceBase extends ReadonlyMapper{
+class InputDeviceBase extends I_ReadonlyMapper{
+    constructor(){
+        super();
+        this.setDefaultMapper(null);
+    }
+    /**
+     * @param {DefaultMapper} mapper 
+     */
+    setDefaultMapper(mapper){
+        this._defaultMapper=mapper;
+
+    }
 
     /**
      * @desc ABC順に並んだリスト
@@ -1727,6 +1789,12 @@ class InputDeviceBase extends ReadonlyMapper{
     }
     numButtons(){
         return this.buttonList().length;
+    }
+    /**
+     * @returns {DefaultMapper}
+     */
+    defaultMapper_v2(){
+        return null;
     }
     defaultMapper(){
         return {};
@@ -1762,12 +1830,6 @@ class InputDeviceBase extends ReadonlyMapper{
     }
 }
 
-class DefaultMapper {
-    readGamepad(){
-        
-    }
-
-}
 //ボタンの名前を入れておくクラス
 //また、編集可能なボタンを制御する際にも使う
 class Gamepad extends InputDeviceBase{
@@ -1902,6 +1964,27 @@ function createDefaultKeyMapperItem(symbol,objText){
     return s;
 }
 
+class InputDevice_ReadOnly{
+    constructor(){
+        this._defaultKeyMapper=null;
+        this.setKeyLayout(null,null);
+    }
+    /**
+    * @param {Key_Layout} jis 
+     * @param {Key_Layout} us 
+     */
+    setKeyLayout(jis,us){
+        this._keyLayoutJIS=jis;
+        this._keyLayoutUS =us;
+    }
+    onBoot(){
+        this.setupDefaultMapper()
+
+    }
+    setupDefaultMapper(){
+        this._defaultKeyMapper=Object.freeze(objectClone(Input.keyMapper));
+    }
+}
 
 const setting = (function(){
     const params = getParam();
@@ -2029,7 +2112,7 @@ function getColorSrc(window_base){
     return ColorSrc||window_base;
 }
 
-class TemporaryMappperBase extends ReadonlyMapper{
+class TemporaryMappperBase extends I_ReadonlyMapper{
     /**
      * 
      * @param {String} symbol 
@@ -2055,6 +2138,8 @@ class TemporaryMappperBase extends ReadonlyMapper{
 
     }
 }
+//TODO:mapperのリセット用に保存してあるデータを何とかする
+//主にリセットで使うので、それに向いた構造に改造したい
 
 class TemporaryMappper extends TemporaryMappperBase{
     /**
@@ -2078,6 +2163,18 @@ class TemporaryMappper extends TemporaryMappperBase{
     createSymbolsSet(){
         const set =new Set(this._map.values());
         return set;
+    }
+    /**
+     * @param {I_ReadonlyMapper} mapper 
+     */
+    readOtherMapper(mapper){
+
+    }
+    /**
+     * @param {DefaultMapper} mapper 
+     */
+    reset_V2(mapper){
+
     }
     reset(mapper){
         this._map = TemporaryMappper.createMap(mapper);
@@ -2476,6 +2573,9 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
     }
     resetMapper(){
         this.temporaryMappper().reset(this.defaultMapper());
+    }
+    resetMapper_V2(){
+
     }
     defaultMapper(){
         return this.inputDevice().defaultMapper();
@@ -3992,7 +4092,7 @@ class Key_Layout extends InputDeviceBase{
         const list = srcList.concat(CommandManager.createCommandList_ForKeyLayout());
         Key_Layout.keylayout_SetupIndex(list);
         this._list =Object.freeze( list);
-        this._enterKeyIndex = this._list.indexOf(KEYS.ENTER_JIS)
+        this._enterKeyIndex = this._list.indexOf(KEYS.ENTER_JIS);
     }
 
     numButtons(){
@@ -4721,6 +4821,16 @@ if(Utils.RPGMAKER_NAME =="MV"){
     });
     PluginManager.registerCommand( PLUGIN_NAME,"GetButtonName",GetButtonName);
     PluginManager.registerCommand( PLUGIN_NAME,"GetButtonNameEX",GetButtonName);
+
+    PluginManager.registerCommand(PLUGIN_NAME,"GamepadScene",function(){
+        Mano_InputConfig.gotoGamepad();
+    })
+
+    PluginManager.registerCommand(PLUGIN_NAME,"KeyboardScene",function(){
+        Mano_InputConfig.gotoKey();
+    })
+
+
 }
 
 const exportClass ={
