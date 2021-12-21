@@ -129,10 +129,36 @@ const PP_Option= (function(){
      if(!Imported.VisuMZ_1_OptionsCore){
          return null;
      }
+     function getCurrentScriptName(){
+        const pluginName = decodeURIComponent(document.currentScript.src).match(/([^\/]+)\.js$/);
+
+        if(pluginName){
+            return pluginName[1];
+        }
+        return "";
+    }
+    /**
+     * @param {String} officialFileName 
+     * @param {String} badFileName 
+     */
+    function ThrowFileNameError(officialFileName,badFileName){
+        const message= `Do not rename the plugin file.<br>`+
+                        `Current file name: ${badFileName}<br>`+
+                        `Original file name: ${officialFileName}`;
+        throw new Error(message);
+
+    }
      /**
       * @type {String}
       */
-     const  PLUGIN_NAME= ('ManoPP_VisuMZ_OptionCore');
+    const  PLUGIN_NAME= ('ManoPP_VisuMZ_OptionCore');
+    const currentFileName =getCurrentScriptName();
+    if(PLUGIN_NAME!==currentFileName){
+        ThrowFileNameError(PLUGIN_NAME,currentFileName);
+    }
+
+
+
 
 
      class OptionSceneState_T{
