@@ -126,41 +126,33 @@ Imported.PP_Option =true;
 const PP_Option= (function(){
 
      'use strict';
-     if(!Imported.VisuMZ_1_OptionsCore){
+    if(!Imported.VisuMZ_1_OptionsCore){
          return null;
-     }
-     function getCurrentScriptName(){
-        const pluginName = decodeURIComponent(document.currentScript.src).match(/([^\/]+)\.js$/);
-
-        if(pluginName){
-            return pluginName[1];
-        }
-        return "";
+    }
+    /**
+     * @type {String}
+     */
+    const  PLUGIN_NAME= ('ManoPP_VisuMZ_OptionCore');
+    function getCurrentScriptName(){
+       const pluginName = decodeURIComponent(document.currentScript.src).match(/([^/]+)\.js$/);
+       if(pluginName){ return pluginName[1];}
+       return ''; 
     }
     /**
      * @param {String} officialFileName 
-     * @param {String} badFileName 
      */
-    function ThrowFileNameError(officialFileName,badFileName){
+    function TestFileNameValid(officialFileName){
+        const currentFileName=getCurrentScriptName();
+        if(officialFileName ===currentFileName){ return;}
         const message= `Do not rename the plugin file.<br>`+
-                        `Current file name: ${badFileName}<br>`+
-                        `Original file name: ${officialFileName}`;
+                        `Current file name: currentFileName<br>`+
+                        `Original file name: officialFileName<br>`+
+                        `プラグインファイルの名前を変更してはいけません<br>`+
+                        `現在のファイル名: currentFileName<br>`+
+                        `本来のファイル名: officialFileName`
         throw new Error(message);
-
     }
-     /**
-      * @type {String}
-      */
-    const  PLUGIN_NAME= ('ManoPP_VisuMZ_OptionCore');
-    const currentFileName =getCurrentScriptName();
-    if(PLUGIN_NAME!==currentFileName){
-        ThrowFileNameError(PLUGIN_NAME,currentFileName);
-    }
-
-
-
-
-
+    TestFileNameValid(PLUGIN_NAME);
      class OptionSceneState_T{
         constructor(){
             this.clear();
