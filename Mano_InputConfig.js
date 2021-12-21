@@ -6,7 +6,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 6.2.0 2021/11/30
+// ver 6.3.0 2021/12/22
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -20,6 +20,7 @@
  * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_InputConfig.js
  * 
  * @target MZ
+ * @orderAfter VisuMZ_1_OptionsCore
  * 
  * @command GetButtonName
  * @text GetButton/ボタン名の取得
@@ -198,25 +199,51 @@
  * @help
  * ※日本語テキストは下の方にあるのでスクロールしてください
  * 
- * Loads the game startup settings as default values.
+ *  Loads the settings at game startup as initial values.
  * Detects input changes regardless of where the plugin is installed.
  * It is OK even if the button is modified by another plug-in.
  *
- * The config data set by this plug-in is recorded in a file.
+ * The config data set by this plug-in is recorded in the file.
  * If you install a new plugin,
- * Reset the config with "Reset to default" after starting the game.
+ * Please reset the config with "Reset to default" after starting the game.
  *
  * ■ What to do if strange characters such as "? KEY: Symbol" are displayed
- * Occurs because the input added by other plugins is unknown.
- * If the above display is displayed, you can handle it by adding an element to extendsMapper.
- * After adding the element, copy the character of the part corresponding to KEY and copy it to KeySetting. * 
+ * Occurs because the input added by another plugin is unknown.
+ * If the above display is displayed,
+ * It can be handled by adding an element to extendsMapper.
+ * 1. Add an element
+ * 2. Try either of the following AB methods.
+ * Copy the character corresponding to A: KEY and paste it into Key Setting.
+ * B: Copy the characters corresponding to Symbol and paste them into symbol.
+ * Be careful not to confuse the case.
  * 
+ * ■ Button operation diffusion function
+ * If the operation is set by another plugin,
+ * May be set on only one of the gamepad / keyboard.
+ * In such a case, you can operate it from others by setting it in extendsMapper.
+ * For example, suppose that the operation is set when you press only T on the keyboard.
+ * If you want to set the operation for the buttons on the gamepad in this state, set as follows.
+ * Key setting: T
+ * Pad button: (any button number)
+ * By doing this, this plugin will read the behavior set for T on the keyboard and
+ * Set so that the same function can be used with the buttons on the gamepad.
+ * The same is true for the opposite.
+ *
+ * If the operation is set on both the keyboard and the gamepad,
+ * Determine which one to prioritize in the overwrite setting.
+ * When using manual symbol settings (for advanced users)
+ * Ignore the priority settings and use the contents set manually.
+ * 
+ * ■ Common event call button
+ * extendsMapper has an item called "Events".
+ * If you set an event here, the event will be called when the button is pressed.
+ * You can use it to create a function to open the map when you press the button.
+ *
  * ■ If you want to control the transition with a script
  * Used when modifying other plugins or switching scenes directly with a script.
  * SceneManager.push (Mano_InputConfig.Scene_GamepadConfig); // Gamepad Config
- * SceneManager.push (Mano_InputConfig.Scene_KeyConfig);     // Keyboard config
+ * SceneManager.push (Mano_InputConfig.Scene_KeyConfig); // Keyboard config
  * You can now move to the specified scene.
- * * 
  * ゲームの起動時の設定を初期値として読み込みます。
  * プラグインの導入位置に関わらず、入力の変更を検知します。
  * 他のプラグインでボタンが改造されていてもOKです。
@@ -227,8 +254,35 @@
  * 
  * ■"?KEY:Symbol"のような変な文字が表示される場合の対処法
  * 他のプラグインによって追加された入力が不明なために発生します。
- * 上記のような表示が出ている場合、extendsMapperに要素を追加することで対応できます。
- * 要素を追加したのち、KEYにあたる部分の文字をコピーして、KeySettingにコピーしてください。
+ * 上記のような表示が出ている場合、
+ * extendsMapperに要素を追加することで対応できます。
+ * 1.要素を追加する
+ * 2.下記のABどちらかの方法を試す。
+ * A:KEYにあたる部分の文字をコピーして、KeySettingに貼り付ける。
+ * B:Symbolにあたる部分の文字をコピーし、symbolに貼り付ける。
+ *   大文字・小文字を間違えないように注意すること。
+ * 
+ * ■ボタン操作拡散機能
+ * 他のプラグインで操作が設定されている場合に、
+ * ゲームパッド・キーボードの片方にしか設定されていない場合があります。
+ * そういった場合、extendsMapperで設定を行うことで他からも操作できるようになります。
+ * 例えば、キーボードのTにのみ押した場合の動作が設定されているとします。
+ * この状態でゲームパッドのボタンにも操作を設定する場合、以下のように設定します。
+ * キー設定:T
+ * パッドボタン:(任意のボタン番号)
+ * こうすることで、このプラグインはキーボードのTに設定されている動作を読み込み、
+ * ゲームパッドのボタンでも同じ機能が使えるように設定を行います。
+ * 逆の場合も同様です。
+ * 
+ * キーボードとゲームパッドの双方に操作が設定されている場合、
+ * どちらを優先するかを上書き設定で決めます。
+ * シンボル手動設定(上級者向け)を使った場合、
+ * 優先設定を無視して手動設定による内容を使います。
+ * 
+ * ■コモンイベント呼び出しボタン
+ * extendsMapperには「イベント」という項目があります。
+ * ここにイベントを設定すると、ボタンが押された時にイベントを呼び出します。
+ * ボタンを押したら地図を開く機能を作る時などに使えます。
  * 
  * ■スクリプトで遷移を制御したい場合
  * 他のプラグインを改造したり、スクリプトで直接シーンを切り替える時に使います。
@@ -237,8 +291,13 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 2021/12/22 ver6.3.0
+ * シンボル設定関連を更新。
+ * ヘルプの内容を追加。
+ * 
  * 2021/12/18 ver6.2.1
  * ラムダ式関連の記述を修正した際に、バグを埋め込んでいたのを修正。
+ * プラグインコマンドを追加。
  * 
  * 2021/11/30 ver6.2.0
  * ManoPP_VisuMZ_OptionCore対応を実装。
@@ -340,7 +399,7 @@
  * 2017/10/05 ver 1.0　公開
  * 
  */
-/**
+
 
 /*~struct~TouchButton:
  * @param image
@@ -364,7 +423,7 @@
 /*~struct~InputDefine:
  * 
  * @param keys
- * @text キー設定/keySetting
+ * @text キー設定/KeySetting
  * @desc 半角英字で設定。例 Ef65
  * Set the key corresponding to the action (ex:Ef65)
  * 
@@ -413,11 +472,27 @@
  * @type boolean
  * @default false
  * 
- * @param overwrite
+ * @param overwriteType
  * @text 上書き/overwrite
- * @desc シンボル書き込みの際に上書きの有無を設定します
- * @type boolean
- * @default false
+ * @desc どのボタンのシンボルを基準にするか
+ * Which button symbol to base on
+ * @type select
+ * @option 上書きしない/none
+ * @value 0
+ * @option ゲームパッド/gamepad
+ * @value 1
+ * @option キーボード/Keyboard
+ * @value 2
+ * @option イベント/event
+ * @value 3
+ * @default 0
+ * 
+ * @param symbol
+ * @text シンボル/symbol
+ * @desc ボタンを押した場合の動作(上級者向け)。
+ * Operation when the button is pressed (for advanced users)
+ * @type string
+ * @default
  * 
  * @param name
  * @text 行動名/actionName
@@ -565,7 +640,27 @@ var Mano_InputConfig=( function(){
     /**
      * @type {String}
      */
-    const  PLUGIN_NAME= ("Mano_InputConfig");
+    const  PLUGIN_NAME= ('Mano_InputConfig');
+    function getCurrentScriptName(){
+       const pluginName = decodeURIComponent(document.currentScript.src).match(/([^/]+)\.js$/);
+       if(pluginName){ return pluginName[1];}
+       return ''; 
+    }
+    /**
+     * @param {String} officialFileName 
+     */
+    function TestFileNameValid(officialFileName){
+        const currentFileName=getCurrentScriptName();
+        if(officialFileName ===currentFileName){ return;}
+        const message= `Do not rename the plugin file.<br>`+
+                        `Current file name: currentFileName<br>`+
+                        `Original file name: officialFileName<br>`+
+                        `プラグインファイルの名前を変更してはいけません<br>`+
+                        `現在のファイル名: currentFileName<br>`+
+                        `本来のファイル名: officialFileName`
+        throw new Error(message);
+    }
+    TestFileNameValid(PLUGIN_NAME);
     const IS_Atsumaru = location.hostname==="html5.nicogame.jp";
 
     function getParam(){
@@ -704,6 +799,7 @@ class TouchButton{
         }
         this._x = x;
         this._y = y;
+        this.setSymbolObject(null);
     }
     /**
      * 
@@ -1066,38 +1162,61 @@ class EventCaller{
         return this._inputType === 2;
     }
 }
+/**
+ * @param {String} objText 
+ */
+const createExtendsSymbol=function(objText){
+    const obj = JSON.parse(objText);
+    const symbol=String(obj.symbol||"");
+    const overwriteType =Number(obj.overwriteType);
+    const mtext = MultiLanguageText.create(obj.name);
+    const keys =String(obj.keys||"");
+    const keyText =String(obj.keyText||"")
+    const eventObj = new EventCaller(Number(obj.eventId),Number(obj.inputType ||0));
+    const def = new ExtendsSymbol(symbol,mtext, Number(obj.button), keys,eventObj,overwriteType,keyText);
 
+    def.setMandatory(obj.mandatory ==="true");
+    /**
+     * @type {String}
+     */
+    const touchButtonText=(obj.touchButton)
+    const button = touchButtonText ? TouchButton.create(touchButtonText):null;
+    if(button && button.isValid()){
+        button.setSymbolObject(def);
+    }
+
+    return {
+        exSymbol:def,
+        button:button,
+    }
+}
 class ExtendsSymbol extends I_SymbolDefine{
     /**
+     * @param {String} symbol
      * @param {MultiLanguageText} actionName 
      * @param {Number} buttonId 
      * @param {String} keys 
-     * @param {EventCaller} event
+     * @param {EventCaller} eventCaller
+     * @param {Number} overwriteType
+     * @param {String} keyText
      */
-    constructor(actionName,buttonId,keys ,event){
+    constructor(symbol,actionName,buttonId,keys ,eventCaller,overwriteType,keyText){
         super();
-        this._event = event;
-        this._symbol ="";
+        this._event = eventCaller;
+        this._symbol =symbol;
         this._keys = (keys ||"").toUpperCase();
         this._buttonId =buttonId;
         this._actionName = actionName;
-        this.setOverwriteEneabled(false);
-        this.setKeyText("");
+        this._keyText=keyText;
         this.setMandatory(false);
+        //上書きの際に、何を基準にするかの設定
+        //シンボルが設定されている場合、強制的にそれを使う
+        this._overwriteType=(!!symbol) ? 99:overwriteType;
     }
-    /**
-     * @param {Boolean} value 
-     */
-    setOverwriteEneabled(value){
-        this._overwriteEnabled=value;
+    isSymbolManualSetting(){
+        return this._overwriteType ===99;
+    }
 
-    }
-    /**
-     * @param {String} keyText 
-     */
-    setKeyText(keyText){
-        this._keyText = keyText;
-    }
     displayKeyName(){
         if(this._keyText){
             return this._keyText;
@@ -1121,7 +1240,7 @@ class ExtendsSymbol extends I_SymbolDefine{
      */
     padSymbol(){
         const symbol =Input.gamepadMapper[this._buttonId];
-        if(!symbolMapper.isBasicSymbol(symbol)){
+        if(!symbolManager.isBasicSymbol(symbol)){
             return symbol;
         }
         return null;
@@ -1135,14 +1254,45 @@ class ExtendsSymbol extends I_SymbolDefine{
            const char_=  this._keys.charCodeAt(i);
            const symbol = Input.keyMapper[char_];
            if(symbol){
-                if(!symbolMapper.isBasicSymbol(symbol)){
+                if(!symbolManager.isBasicSymbol(symbol)){
                     return symbol;
                 }
            }
         }
         return null;
     }
+    evantCallSymbol(){
+        if(this._event){
+            const eventId =this._event.eventId()
+            if(eventId > 0){
+                 return "call"+eventId;
+            }
+        }
+        return null
+
+    }
+    //優先シンボルの読み込み
+
+    isOverwriteEnabled(){
+        return this._overwriteType;
+    }
+    xxxSymbol(){
+        switch (this._overwriteType) {
+            case 1:
+                return this.padSymbol();
+            case 2:
+                return this.firstKeySymbol();
+            case 3:
+                return this.evantCallSymbol()
+        }
+        return "";
+    }
     readMySymbol(){
+
+        const xxxx=this.xxxSymbol();
+        if(xxxx){
+            return xxxx;
+        }
         const pad = this.padSymbol();
         if(pad){
             return pad;
@@ -1151,15 +1301,16 @@ class ExtendsSymbol extends I_SymbolDefine{
         if(key){
             return key; 
         }
-        if(this._event){
-            const eventId =this._event.eventId()
-            if(eventId > 0){
-                 return "call"+eventId;
-            }    
+        const eventCall =this.evantCallSymbol();
+        if(eventCall){
+            return eventCall;
         }
         return "";
     }
-    loadSymbol(){
+    /**
+     * @param {I_ReadOnrySymbolManager} mapper 
+     */
+    loadSymbol(mapper){
         if(!this._symbol){
             const symbol =this.readMySymbol();
             this._symbol = symbol;
@@ -1169,9 +1320,12 @@ class ExtendsSymbol extends I_SymbolDefine{
         }
     }
     mapperWrite(mapper,targetKey){
-        if(!this._overwriteEnabled){
+        //上書きが許可されてない場合
+        if(!this.isOverwriteEnabled()){
+            //指定位置のシンボルがあるか調べる
             const oldSymbol =mapper[targetKey];	
             if(oldSymbol){
+                //上書きせずに終了
                 return;
             }
         }
@@ -1194,24 +1348,11 @@ class ExtendsSymbol extends I_SymbolDefine{
             this._event.update(this.symbol());
         }
     }
-    // eventId(){
-    //     return this._eventId;
-    // }
-    // needsEventCall(){
-    //     if(this._eventId > 0){
-    //         switch (this._inputType) {
-    //             case 1:
-    //                 return this.isTriggered();
-    //             case 2:
-    //                 return this.isRepeated();
-    //         }
-    //         return this.isPressed();    
-    //     }
-    //     return false;
-    // }
+
 }
 
 /**
+ * @description 指定したシンボルを持つキーの一覧を取得
  * @param {String} symbol 
  */
 function KeyWithTheSymbolPlaced(symbol){
@@ -1227,6 +1368,7 @@ function KeyWithTheSymbolPlaced(symbol){
 }
 
 /**
+ * @description 指定したシンボルを持つパッドボタン番号を取得
  * @param {String} symbol 
  */
 function buttonWithTheSymbolPlaced(symbol){
@@ -1275,12 +1417,22 @@ class UnknowSymbol extends I_SymbolDefine{
 
 const Game_Map_setupStartingEvent =Game_Map.prototype.setupStartingEvent;
 Game_Map.prototype.setupStartingEvent =function(){
-    symbolMapper.callButtonEvent();
+    symbolManager.callButtonEvent();
     return Game_Map_setupStartingEvent.call(this);
 };
 
-class SymbolMapper_T{
+class I_ReadOnrySymbolManager{
+    /**
+     * @param {String} symbolString 
+     * @returns 
+     */
+    isBasicSymbol(symbolString){
+        return false;
+    }
+}
+class SymbolManager_T extends I_ReadOnrySymbolManager{
     constructor(){
+        super();
         /**
          * @type {Map<String,I_SymbolDefine>}
          */
@@ -1314,6 +1466,7 @@ class SymbolMapper_T{
      * @param {ExtendsSymbol[]} list 
      */
     setExtendSymbols(list){
+
         this._extendSymbols =list;
     }
 
@@ -1332,8 +1485,12 @@ class SymbolMapper_T{
         this.loadUnknowSymbols();
     }
     loadExtendsSymbols(){
+        const numExSymbols=this._extendSymbols.length;
         for (const iterator of this._extendSymbols) {
-            iterator.loadSymbol();
+            iterator.loadSymbol(this);
+        }
+        if(numExSymbols!==this._extendSymbols.length){
+            throw new Error("要素数を書き換えてはいけません")
         }
         for (const iterator of this._extendSymbols) {
             iterator.fillSymbol();
@@ -1377,8 +1534,9 @@ class SymbolMapper_T{
         set.forEach(function(symbol){
             const obj =new UnknowSymbol(symbol)
             seleObject._unknowList.push( obj);
-            seleObject._symbolDictionary.set(symbol,obj);
+//            seleObject._symbolDictionary.set(symbol,obj);
         });
+        this.addDictionaryItems(this._unknowList)
     }
 
     /**
@@ -1412,6 +1570,8 @@ class SymbolMapper_T{
         if(!symbol){ return "";}
         const item = this.findSymbol(symbol);
         if(item){  return item.name();}
+
+        //TODO:この表記になるとガチで正体不明になるので対策
         return "unknow:"+symbol;
     }
     /**
@@ -1473,65 +1633,33 @@ class SymbolMapper_T{
         return this.isValidMapper_V3(set);
     }
 }
-const symbolMapper = new SymbolMapper_T();
-//TODO:ボタン用の情報をどう持たせるのか　このタイミングではシンボルが確定していない
-//方法が決まったので、次回消す
-//処理はcreateに移行済み
-function loadButtonDefine(objText){
-    const obj = JSON.parse(objText);
-    const x  =Number(obj.x);
-    const y = Number(obj.y);
-    const button = new TouchButton(obj.image,x,y);
-    return button;
-}
+const symbolManager = new SymbolManager_T();
 
-
-function extendsSymbols(){
+/**
+ * @param {SymbolManager_T} symbolManager 
+ * @param {ButtonManager_T} buttonManager
+ */
+function setupExtendsSymbols(symbolManager,buttonManager){
     const param = getParam();
     /**
      * @type {String[]}
      */
     const textList = JSON.parse(param.extendsMapper);
-    /**
-     * @type {TouchButton[]}
-     */
-    const buttonImage =[];
-    //メモ ラムダ記法禁止　MV用高速化nw.jsでエラーが発生する
-    const listX = textList.map(function(text){
-        const obj = JSON.parse(text);
-        const mtext = MultiLanguageText.create(obj.name);
-        const keys =String(obj.keys||"");
-        const eventObj = new EventCaller(Number(obj.eventId),Number(obj.inputType ||0));
-        const def = new ExtendsSymbol(mtext, Number(obj.button), keys,eventObj);
-        def.setOverwriteEneabled(obj.overwrite==="true");
 
-        //タッチ操作用ボタン生成 パラメータの構成やシンボルの初期化の関係でここしかない
-        if(obj.touchButton ){
-            const button =  TouchButton.create(obj.touchButton) ;//loadButtonDefine(obj.touchButton);
-            if(button &&  button.isValid()){
-                button.setSymbolObject(def);
-                buttonImage.push(button);    
-            }
+    const buttons =[];
+    const symbols=[];
+    for (const iterator of textList) {
+        const item=createExtendsSymbol(iterator);
+        symbols.push(item.exSymbol);
+        if(item.button){
+            buttons.push(item.button);
         }
-
-        def.setMandatory(obj.mandatory ==="true");
-        def.setKeyText(obj.keyText||"");
-        return def;
-    });
-    for (const iterator of listX) {
-        iterator.loadSymbol();
     }
-    return {
-        symbols:listX,
-        buttonImage:buttonImage,
-    };
+    symbolManager.setExtendSymbols(symbols);
+    buttonManager.setList(buttons);
 }
+setupExtendsSymbols(symbolManager,ButtonManager);
 
-{
-    const tmp=extendsSymbols();
-    symbolMapper.setExtendSymbols(tmp.symbols);
-    ButtonManager.setList(tmp.buttonImage);
-}
 
 if(ButtonManager.isTouchButtonEnabled()){
 
@@ -2199,7 +2327,7 @@ class TemporaryMappper extends TemporaryMappperBase{
      */
     getSymbolObjectByCode(codeId){
         const symbol = this._map.get(codeId);
-        return symbolMapper.findSymbol(symbol);
+        return symbolManager.findSymbol(symbol);
     }
     /**
      * @param {Number} codeId 
@@ -2224,7 +2352,7 @@ class TemporaryMappper extends TemporaryMappperBase{
      */
     findObjectByCode(code){
         const symbolString = this.findSymbolByCode(code);
-        return symbolMapper.findSymbol(symbolString);
+        return symbolManager.findSymbol(symbolString);
     }
     // /**
     //  * @param {String} symbol 
@@ -2282,7 +2410,7 @@ class TemporaryMappper extends TemporaryMappperBase{
         return false;
     }
     isValidMapper(){
-        return symbolMapper.isValidMapper_V3(this.createSymbolsSet());
+        return symbolManager.isValidMapper_V3(this.createSymbolsSet());
     }
 }
 
@@ -2533,7 +2661,7 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
     }
     currentSymbolObject(){
         const symbol = this.currentSymbolString();
-        return symbolMapper.findSymbol(symbol)
+        return symbolManager.findSymbol(symbol)
     }
     /**
      * @param {Boolean} value 
@@ -2664,7 +2792,7 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
         this.refresh();
     }
     makeItemList(){
-        this._list = symbolMapper.getSymbolList();
+        this._list = symbolManager.getSymbolList();
         //TODO:初期設定に戻す(ボタン単位)を追加 原理的には可能
         this._list.push(new SymbolDeleteObject());
     }
@@ -2720,9 +2848,11 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
     currentItemIsDeleter(){
         const item = this.symbolObject(this.index());
         if(item){
+            return item.isDeleter();
             //有効化されていて、シンボルがnullなのはdeleteにしかない
-            return item.isEnabled() && (!item.symbol());
+            //return item.isEnabled() && (!item.symbol());
         }
+        return false;
     }
     /**
      * @param {Number} index 
@@ -2784,7 +2914,7 @@ class Window_SymbolList_ALT extends Window_InputConfigBase_workaround{
         }
     }
     makeItemList(){
-        this._list = symbolMapper.getSymbolList();
+        this._list = symbolManager.getSymbolList();
     }
     mainItems(){
         return this._list.length;
@@ -2974,7 +3104,7 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
      */
     symbolText(index) {
         const s =this.symbolString(index)
-        return symbolMapper.actionName(s);
+        return symbolManager.actionName(s);
     }
 
 
@@ -4576,7 +4706,7 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
 
     symbolObjectFromKeyNumber(keyNumber){
         const symbol = this.temporaryMappper().findSymbolByCode(keyNumber)
-        return symbolMapper.findSymbol(symbol);
+        return symbolManager.findSymbol(symbol);
     }
 
     /**
@@ -4741,7 +4871,7 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
 
 //const setupPP_Option_V2=(Imported.PP_Option) ? null : 
 function setupDefaultMapper(){
-    symbolMapper.onBoot();
+    symbolManager.onBoot();
     //TODO:これの型を変更する 変数の保存場所も変更する
     Mano_InputConfig.defaultGamepadMapper =Object.freeze( objectClone(Input.gamepadMapper));
     Mano_InputConfig.defaultKeyMapper= Object.freeze(objectClone(Input.keyMapper));
@@ -4811,12 +4941,12 @@ if(Utils.RPGMAKER_NAME =="MV"){
 }else{
     PluginManager.registerCommand( PLUGIN_NAME,"IsGamepadValid",function(arg){
         const sid = (arg.switchId);
-        const value = symbolMapper.isValidMapper(Input.gamepadMapper);
+        const value = symbolManager.isValidMapper(Input.gamepadMapper);
         $gameSwitches.setValue(sid,value);
     });
     PluginManager.registerCommand( PLUGIN_NAME,"IsKeyboardValid",function(arg){
         const sid = (arg.switchId);
-        const value = symbolMapper.isValidMapper(Input.keyMapper);
+        const value = symbolManager.isValidMapper(Input.keyMapper);
         $gameSwitches.setValue(sid,value);
     });
     PluginManager.registerCommand( PLUGIN_NAME,"GetButtonName",GetButtonName);
