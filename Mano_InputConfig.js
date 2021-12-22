@@ -521,6 +521,11 @@
  * @value 2
  * @default 0
  * 
+ * @param sourcePlugin
+ * @desc 指定した名前のプラグインがONの場合のみ、有効化します
+ * @type combo
+ * @default
+ * 
  * @param touchButton
  * @text タッチボタン/touchButton
  * @type struct<TouchButton>
@@ -637,6 +642,20 @@ Imported.Mano_InputConfig = true;
 
 var Mano_InputConfig=( function(){
     'use strict'
+
+    const GetEnabledPlugins =function(){
+        /**
+         * @type {Set<String>}
+         */
+        const set=new Set();
+        for (const iterator of $plugins) {
+            if(iterator.status){
+                set.add(iterator.name);
+            }
+        }
+        return set;
+    }
+
     /**
      * @type {String}
      */
@@ -736,16 +755,21 @@ const isRussian = function() {
     return $dataSystem.locale.match(/^ru/);
 };
 class MultiLanguageText{
-    constructor(){
-        this.setNameEN("");
-        this.setNameJP("");
+    /**
+     * 
+     * @param {String} en 
+     * @param {String} jp 
+     */
+    constructor(en,jp){
+        this.setNameEN(en);
+        this.setNameJP(jp);
         this.setDefaultName("");
     }
     static create(objText){
         const obj = JSON.parse(objText);
-        const mtext = new MultiLanguageText();
-        mtext.setNameJP( noteOrString( obj.jp));
-        mtext.setNameEN( noteOrString(obj.en));
+        const en =noteOrString(obj.en);
+        const jp =noteOrString( obj.jp);
+        const mtext = new MultiLanguageText(en,jp);
         return mtext;
     }
     /**
@@ -1040,7 +1064,7 @@ class SymbolDeleteObject extends I_SymbolDefine{
         return true;
     }
     name(){
-        return setting.mapperDelete.currentName();
+        return setting.text.mapperDelete.currentName();
     }
     symbol(){
         return null;
@@ -1226,11 +1250,20 @@ class ExtendsSymbol extends I_SymbolDefine{
     eventCaller(){
         return this._event;
     }
+    /**
+     * @param {Boolean} value 
+     */
     setMandatory(value){
+        //シンボルが無効な場合などで必須を解除するので、これだけ関数で設定する
         this._mandatory = value;
     }
     name(){
-        return this._actionName.currentName();
+
+        const name= this._actionName.currentName();
+        if(this._symbol){
+            return name;
+        }
+        return `empty:${name}`;
     }
     symbol(){
         return this._symbol;
@@ -1317,6 +1350,8 @@ class ExtendsSymbol extends I_SymbolDefine{
         }
         if(this.isEmpty()){
             this.setMandatory(false);
+            //TODO:表示名を変える
+
         }
     }
     mapperWrite(mapper,targetKey){
@@ -2113,6 +2148,19 @@ class InputDevice_ReadOnly{
         this._defaultKeyMapper=Object.freeze(objectClone(Input.keyMapper));
     }
 }
+function createText(params){
+    const guid = new MultiLanguageText("This is an unknown symbol. Add an item to the input extension","不明なシンボルです 入力拡張に項目を追加してください");
+
+    return{
+        gamepadConfigCommandText:MultiLanguageText.create(params.gamepadConfigCommandText),
+        keyConfigCommandText:MultiLanguageText.create(params.keyConfigCommandText),
+        mapperDelete:MultiLanguageText.create(params.mapperDelete),
+        gamepadIsNotConnected: MultiLanguageText.create(params.GamepadIsNotConnectedText),
+        needButtonDetouch:MultiLanguageText.create(params.needButtonDetouchText),
+        guid:guid,
+    }
+
+}
 
 const setting = (function(){
     const params = getParam();
@@ -2132,31 +2180,32 @@ const setting = (function(){
     buttonUsedForALT.setNameEN("%1 has been assigned to this button")
 
     const result= {
+        text:createText(params),
         buttonUsedForALT:buttonUsedForALT,
         unknowGuidText:guid,
         keyWindowLineHeight:22,
         gamepad :new Gamepad(),
         keyText:keyText,
         emptySymbolText:String(params.textEmpty),
-        needButtonDetouch:MultiLanguageText.create(params.needButtonDetouchText),
-        gamepadIsNotConnected: MultiLanguageText.create(params.GamepadIsNotConnectedText),
         mandatorySymbols:createMandatorySymbols(params),
         windowSymbolListWidht:Number(params.windowSymbolListWidth),
-        gamepadConfigCommandText:MultiLanguageText.create(params.gamepadConfigCommandText),
-        keyConfigCommandText:MultiLanguageText.create(params.keyConfigCommandText),
         gamepadBackground:String(params.gamepadBackground),
         keyBackground:String(params.keyBackground),
-        mapperDelete:MultiLanguageText.create(params.mapperDelete),
+        //needButtonDetouch:MultiLanguageText.create(params.needButtonDetouchText),
+        //gamepadIsNotConnected: MultiLanguageText.create(params.GamepadIsNotConnectedText),
+        //gamepadConfigCommandText:MultiLanguageText.create(params.gamepadConfigCommandText),
+        //keyConfigCommandText:MultiLanguageText.create(params.keyConfigCommandText),
+        //mapperDelete:MultiLanguageText.create(params.mapperDelete),
         numVisibleRows:16,//Number(params.numVisibleRows),
         cols:4,
     };
     return result;
 })();
 function currentGamepadConfigText(){
-    return setting.gamepadConfigCommandText.currentName();
+    return setting.text.gamepadConfigCommandText.currentName();
 }
 function currentKeyConfigText(){
-    return setting.keyConfigCommandText.currentName();
+    return setting.text.keyConfigCommandText.currentName();
 }
 
 /**
@@ -3160,7 +3209,7 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
             this._helpWindow.setText(text);
             return;
         }
-        this._helpWindow.setText(setting.gamepadIsNotConnected.currentName());
+        this._helpWindow.setText(setting.text.gamepadIsNotConnected.currentName());
     }
 
     updateHelp(){
@@ -3344,7 +3393,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBaseMVMZ{
         if(this._popSceneMode ){
             if(this.isAnyButtonLongPressed()){
                 if(this._helpWindow){
-                    this._helpWindow.setText(setting.needButtonDetouch.currentName());
+                    this._helpWindow.setText(setting.text.needButtonDetouch.currentName());
                 }
             }
             if(this.isAllButtonDetouch()){
