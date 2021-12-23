@@ -6,7 +6,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 6.3.0 2021/12/22
+// ver 6.3.1 2021/12/24
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -291,6 +291,9 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 2021/12/24 ver6.3.1
+ * エラーメッセージの英語表記を追加。
+ * 
  * 2021/12/22 ver6.3.0
  * シンボル設定関連を更新。
  * ヘルプの内容を追加。
@@ -521,15 +524,18 @@
  * @value 2
  * @default 0
  * 
- * @param sourcePlugin
- * @desc 指定した名前のプラグインがONの場合のみ、有効化します
- * @type combo
- * @default
  * 
  * @param touchButton
  * @text タッチボタン/touchButton
  * @type struct<TouchButton>
  * @desc MZのみ:画面上にタッチUI向けのボタンを追加します
+ * 
+ */
+/* 
+ * @param sourcePlugin
+ * @desc 指定した名前のプラグインがONの場合のみ、有効化します
+ * @type combo
+ * @default
  */
 
 
@@ -1004,13 +1010,16 @@ class I_SymbolDefine{
     }
     helpText(){
         if(this.isEmpty()){
-            return "シンボルが設定されていません\nプラグインパラメータから拡張設定の内容を確認してください";
+            return setting.errorText.symbolEmpty.currentName();
         }
         const name = this.name();
         if(!name){
-            return "表示用の名称が設定されていません\nsymbol:"+this.symbol();
+            return setting.errorText.nameEmpty.currentName()+this.symbol();
         }
         return "";
+    }
+    createErrorObject(){
+
     }
 
     isPressed(){
@@ -1263,7 +1272,7 @@ class ExtendsSymbol extends I_SymbolDefine{
         if(this._symbol){
             return name;
         }
-        return `empty:${name}`;
+        return `empty(${this._overwriteType}):${name}`;
     }
     symbol(){
         return this._symbol;
@@ -1446,7 +1455,7 @@ class UnknowSymbol extends I_SymbolDefine{
         return "button:"+this._buttonId +"  keys:"+this._kesy;
     }
     helpText(){
-        return setting.unknowGuidText.currentName()+"\n" + this.paramSettingGuide();
+        return setting.errorText.unknowSymbol.currentName()+"\n" + this.paramSettingGuide();
     }
 }
 
@@ -1543,10 +1552,12 @@ class SymbolManager_T extends I_ReadOnrySymbolManager{
          * @type {String}
          */
         const keySymbols =Object.values(Input.keyMapper)
+        //mapperにある全てのシンボルを列挙する
         const set = new Set(keySymbols);
         for (const iterator of padSymbols) {
             set.add(iterator);
         }
+        //Managerにあるシンボルを列挙した中から消す
         for (const iterator of this.getSymbolList()) {
             const symbol = iterator.symbol();
             if (symbol) {
@@ -1554,16 +1565,17 @@ class SymbolManager_T extends I_ReadOnrySymbolManager{
             }
         }
 
+        //移動シンボル4種を消す
         for (const iterator of this._moveSymbols) {
             const symbol = iterator.symbol();
             if(symbol){
                 set.delete(symbol);
             }
         }
-
         for (const iterator of this.systemSymbols()) {
             set.delete(iterator);
         }
+        //ラムダ式が使えないので、この方法でthisを捕まえておく
         const seleObject=this;
 
         set.forEach(function(symbol){
@@ -2157,7 +2169,43 @@ function createText(params){
         mapperDelete:MultiLanguageText.create(params.mapperDelete),
         gamepadIsNotConnected: MultiLanguageText.create(params.GamepadIsNotConnectedText),
         needButtonDetouch:MultiLanguageText.create(params.needButtonDetouchText),
-        guid:guid,
+        unknowguid:guid,
+    }
+}
+class ErrorObject{
+    
+    constructor(mtext,errorCategory){
+
+    }
+    errorNumber(){
+        //E1 
+
+        //E9 その他のエラー
+    }
+    createErrorMessage(symbol){
+
+    }
+    //一覧表示用の内容を返す
+    itemText(){
+
+    }
+    //解決方法を返す
+    helpText(){
+
+    }
+}
+
+function createErrorTexts(){
+    const unknowSymbol = new MultiLanguageText("This is an unknown symbol. Add an item to the input extension","不明なシンボルです 入力拡張に項目を追加してください");
+    const symbolEmpty=new MultiLanguageText("The symbol is not set \n Check the contents of the inputExtension from the plugin parameters","シンボルが設定されていません\nプラグインパラメータから拡張設定の内容を確認してください");
+    const nameEmpty= new MultiLanguageText("The name for display is not set\nsymbol:","表示用の名称が設定されていません\nsymbol:");
+    //シンボル名の打ち間違いを調べる
+    const symbolManual =new MultiLanguageText("","シンボルが手動で設定されていますが、mapper内から見つけることができませんでした。");
+
+    return {
+        unknowSymbol:unknowSymbol,
+        symbolEmpty:symbolEmpty,
+        nameEmpty:nameEmpty,
     }
 
 }
@@ -2171,18 +2219,14 @@ const setting = (function(){
         left:"←"
     };
 
-    const guid = new MultiLanguageText();
-    guid.setNameJP("不明なシンボルです 入力拡張に項目を追加してください");
-    guid.setNameEN("This is an unknown symbol. Add an item to the input extension");
-
     const buttonUsedForALT =new MultiLanguageText();
     buttonUsedForALT.setNameJP("このボタンには%1が割り当て済みです");
     buttonUsedForALT.setNameEN("%1 has been assigned to this button")
 
     const result= {
+        errorText:createErrorTexts(),
         text:createText(params),
         buttonUsedForALT:buttonUsedForALT,
-        unknowGuidText:guid,
         keyWindowLineHeight:22,
         gamepad :new Gamepad(),
         keyText:keyText,
@@ -4944,6 +4988,14 @@ Scene_Boot.prototype.onDatabaseLoaded =function(){
     }
     Scene_Boot_onDatabaseLoaded.call(this);
 };
+
+//TODO:エラー診断　パラメータの問題を検出して、解決方法を提示
+class Scene_ErrorDetection extends Scene_MenuBaseMVMZ{
+
+
+}
+
+
 /**
  * @param {String} symbol 
  * @returns 
@@ -5027,7 +5079,6 @@ const exportClass ={
     gotoKey:function(){
         SceneManager.push(Mano_InputConfig.Scene_KeyConfig );
     },
-    //TODO:名前をいずれ変更する ただし、VisuStail対策が必須
     gotoGamepad:function(){
         if(ConfigManager[MA_INPUTCONFIG_STYLE]==="ALT"){
             SceneManager.push(Mano_InputConfig.Scene_GamepadConfig_ALT );
