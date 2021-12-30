@@ -1438,7 +1438,7 @@ class KeySetting{
      * @param {MultiLanguageText} text 
      */
     constructor(keys,color,text){
-        this._keys=keys;
+        this._keys=keys.toUpperCase();
         this._color = color;
         this._mText=text;
     }
