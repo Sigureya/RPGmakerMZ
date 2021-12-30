@@ -6,7 +6,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 6.3.1 2021/12/24
+// ver 7.0.0 2021/12/30
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -21,6 +21,7 @@
  * 
  * @target MZ
  * @orderAfter VisuMZ_1_OptionsCore
+ * @orderAfter MOG_TitleSplashScreen
  * 
  * @command GetButtonName
  * @text GetButton/ボタン名の取得
@@ -122,6 +123,8 @@
  * 
  * 
  * @param extendsMapper
+ * @desc ボタンイベント・追加の入力設定の登録
+ * Registration of button events and additional input settings
  * @text 入力拡張/inputExtension
  * @type struct<InputDefine>[]
  * @default []
@@ -217,6 +220,12 @@
  * B: Copy the characters corresponding to Symbol and paste them into symbol.
  * Be careful not to confuse the case.
  * 
+ * ■ What to do if a display like unknow: XXXX appears
+ * The following causes are possible.
+ * -Symbols were set after the game started (after Scene_Boot)
+ * -Initialization process was not performed correctly
+ * It may be improved by moving this plugin down.
+ * 
  * ■ Button operation diffusion function
  * If the operation is set by another plugin,
  * May be set on only one of the gamepad / keyboard.
@@ -262,6 +271,12 @@
  * B:Symbolにあたる部分の文字をコピーし、symbolに貼り付ける。
  *   大文字・小文字を間違えないように注意すること。
  * 
+ * ■unknow:XXXXのような表示が出る場合の対処法
+ * 以下の原因が考えられます。
+ * ・シンボルの設定がゲーム起動後(Scene_Bootより後)で行われた
+ * ・初期化処理が正しく行われなかった
+ * このプラグインを下の方に移動することで改善する可能性があります。
+ * 
  * ■ボタン操作拡散機能
  * 他のプラグインで操作が設定されている場合に、
  * ゲームパッド・キーボードの片方にしか設定されていない場合があります。
@@ -291,6 +306,9 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 2021/12/30 ver7.0.0
+ * プラグインパラメータ「入力拡張」を中心に大改造。
+ * 
  * 2021/12/24 ver6.3.1
  * エラーメッセージの英語表記を追加。
  * 
@@ -371,7 +389,7 @@
  * 別プラグインとの競合があったので対策
  * symbolAutoSelectがキーコンフィグで機能していなかったのを修正。
  * 
- * 2019/07/12 ver2.81
+ * 2019/07/12 ver2.8.1
  * ゲームパッドのハードごとの識別情報を表示する機能を追加。
  * 
  * 2019/07/06 ver2.8
@@ -382,8 +400,8 @@
  * キーボードに任意の初期設定を割り当てる機能を追加。
  * 
  * 2018/09/28 ver2.6
- * ゲームパッドコンフィグを改造すると誤作動があったので、誤作動を減らす改造。
- * また、プラグインの位置に関わらず入力の変更を捕まえられるように。
+ * ゲームパッドコンフィグを改造すると誤作動があったので、誤作動を減らす修正。
+ * プラグインの位置に関わらず初期設定の変更を捕まえられるように。
  * 
  * 2018/06/25 ver 2.5
  * 色々あった細かいバグ修正を重ねた最新版。
@@ -421,14 +439,91 @@
  * @default 0
  * 
 */
+/*~struct~EventCaller:
+ * @param id
+ * @text 呼び出すイベント/event
+ * @desc ボタンを押した際に呼び出すコモンイベント(マップのみ)
+ * Common event to call when a button is pressed(MapOnly)
+ * @type common_event
+ * @default 0
+ * 
+ * @param inputType
+ * @text 入力方式/inputType
+ * @desc イベント専用機能。呼び出し時のボタンの入力形式。
+ * Set when using an event call.
+ * @type select
+ * @option 押されている/pressed
+ * @value 0
+ * @option トリガー/triggerd
+ * @value 1
+ * @option リピート/repeated
+ * @value 2
+ * @default 0
+ */
+/*~struct~KeyboradSetting:
 
+ * @param keys
+ * @type string
+ * @desc 半角英字で設定。例 Ef65
+ * Set the key corresponding to the action (ex:Ef65)
+ * 
+ * 
+ * @param text
+ * @text キーの表示/keyText
+ * @desc キーコンフィグの際の表示名を定義します(空欄OK)
+ * Define the display name for key config (blank OK)
+ * @type struct<MultiLangString>
+ * @default {"jp":"","en":""}
+ * 
+*/
+/*
+ * TODO:あとでキー設定にカラーを追加
+ * @param color
+ * @type combo
+ * @option #FF00FF
+ * @default 
+ * 
+ */
+/*~struct~AdvancedSetting:
+ * @param symbol
+ * @text シンボル/symbol
+ * @desc ボタンを押した場合の動作(上級者向け)
+ * Operation when the button is pressed (for advanced users)
+ * @type string
+ * @default
+ * 
+ * @param overwrite
+ * @text 上書き/overwrite
+ * @desc どのボタンのシンボルを基準にするか
+ * Which button symbol to base on
+ * @type select
+ * @option 上書きしない/none
+ * @value 0
+ * @option ゲームパッド/gamepad
+ * @value 1
+ * @option キーボード/Keyboard
+ * @value 2
+ * @option イベント/event
+ * @value 3
+ * @default 0
+ * 
+ * @param mandatory
+ * @text 必須フラグ/mandatory
+ * @type boolean
+ * @default false
+ */
 
 /*~struct~InputDefine:
  * 
  * @param keys
  * @text キー設定/KeySetting
- * @desc 半角英字で設定。例 Ef65
- * Set the key corresponding to the action (ex:Ef65)
+ * @desc 廃止予定。同名の新しいパラメータを使用してください。
+ * Scheduled to be abolished. Use the new parameter.
+ * 
+ * @param keySetting
+ * @text キー設定/keySetting
+ * @type struct<KeyboradSetting>
+ * @default {"keys":"","color":"","text":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
  * @param button
  * @text パッドボタン/padButton
@@ -465,38 +560,6 @@
  * @option 16(center)
  * @value 16
  * 
- * @param keyText
- * @text キーの表示/keyText
- * @desc キーコンフィグの際の表示名を定義します(空欄OK)
- * @type string
- *
- * @param mandatory
- * @text 必須フラグ/mandatory
- * @type boolean
- * @default false
- * 
- * @param overwriteType
- * @text 上書き/overwrite
- * @desc どのボタンのシンボルを基準にするか
- * Which button symbol to base on
- * @type select
- * @option 上書きしない/none
- * @value 0
- * @option ゲームパッド/gamepad
- * @value 1
- * @option キーボード/Keyboard
- * @value 2
- * @option イベント/event
- * @value 3
- * @default 0
- * 
- * @param symbol
- * @text シンボル/symbol
- * @desc ボタンを押した場合の動作(上級者向け)。
- * Operation when the button is pressed (for advanced users)
- * @type string
- * @default
- * 
  * @param name
  * @text 行動名/actionName
  * @desc 言語別に行動の説明を入力します
@@ -504,33 +567,31 @@
  * @type struct<MultiLangString>
  * @default {"jp":"","en":""}
  * 
- * @param eventId
- * @text 呼び出すイベント/event
- * @desc ボタンを押した際に呼び出すコモンイベント(マップのみ)
- * Common event to call when a button is pressed(MapOnly)
- * @type common_event
- * @default 0
+ * @param helpText
+ * @text 詳細/helpText
+ * @desc 画面上部に表示する説明文
+ * Description to be displayed at the top of the screen
+ * @type struct<MultiLangString>
+ * @default {"jp":"","en":""}
  * 
- * @param inputType
- * @text 入力方式/inputType
- * @desc イベント専用機能。呼び出し時のボタンの入力形式。
- * Set when using an event call.
- * @type select
- * @option 押されている/pressed
- * @value 0
- * @option トリガー/triggerd
- * @value 1
- * @option リピート/repeated
- * @value 2
- * @default 0
- * 
+ * @param event
+ * @text イベント/event
+ * @type struct<EventCaller>
+ * @default {"id":"0","inputType":"0"}
  * 
  * @param touchButton
  * @text タッチボタン/touchButton
  * @type struct<TouchButton>
  * @desc MZのみ:画面上にタッチUI向けのボタンを追加します
  * 
+ * @param adovanced
+ * @text 上級者向け/adovanced
+ * @type struct<AdvancedSetting>
+ * @default {"symbol":"","overwrite":"0","mandatory":"false"}
+ * 
  */
+
+
 /* 
  * @param sourcePlugin
  * @desc 指定した名前のプラグインがONの場合のみ、有効化します
@@ -773,8 +834,8 @@ class MultiLanguageText{
     }
     static create(objText){
         const obj = JSON.parse(objText);
-        const en =noteOrString(obj.en);
-        const jp =noteOrString( obj.jp);
+        const en =noteOrString(obj.en||"");
+        const jp =noteOrString( obj.jp||"");
         const mtext = new MultiLanguageText(en,jp);
         return mtext;
     }
@@ -805,7 +866,7 @@ class MultiLanguageText{
         }
     }
     currentName(){
-        if(isJapanese()){
+        if(isJapanese() && this.ja_JP ){
             return this.ja_JP;
         }
         return this.en_US;
@@ -940,10 +1001,34 @@ class SymbolColorManager_T{
         return this.mandatoryColor();
     }
 }
+//デバッグ用の情報を扱うクラス
+class DebugSymbol{
+    /**
+     * 
+     * @param {I_SymbolDefine} symbol 
+     * @param {String} type 
+     */
+    constructor(symbol,type){
+        this._symbol =symbol;
+        this._type =type;
+    }
+    symbolName(){
+        return this._symbol.name();
+    }
+    exInfos(){
+        //return this._symbol.
+    }
+
+
+}
+
 
 const SymbolColorManager = new SymbolColorManager_T();
 class I_SymbolDefine{
 
+    createDebugSymbol(){
+        return new DebugSymbol(this,this.constructor.name);
+    }
     isDeleter(){
         return false;
     }
@@ -1002,6 +1087,9 @@ class I_SymbolDefine{
     isMandatory(){
         return false;
     }
+    debugInfo(){
+        return "";
+    }
     isEmpty(){
         return !this.symbol();
     }
@@ -1032,7 +1120,7 @@ class I_SymbolDefine{
         return Input.isTriggered(this.symbol());
     }
 }
-class MoveDefine extends I_SymbolDefine{
+class MoveSymbol extends I_SymbolDefine{
     /**
      * @param {String} symbol 
      * @param {String} name 
@@ -1059,10 +1147,10 @@ class MoveDefine extends I_SymbolDefine{
     // }
 }
 function createMoveSymbols(){
-    const up = new MoveDefine("up","↑");
-    const down = new MoveDefine("down","↓");
-    const left =new MoveDefine("left","←");
-    const right =new MoveDefine("right","→");
+    const up = new MoveSymbol("up","↑");
+    const down = new MoveSymbol("down","↓");
+    const left =new MoveSymbol("left","←");
+    const right =new MoveSymbol("right","→");
     return [up,down,left,right];
 }
 class SymbolDeleteObject extends I_SymbolDefine{
@@ -1153,19 +1241,36 @@ class EventCaller{
         this._eventId = eventId;
         this._inputType = triggereType;
     }
+    /**
+     * @param {String} objText 
+     * @returns 
+     */
+    static create(objText){
+        if(!objText){
+            return new EventCaller(0,0);
+        }
+        const obj =JSON.parse(objText);
+
+        const eventId =Number(obj.id);
+        const inputType =Number(obj.inputType);
+        return new EventCaller(eventId,inputType);
+    }
+    isValidEvent(){
+        return this._eventId > 0;
+    }
     eventId(){
         return this._eventId;
     }
     callEvent(){
         if(!$gameTemp.isCommonEventReserved()){
-            $gameTemp.reserveCommonEvent(this.eventId());
+            $gameTemp.reserveCommonEvent(this._eventId);
         }
     }
     /**
      * @param {String} symbol 
      */
     update(symbol){
-        if(this.needsEventCall(symbol)){
+        if(this._eventId >0 && this.needsEventCall(symbol)){
             this.callEvent();
         }
     }
@@ -1174,14 +1279,13 @@ class EventCaller{
      * @returns 
      */
     needsEventCall(symbol){
-        if(this._eventId > 0){
-            switch (this._inputType) {
-                case 1:
-                    return Input.isTriggered(symbol)
-                case 2:
-                    return Input.isRepeated(symbol);
-            }
-            return Input.isPressed(symbol);    
+        switch (this._inputType) {
+            case 0:
+                return Input.isPressed(symbol);    
+            case 1:
+                return Input.isTriggered(symbol)
+            case 2:
+                return Input.isRepeated(symbol);
         }
         return false;
     }
@@ -1195,20 +1299,104 @@ class EventCaller{
         return this._inputType === 2;
     }
 }
+class KeySetting{
+    /**
+     * 
+     * @param {String} keys 
+     * @param {String} color 
+     * @param {MultiLanguageText} text 
+     */
+    constructor(keys,color,text){
+        this._keys=keys;
+        this._color = color;
+        this._mText=text;
+    }
+    static create(objText){
+        if(!objText){
+            return new KeySetting("",null,new MultiLanguageText("",""));
+        }
+        const obj =JSON.parse(objText);
+        const keys =obj.keys;
+        const color = (obj.color||null);
+        const mtext = MultiLanguageText.create(obj.text);
+
+        return new KeySetting(keys,color,mtext);
+
+
+    }
+    keys(){
+        return this._keys;
+    }
+
+
+}
+class AdovancedSetting{
+    /**
+     * 
+     * @param {String} symbol 
+     * @param {Number} overwriteType 
+     * @param {boolean} mandatory 
+     */
+    constructor(symbol,overwriteType,mandatory){
+        this._symbol =symbol;
+        //シンボルが手動で設定されている場合、上書きで確定
+        this._overwriteType=(!!symbol) ? 9: overwriteType;
+        this._mandatory=  mandatory;
+    }
+    /**
+     * 
+     * @param {String} objText 
+     * @returns 
+     */
+    static create(objText){
+        if(!objText){
+            return new AdovancedSetting(null,0,false); 
+        }
+        const obj=JSON.parse(objText);
+        const symbol=(obj.symbol);
+        const overwiteType =Number(obj.overwrite||0);
+        const mandatory = (obj.mandatory==="true");
+        return new AdovancedSetting(symbol,overwiteType,mandatory);
+    }
+    symbol(){
+        return this._symbol;
+    }
+    isOverwriteEnabled(){
+        return this._overwriteType !==0;
+    }
+    /**
+     * 
+     * @param {Boolean} value 
+     */
+    setMandatory(value){
+        this._mandatory=value;
+    }
+    isMandatory(){
+        return this._mandatory;
+    }
+    overwriteType(){
+        return this._overwriteType;
+    }
+
+}
+
 /**
  * @param {String} objText 
  */
 const createExtendsSymbol=function(objText){
     const obj = JSON.parse(objText);
-    const symbol=String(obj.symbol||"");
-    const overwriteType =Number(obj.overwriteType);
+    const adovanced = AdovancedSetting.create(obj.adovanced);
+    const buttonId =Number(obj.button);
+
     const mtext = MultiLanguageText.create(obj.name);
     const keys =String(obj.keys||"");
-    const keyText =String(obj.keyText||"")
-    const eventObj = new EventCaller(Number(obj.eventId),Number(obj.inputType ||0));
-    const def = new ExtendsSymbol(symbol,mtext, Number(obj.button), keys,eventObj,overwriteType,keyText);
+    const keyText =String(obj.keyText||"");
+    const helpText =MultiLanguageText.create(obj.helpText||"{}");
+    const keySetting = KeySetting.create(obj.keySetting);
 
-    def.setMandatory(obj.mandatory ==="true");
+    const eventObj =EventCaller.create(obj.event);
+    const def = new ExtendsSymbol(adovanced,mtext, buttonId, keys,eventObj ,keyText,helpText,keySetting);
+
     /**
      * @type {String}
      */
@@ -1223,33 +1411,44 @@ const createExtendsSymbol=function(objText){
         button:button,
     }
 }
+
 class ExtendsSymbol extends I_SymbolDefine{
     /**
-     * @param {String} symbol
+     * @param {AdovancedSetting} adovanced
      * @param {MultiLanguageText} actionName 
      * @param {Number} buttonId 
      * @param {String} keys 
      * @param {EventCaller} eventCaller
-     * @param {Number} overwriteType
      * @param {String} keyText
+     * @param {MultiLanguageText} helpText
+     * @param {KeySetting} keySetting
      */
-    constructor(symbol,actionName,buttonId,keys ,eventCaller,overwriteType,keyText){
+    constructor(adovanced,actionName,buttonId,keys ,eventCaller,keyText,helpText,keySetting){
         super();
         this._event = eventCaller;
-        this._symbol =symbol;
+        this._symbol =null;
         this._keys = (keys ||"").toUpperCase();
         this._buttonId =buttonId;
         this._actionName = actionName;
         this._keyText=keyText;
-        this.setMandatory(false);
-        //上書きの際に、何を基準にするかの設定
-        //シンボルが設定されている場合、強制的にそれを使う
-        this._overwriteType=(!!symbol) ? 99:overwriteType;
-    }
-    isSymbolManualSetting(){
-        return this._overwriteType ===99;
+        this._helpText =helpText;
+        this._advanced =adovanced;
+        this._keySetting=keySetting;
     }
 
+    getKeys(){
+        return this._keys + this._keySetting.keys();
+    }
+    overwriteType(){
+        return this._advanced.overwriteType();
+    }
+    isOverwriteEnabled(){
+        return this._advanced.isOverwriteEnabled();
+    }
+
+    isMandatory(){
+        return this._advanced.isMandatory();
+    }
     displayKeyName(){
         if(this._keyText){
             return this._keyText;
@@ -1259,44 +1458,44 @@ class ExtendsSymbol extends I_SymbolDefine{
     eventCaller(){
         return this._event;
     }
-    /**
-     * @param {Boolean} value 
-     */
-    setMandatory(value){
-        //シンボルが無効な場合などで必須を解除するので、これだけ関数で設定する
-        this._mandatory = value;
+    helpText(){
+        const base = super.helpText();
+        if(base){ return base; }
+        return this._helpText.currentName();
     }
     name(){
-
         const name= this._actionName.currentName();
         if(this._symbol){
             return name;
         }
-        return `empty(${this._overwriteType}):${name}`;
+        return `empty(${this.overwriteType()}):${name}`;
     }
     symbol(){
         return this._symbol;
     }
     /**
+     * @param {I_ReadOnrySymbolManager} mapper
      * @returns {String}
      */
-    padSymbol(){
+    padSymbol(mapper){
         const symbol =Input.gamepadMapper[this._buttonId];
-        if(!symbolManager.isBasicSymbol(symbol)){
+        if(!mapper.isBasicSymbol(symbol)){
             return symbol;
         }
         return null;
     }
     /**
+     * @param {I_ReadOnrySymbolManager} mapper
      * @returns {String}
      */
-    firstKeySymbol(){
-        const charLen =this._keys.length;
+    firstKeySymbol(mapper){
+        const keys = this.getKeys();
+        const charLen =keys;
         for(let i =0; i <charLen; ++i){
-           const char_=  this._keys.charCodeAt(i);
+           const char_=  keys.charCodeAt(i);
            const symbol = Input.keyMapper[char_];
            if(symbol){
-                if(!symbolManager.isBasicSymbol(symbol)){
+                if(!mapper.isBasicSymbol(symbol)){
                     return symbol;
                 }
            }
@@ -1313,33 +1512,41 @@ class ExtendsSymbol extends I_SymbolDefine{
         return null
 
     }
-    //優先シンボルの読み込み
 
-    isOverwriteEnabled(){
-        return this._overwriteType;
-    }
-    xxxSymbol(){
-        switch (this._overwriteType) {
+    /**
+     * @param {I_ReadOnrySymbolManager} mapper 
+     * @returns {String}
+     */
+     xxxSymbol(mapper){
+        const manualSymbol=this._advanced.symbol();
+        if(manualSymbol){
+            return manualSymbol;
+        }
+        switch (this._advanced.overwriteType()) {
             case 1:
-                return this.padSymbol();
+                return this.padSymbol(mapper);
             case 2:
-                return this.firstKeySymbol();
+                return this.firstKeySymbol(mapper);
             case 3:
                 return this.evantCallSymbol()
         }
         return "";
     }
-    readMySymbol(){
+    /**
+     * @param {I_ReadOnrySymbolManager} mapper 
+     * @returns {String}
+     */
+    readMySymbol(mapper){
 
-        const xxxx=this.xxxSymbol();
+        const xxxx=this.xxxSymbol(mapper);
         if(xxxx){
             return xxxx;
         }
-        const pad = this.padSymbol();
+        const pad = this.padSymbol(mapper);
         if(pad){
             return pad;
         }
-        const key =this.firstKeySymbol()
+        const key =this.firstKeySymbol(mapper)
         if(key){
             return key; 
         }
@@ -1354,13 +1561,11 @@ class ExtendsSymbol extends I_SymbolDefine{
      */
     loadSymbol(mapper){
         if(!this._symbol){
-            const symbol =this.readMySymbol();
+            const symbol =this.readMySymbol(mapper);
             this._symbol = symbol;
         }
         if(this.isEmpty()){
-            this.setMandatory(false);
-            //TODO:表示名を変える
-
+            this._advanced.setMandatory(false);
         }
     }
     mapperWrite(mapper,targetKey){
@@ -1381,16 +1586,20 @@ class ExtendsSymbol extends I_SymbolDefine{
         if(!isNaN( this._buttonId)){
             this.mapperWrite(Input.gamepadMapper,this._buttonId);
         }
-        const len = this._keys.length;
+        const keys=this.getKeys();
+        const len = keys.length;
         for(let i =0; i< len;++i){
-            const key =this._keys.charCodeAt(i);
-            this.mapperWrite(Input.keyMapper,key);
+            const charcode =keys.charCodeAt(i);
+            this.mapperWrite(Input.keyMapper,charcode);
         }
     }
     updateEventCall(){
         if(this._event){
             this._event.update(this.symbol());
         }
+    }
+    debugInfo(){
+        return `ot:${this.overwriteType()},id:${this._buttonId},keys:${this.getKeys()}`;
     }
 
 }
@@ -1451,11 +1660,11 @@ class UnknowSymbol extends I_SymbolDefine{
         return true;
     }
 
-    paramSettingGuide(){
-        return "button:"+this._buttonId +"  keys:"+this._kesy;
+    debugInfo(){
+        return "button:"+this._buttonId +",keys:"+this._kesy;
     }
     helpText(){
-        return setting.errorText.unknowSymbol.currentName()+"\n" + this.paramSettingGuide();
+        return setting.errorText.unknowSymbol.currentName()+"\n" + this.debugInfo();
     }
 }
 
@@ -2010,6 +2219,7 @@ class InputDeviceBase extends I_ReadonlyMapper{
 class Gamepad extends InputDeviceBase{
     constructor(){
         super();
+        this._defaultMapper_V2=null;//new InputDevice_Readonly()
         const moves =[
             new GamepadButton(12,"↑"),
             new GamepadButton(13,"↓"),
@@ -2033,6 +2243,9 @@ class Gamepad extends InputDeviceBase{
 //          ,new GamepadButton(16,"center")
         ];
         this._list = buttons;
+    }
+    onBoot(){
+
     }
     button(buttonId){
         return this._list[buttonId];
@@ -2138,28 +2351,6 @@ function createDefaultKeyMapperItem(symbol,objText){
     const s= new StandardSymbol(symbol,mtext,"");
     return s;
 }
-
-class InputDevice_ReadOnly{
-    constructor(){
-        this._defaultKeyMapper=null;
-        this.setKeyLayout(null,null);
-    }
-    /**
-    * @param {Key_Layout} jis 
-     * @param {Key_Layout} us 
-     */
-    setKeyLayout(jis,us){
-        this._keyLayoutJIS=jis;
-        this._keyLayoutUS =us;
-    }
-    onBoot(){
-        this.setupDefaultMapper()
-
-    }
-    setupDefaultMapper(){
-        this._defaultKeyMapper=Object.freeze(objectClone(Input.keyMapper));
-    }
-}
 function createText(params){
     const guid = new MultiLanguageText("This is an unknown symbol. Add an item to the input extension","不明なシンボルです 入力拡張に項目を追加してください");
 
@@ -2209,6 +2400,44 @@ function createErrorTexts(){
     }
 
 }
+class InputDevice_Readonly{
+    constructor(mapper){
+        this._mapper=mapper;
+    }
+    mapper(){
+        return this._mapper;
+    }
+
+}
+
+class DeviceXXX{
+    constructor(){
+        this._defaultKeyMapper=null;
+        this._defaultGamepadMapper=null;
+        this.setKeyLayout(null,null);
+    }
+    /**
+    * @param {Key_Layout} jis 
+     * @param {Key_Layout} us 
+     */
+    setKeyLayout(jis,us){
+        this._keyLayoutJIS=jis;
+        this._keyLayoutUS =us;
+    }
+    onBoot(){
+        this.setupDefaultMapper()
+    }
+    setupDefaultMapper(){
+        this._defaultKeyMapper= new InputDevice_Readonly(  Object.freeze(objectClone(Input.keyMapper)));
+        this._defaultGamepadMapper =new InputDevice_Readonly(  Object.freeze(objectClone(Input.gamepadMapper)));
+    }
+    keyMapper(){
+        return this._defaultKeyMapper;
+    }
+    gamepadMapper(){
+        return this._defaultGamepadMapper;
+    }
+}
 
 const setting = (function(){
     const params = getParam();
@@ -2224,6 +2453,7 @@ const setting = (function(){
     buttonUsedForALT.setNameEN("%1 has been assigned to this button")
 
     const result= {
+        device:new DeviceXXX(),
         errorText:createErrorTexts(),
         text:createText(params),
         buttonUsedForALT:buttonUsedForALT,
@@ -2873,7 +3103,8 @@ class Window_InputConfigBase_workaround extends Window_InputConfigBase{
     }
 }
 
-class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
+
+class Window_InputSymbolListBase extends Window_Selectable_InputConfigVer{
     /**
      * @param {Rectangle} rect 
      */
@@ -2886,8 +3117,6 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
     }
     makeItemList(){
         this._list = symbolManager.getSymbolList();
-        //TODO:初期設定に戻す(ボタン単位)を追加 原理的には可能
-        this._list.push(new SymbolDeleteObject());
     }
     maxItems(){
         return this._list.length;
@@ -2957,9 +3186,6 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
         }
         return false;
     }
-    maxCols(){
-        return 4;
-    }
     updateHelp(){
         const symbol = this.currentSymbolObject()
         if(symbol){
@@ -2968,6 +3194,17 @@ class Window_InputSymbolList extends Window_Selectable_InputConfigVer{
             this._helpWindow.clear();
         }
     }
+}
+class Window_InputSymbolList extends Window_InputSymbolListBase{
+    makeItemList(){
+        super.makeItemList();
+        //TODO:初期設定に戻す(ボタン単位)を追加 原理的には可能
+        this._list.push(new SymbolDeleteObject());
+    }
+    maxCols(){
+        return 4;
+    }
+
 }
 class ButtonsMediator{
     /**
@@ -3248,6 +3485,8 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
     makePadInfoText(){
         const pad = createPadState(0);
         if(pad){
+            //TODO:ボタン数が少ないと、一部のキーを読めない可能性
+            //左右が10・11にあるパターンとか
             const text= `${pad.id.replace("(","\n(")}
             buttons:${pad.buttons.length} mapping:${pad.mapping}`;
             this._helpWindow.setText(text);
@@ -4989,6 +5228,10 @@ Scene_Boot.prototype.onDatabaseLoaded =function(){
     Scene_Boot_onDatabaseLoaded.call(this);
 };
 
+class Window_DebugSymbols extends Window_InputSymbolListBase{
+
+
+}
 //TODO:エラー診断　パラメータの問題を検出して、解決方法を提示
 class Scene_ErrorDetection extends Scene_MenuBaseMVMZ{
 
