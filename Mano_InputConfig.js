@@ -80,41 +80,41 @@
  * @desc キーボード設定のシーンを開きます。
  * Open the keyboard settings scene.
  * 
- * @param mapperOk
+ * @param basicOk
  * @text 決定/ok
- * @type struct<MultiLangString>
- * @default {"en":"ok","jp":"決定"}
+ * @type struct<BasicSymbol>
+ * @default {"name":"{\"jp\":\"決定\",\"en\":\"OK\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
- * @param mapperCancel
+ * @param basicCancel
  * @text 取り消し/cancle
- * @type struct<MultiLangString>
- * @default {"en":"cancel","jp":"キャンセル"}
+ * @type struct<BasicSymbol>
+ * @default {"name":"{\"jp\":\"キャンセル\",\"en\":\"cancel\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
- * @param mapperShift
+ * @param basicShift
  * @text ダッシュ/dash
- * @type struct<MultiLangString>
- * @default {"en":"dash","jp":"ダッシュ"}
+ * @type struct<BasicSymbol>
+ * @default {"name":"{\"jp\":\"ダッシュ\",\"en\":\"dash\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
- * @param mapperMenu
+ * @param basicMenu
  * @text メニュー/menu
- * @type struct<MultiLangString>
- * @default {"en":"menu","jp":"メニュー"}
+ * @type struct<BasicSymbol>
+ * @default {"name":"{\"jp\":\"メニュー\",\"en\":\"menu\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
- * @param mapperEscape
+ * @param basicEscape
  * @text メニュー(2)/menu(2)
- * @type struct<MultiLangString>
- * @default {"en":"menu/cancel","jp":"メニュー/キャンセル"}
+ * @type struct<BasicSymbol>
+ * @default {"name":"{\"jp\":\"メニュー/キャンセル\",\"en\":\"menu/cancel\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
- * 
- * @param mapperPageup
+ * @param basicPageup
  * @text 次/next
- * @type struct<MultiLangString>
- * @default {"en":"next","jp":"次"}
+ * @type struct<BasicSymbol>
+ * @default {"name":"{\"jp\":\"次\",\"en\":\"next\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
- * @param mapperPagedown
+ * @param basicPagedown
  * @text 前/prev
- * @type struct<MultiLangString>
- * @default {"en":"prev","jp":"前"}
+ * @type struct<BasicSymbol>
+ * @default {"name":"{\"jp\":\"前\",\"en\":\"prev\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
+ * 
  * 
  * @param mapperDelete
  * @text 設定を消去/delete
@@ -420,7 +420,27 @@
  * 2017/10/05 ver 1.0　公開
  * 
  */
-
+/*~struct~BasicSymbol:
+ * @param name
+ * @type struct<MultiLangString>
+ * @default {"jp":"","en":""}
+ * 
+ * @param keyText
+ * @text キーの表示/keyText
+ * @desc キーコンフィグの際の表示名を定義します(空欄OK)
+ * Define the display name for key config (blank OK)
+ * @type struct<MultiLangString>
+ * @default {"jp":"","en":""}
+ * 
+ * @param helpText
+ * @text 詳細/helpText
+ * @desc 画面上部に表示する説明文
+ * Description to be displayed at the top of the screen
+ * @type struct<MultiLangNote>
+ * @default {"jp":"","en":""}
+ * 
+ *  
+*/
 
 /*~struct~TouchButton:
  * @param image
@@ -689,6 +709,23 @@
   * @default {}
   * 
 */
+ /*~struct~ColorManager:
+  * 
+  * @param nomrmal
+  * @default #880000
+  * 
+  * @param mandatory
+  * @text 必須シンボル/mandatory
+  * @default #22e488
+  * 
+  * @param move
+  * @text 移動/move
+  * @default #22e488
+  * 
+  * 
+  * 
+  * 
+*/
 /*~struct~DisguiseAsYEP:
  * @param gamepad
  * @desc Impersonate the configuration as if it were GamepadConfig.js (by Yanfly).
@@ -833,11 +870,17 @@ class MultiLanguageText{
         this.setDefaultName("");
     }
     static create(objText){
+        if(!objText){
+            return null;
+        }
         const obj = JSON.parse(objText);
         const en =noteOrString(obj.en||"");
         const jp =noteOrString( obj.jp||"");
         const mtext = new MultiLanguageText(en,jp);
         return mtext;
+    }
+    isEmpty(){
+        return (!this.ja_JP)&&(!this.en_US);
     }
     /**
      * @param {String} name 
@@ -984,6 +1027,23 @@ class ButtonManager_T{
 const ButtonManager = new ButtonManager_T();
 
 class SymbolColorManager_T{
+    constructor(normal){
+        this._normal =normal
+    }
+    /**
+     * 
+     * @param {String} objText 
+     * @returns 
+     */
+    static create(objText){
+        if(!objText){
+            return new SymbolColorManager_T("880000");
+        }
+        const obj =JSON.parse(objText);
+        const normal =(obj.normal||null);
+        
+        return new SymbolColorManager_T(normal);
+    }
 
     paramatorInvalidColor(){
         return "#FF00FF";
@@ -1001,6 +1061,9 @@ class SymbolColorManager_T{
         return this.mandatoryColor();
     }
 }
+
+//TODO
+const SymbolColorManager =  SymbolColorManager_T.create(null);
 //デバッグ用の情報を扱うクラス
 class DebugSymbol{
     /**
@@ -1021,9 +1084,6 @@ class DebugSymbol{
 
 
 }
-
-
-const SymbolColorManager = new SymbolColorManager_T();
 class I_SymbolDefine{
 
     createDebugSymbol(){
@@ -1096,7 +1156,7 @@ class I_SymbolDefine{
     displayKeyName(){
         return this.symbol();
     }
-    helpText(){
+    errorText(){
         if(this.isEmpty()){
             return setting.errorText.symbolEmpty.currentName();
         }
@@ -1105,6 +1165,17 @@ class I_SymbolDefine{
             return setting.errorText.nameEmpty.currentName()+this.symbol();
         }
         return "";
+
+    }
+    helpText(){
+        return ""
+    }
+    getHelpText(){
+        const errorText = this.errorText();
+        if(errorText){
+            return errorText;
+        }
+        return this.helpText();
     }
     createErrorObject(){
 
@@ -1173,11 +1244,29 @@ class SymbolDeleteObject extends I_SymbolDefine{
 class EscapeSymbol extends I_SymbolDefine{
     /**
      * @param {MultiLanguageText} name 
+     * @param {MultiLanguageText} helpText
+     * @param {MultiLanguageText} keyText
      */
-    constructor(name){
+    constructor(name,helpText,keyText){
         super();
         this._name =name;
+        this._helpText =xxxxMtext(helpText);
+        this._keyText = xxxxMtext(keyText);
+
     }
+    static create(objText){
+        if(!objText){
+            const name = new MultiLanguageText("menu/cancel","メニュー/キャンセル");
+            return new EscapeSymbol(name,null,null);
+        }
+        const obj=JSON.parse(objText);
+
+        const name =  MultiLanguageText.create(obj.name);
+        const helpText =MultiLanguageText.create(obj.helpText);
+        const keyText =MultiLanguageText.create(obj.keyText);
+        return new EscapeSymbol(name,helpText,keyText);
+    }
+
     name(){
         return this._name.currentName();
     }
@@ -1188,20 +1277,50 @@ class EscapeSymbol extends I_SymbolDefine{
         return SymbolColorManager.mandatoryColor();
     }
 }
+/**
+ * 
+ * @param {MultiLanguageText} mText 
+ */
+function xxxxMtext(mText){
+    if(mText){
+        if(!mText.isEmpty()){
+            return mText
+        }
+    }
+    return null;
+}
 class StandardSymbol extends I_SymbolDefine{
     /**
      * @param {String} symbol 
      * @param {MultiLanguageText} name 
-     * @param {String} keyText
+     * @param {MultiLanguageText} keyText
+     * @param {MultiLanguageText} helpText
      */
-    constructor(symbol,name,keyText){
+    constructor(symbol,name,keyText,helpText){
         super();
         this._symbol = symbol;
-        this._name =name;
-        this._keyText = keyText;
+        //名前が未設定の場合、シンボルで初期化してしまう
+        this._name =name ? name : new MultiLanguageText(symbol,symbol);
+        //テキストが空っぽならnullにして、基底クラスの処理に任せる
+        this._keyText = xxxxMtext( keyText);
+        this._helpText=xxxxMtext(helpText);
+    }
+    static create(symbol,objText){
+        if(!objText){
+            return new StandardSymbol(symbol,null,null,null);
+        }
+        const obj = JSON.parse(objText);
+        const name =MultiLanguageText.create(obj.name);
+        const keyText =MultiLanguageText.create(obj.keyText);
+        const helpText =MultiLanguageText.create(obj.helpText);
+        return new StandardSymbol(symbol,name,keyText,helpText);
+
     }
     isMandatory(){
         return true;
+    }
+    helpText(){
+        return super.helpText();
     }
     name(){
         return this._name.currentName();
@@ -1211,27 +1330,39 @@ class StandardSymbol extends I_SymbolDefine{
     }
     displayKeyName(){
         if(this._keyText){
-            return this._keyText;
+            return this._keyText.currentName();
         }
         return super.displayKeyName();
     }
 }
-/**
- * @returns {I_SymbolDefine[]}
- */
-function basicSymbols(){
-    const param = getParam();
-    const ok =createDefaultKeyMapperItem("ok",param.mapperOk);
-    const cancel = createDefaultKeyMapperItem("cancel",param.mapperCancel);
-    const shift = createDefaultKeyMapperItem("shift",param.mapperShift);
-    const menu = createDefaultKeyMapperItem("menu",param.mapperMenu);
-    const pageup =createDefaultKeyMapperItem("pageup",param.mapperPageup)
-    const pagedonw =createDefaultKeyMapperItem("pagedown",param.mapperPagedown);
-
-    const escapeText = MultiLanguageText.create(param.mapperEscape);
-    const escape = new EscapeSymbol(escapeText);
-    return [ok,cancel,shift,menu,pageup,pagedonw,escape];
+function basicSymbols_V2(){
+    const param    = getParam();
+    const ok       = StandardSymbol.create("ok",param.basicOk);
+    const cancel   = StandardSymbol.create("cancel",param.basicCancel);
+    const shift    = StandardSymbol.create("shift",param.basicShift);
+    const menu     = StandardSymbol.create("menu",param.basicMenu);
+    const pageup   = StandardSymbol.create("pageup",param.basicPageup);
+    const pagedown = StandardSymbol.create("pagedown",param.basicPagedown);
+    const esacape  = EscapeSymbol.create(param.basicEscape);
+    return [ok,cancel,shift,menu,pageup,pagedown,esacape];
 }
+
+// /**
+//  * @returns {I_SymbolDefine[]}
+//  */
+// function basicSymbols(){
+//     const param = getParam();
+//     const ok =createDefaultKeyMapperItem("ok",param.mapperOk,null);
+//     const cancel = createDefaultKeyMapperItem("cancel",param.mapperCancel,null);
+//     //const shift = createDefaultKeyMapperItem("shift",param.mapperShift,null);
+//     const menu = createDefaultKeyMapperItem("menu",param.mapperMenu,null);
+//     const pageup =createDefaultKeyMapperItem("pageup",param.mapperPageup,null)
+//     const pagedonw =createDefaultKeyMapperItem("pagedown",param.mapperPagedown,null);
+
+//     const escapeText = MultiLanguageText.create(param.mapperEscape);
+//     const escape = new EscapeSymbol(escapeText);
+//     return [ok,cancel,menu,pageup,pagedonw,escape];
+// }
 class EventCaller{
     /**
      * @param {Number} eventId 
@@ -1326,6 +1457,12 @@ class KeySetting{
     }
     keys(){
         return this._keys;
+    }
+    keyText(){
+        if(this._mText){
+            return this._mText.currentName();
+        }
+        return "";
     }
 
 
@@ -1450,8 +1587,9 @@ class ExtendsSymbol extends I_SymbolDefine{
         return this._advanced.isMandatory();
     }
     displayKeyName(){
-        if(this._keyText){
-            return this._keyText;
+        const keyText = this._keySetting.keyText();
+        if(keyText){
+            return keyText;
         }
         return super.displayKeyName();
     }
@@ -1459,9 +1597,10 @@ class ExtendsSymbol extends I_SymbolDefine{
         return this._event;
     }
     helpText(){
-        const base = super.helpText();
-        if(base){ return base; }
-        return this._helpText.currentName();
+        if(this._helpText){
+            return this._helpText.currentName();            
+        }
+        return null;
     }
     name(){
         const name= this._actionName.currentName();
@@ -1474,28 +1613,28 @@ class ExtendsSymbol extends I_SymbolDefine{
         return this._symbol;
     }
     /**
-     * @param {I_ReadOnrySymbolManager} mapper
+     * @param {(symbol:string)=>Boolean} isBasicSymbol
      * @returns {String}
      */
-    padSymbol(mapper){
+    padSymbol(isBasicSymbol){
         const symbol =Input.gamepadMapper[this._buttonId];
-        if(!mapper.isBasicSymbol(symbol)){
+        if(!isBasicSymbol(symbol)){
             return symbol;
         }
         return null;
     }
     /**
-     * @param {I_ReadOnrySymbolManager} mapper
+     * @param {(symbol:string)=>Boolean} isBasicSymbol
      * @returns {String}
      */
-    firstKeySymbol(mapper){
+    firstKeySymbol(isBasicSymbol){
         const keys = this.getKeys();
         const charLen =keys;
         for(let i =0; i <charLen; ++i){
            const char_=  keys.charCodeAt(i);
            const symbol = Input.keyMapper[char_];
            if(symbol){
-                if(!mapper.isBasicSymbol(symbol)){
+                if(!isBasicSymbol(symbol)){
                     return symbol;
                 }
            }
@@ -1514,7 +1653,7 @@ class ExtendsSymbol extends I_SymbolDefine{
     }
 
     /**
-     * @param {I_ReadOnrySymbolManager} mapper 
+     * @param {(symbol:String)=>Boolean} mapper 
      * @returns {String}
      */
      xxxSymbol(mapper){
@@ -1533,20 +1672,20 @@ class ExtendsSymbol extends I_SymbolDefine{
         return "";
     }
     /**
-     * @param {I_ReadOnrySymbolManager} mapper 
+     * @param {(symbol:String)=>Boolean} isBasicSymbol 
      * @returns {String}
      */
-    readMySymbol(mapper){
+    readMySymbol(isBasicSymbol){
 
-        const xxxx=this.xxxSymbol(mapper);
+        const xxxx=this.xxxSymbol(isBasicSymbol);
         if(xxxx){
             return xxxx;
         }
-        const pad = this.padSymbol(mapper);
+        const pad = this.padSymbol(isBasicSymbol);
         if(pad){
             return pad;
         }
-        const key =this.firstKeySymbol(mapper)
+        const key =this.firstKeySymbol(isBasicSymbol)
         if(key){
             return key; 
         }
@@ -1557,7 +1696,7 @@ class ExtendsSymbol extends I_SymbolDefine{
         return "";
     }
     /**
-     * @param {I_ReadOnrySymbolManager} mapper 
+     * @param {(symbol:String)=>Boolean} mapper 
      */
     loadSymbol(mapper){
         if(!this._symbol){
@@ -1674,18 +1813,8 @@ Game_Map.prototype.setupStartingEvent =function(){
     return Game_Map_setupStartingEvent.call(this);
 };
 
-class I_ReadOnrySymbolManager{
-    /**
-     * @param {String} symbolString 
-     * @returns 
-     */
-    isBasicSymbol(symbolString){
-        return false;
-    }
-}
-class SymbolManager_T extends I_ReadOnrySymbolManager{
+class SymbolManager_T {
     constructor(){
-        super();
         /**
          * @type {Map<String,I_SymbolDefine>}
          */
@@ -1695,24 +1824,27 @@ class SymbolManager_T extends I_ReadOnrySymbolManager{
          */
         this._unknowList=[];
         this.setExtendSymbols([]);
-        this._basicSymbols = basicSymbols();
+        this._basicSymbols = basicSymbols_V2();
         this._moveSymbols = createMoveSymbols();
         this.addDictionaryItems(this._basicSymbols);
         this.addDictionaryItems(this._moveSymbols);
     }
     /**
      * @param {String} symbolString 
-     * @returns 
     */
     isBasicSymbol(symbolString){
         if(!symbolString){
             return false;
         }
-        const symbolObect = this.findSymbol(symbolString);
-        if(symbolObect){
-            return this._basicSymbols.contains(symbolObect);
-        }
-        return false;
+
+        return this._basicSymbols.some( function(symbolObject){
+            return symbolObject.symbol() ===symbolString;
+        } )
+        // const symbolObect = this.findSymbol(symbolString);
+        // if(symbolObect){
+        //     return this._basicSymbols.contains(symbolObect);
+        // }
+        // return false;
     }
     
     /**
@@ -1738,9 +1870,13 @@ class SymbolManager_T extends I_ReadOnrySymbolManager{
         this.loadUnknowSymbols();
     }
     loadExtendsSymbols(){
+        const selfObject =this;
+        const isBasicSymbol = function(symbol){
+            return selfObject.isBasicSymbol(symbol);
+        }
         const numExSymbols=this._extendSymbols.length;
         for (const iterator of this._extendSymbols) {
-            iterator.loadSymbol(this);
+            iterator.loadSymbol(isBasicSymbol);
         }
         if(numExSymbols!==this._extendSymbols.length){
             throw new Error("要素数を書き換えてはいけません")
@@ -1775,12 +1911,12 @@ class SymbolManager_T extends I_ReadOnrySymbolManager{
         }
 
         //移動シンボル4種を消す
-        for (const iterator of this._moveSymbols) {
-            const symbol = iterator.symbol();
-            if(symbol){
-                set.delete(symbol);
-            }
-        }
+        // for (const iterator of this._moveSymbols) {
+        //     const symbol = iterator.symbol();
+        //     if(symbol){
+        //         set.delete(symbol);
+        //     }
+        // }
         for (const iterator of this.systemSymbols()) {
             set.delete(iterator);
         }
@@ -1828,6 +1964,7 @@ class SymbolManager_T extends I_ReadOnrySymbolManager{
         if(item){  return item.name();}
 
         //TODO:この表記になるとガチで正体不明になるので対策
+        //この場合、初期化が正しく行われていない可能性
         return "unknow:"+symbol;
     }
     /**
@@ -2345,10 +2482,10 @@ function noteOrString(text){
  * @param {String} symbol 
  * @param {String} objText 
  */
-function createDefaultKeyMapperItem(symbol,objText){
+function createDefaultKeyMapperItem(symbol,objText,keyText){
     const mtext = MultiLanguageText.create(objText);
     //TODO:プラグインパラメータの修正が終わり次第、対応
-    const s= new StandardSymbol(symbol,mtext,"");
+    const s= new StandardSymbol(symbol,mtext,keyText ||null);
     return s;
 }
 function createText(params){
@@ -3037,7 +3174,7 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
     updateHelp(){
         const obj = this.currentSymbolObject();
         if(obj){
-            this._helpWindow.setText(obj.helpText());
+            this._helpWindow.setText(obj.getHelpText());
         }else{
             this._helpWindow.clear();
         }
@@ -3189,7 +3326,7 @@ class Window_InputSymbolListBase extends Window_Selectable_InputConfigVer{
     updateHelp(){
         const symbol = this.currentSymbolObject()
         if(symbol){
-            this._helpWindow.setText(symbol.helpText());
+            this._helpWindow.setText(symbol.getHelpText());
         }else{
             this._helpWindow.clear();
         }
