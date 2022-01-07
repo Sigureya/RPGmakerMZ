@@ -169,3 +169,59 @@ class MV_Workaround extends I_MVMZ_Workaround{
         this._pluginManager.callMV(commandName,args);
     }
 }
+class Scene_MenuBase_MVMZ  extends Scene_MenuBase{
+    /**
+     * 
+     * @returns {number}
+     */
+    mainAreaTop(){
+        if(super.mainAreaTop){
+            return super.mainAreaTop();
+        }
+        return 0;
+    }
+    /**
+     * 
+     * @returns {Number}
+     */
+    mainAreaHeight(){
+        const baseHeight = (super.mainAreaHeight) ? super.mainAreaHeight():Graphics.boxHeight;
+
+        return baseHeight
+    }
+    /**
+     * 
+     * @returns {Bitmap}
+     */
+    backgrongBitmap(){
+        return null;
+    }
+    createBackground(){
+        const bmp = this.backgrongBitmap();
+        if(bmp){
+            this._backgroundSprite = new Sprite();
+            this._backgroundSprite.bitmap = bmp;
+            this.addChild(this._backgroundSprite);
+        }else{
+            super.createBackground();
+        }
+
+    }
+    lineHeight(){
+        if( Utils.RPGMAKER_NAME==="MV"){
+            return 26;
+        }
+        return 26;
+    }
+    paddingSize(){
+        return 4;
+    }
+    /**
+     * @param {Number} lines 
+     * @returns 
+     */
+    calcWindowHeightEX(lines){
+        return this.lineHeight() * lines + this.paddingSize()*2;
+        //TODO:MZに対応して設計しつつ、MVをあれこれ
+    }
+}
