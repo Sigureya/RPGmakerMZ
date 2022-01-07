@@ -169,6 +169,55 @@ class MV_Workaround extends I_MVMZ_Workaround{
         this._pluginManager.callMV(commandName,args);
     }
 }
+class Window_Selectble_MVMZ extends Window_Selectable{
+    /**
+     * @param {Rectangle} rect 
+     */
+    constructor(rect){
+        super(rect);
+    }
+
+    initialize(rect){
+        workaround.windowInitialize(this,rect,super.initialize);
+        //window_initializeMVMZ(this,rect,super.initialize);
+    }
+    isShiftTriggerd(){
+        return Input.isRepeated("shift");
+    }
+    isShiftEnabled(){
+        return this.isHandled("shift");
+    }
+    processShift(){
+        this.playOkSound();
+        this.updateInputData();
+        this.deactivate();
+        this.callHandler("shift");
+    }
+    processHandling(){
+        super.processHandling();
+        if(this.isOpenAndActive()){
+            if(this.isShiftEnabled() && this.isShiftTriggerd()){
+                this.processShift();
+            }
+        }
+    }
+
+    /**
+     * @param {Number} index 
+     * @returns 
+     */
+    itemRectWithPaddingMV(index){
+        const rect = this.itemRect(index);
+        const padding = this.itemPaddingMV();
+        rect.x += padding;
+        rect.width -= padding * 2;
+        return rect;
+    }
+    itemPaddingMV(){
+        return 6;
+    }
+}
+
 class Scene_MenuBase_MVMZ  extends Scene_MenuBase{
     /**
      * 
@@ -225,3 +274,8 @@ class Scene_MenuBase_MVMZ  extends Scene_MenuBase{
         //TODO:MZに対応して設計しつつ、MVをあれこれ
     }
 }
+
+
+const workaround=  (function createMVMZ_Workaround(){
+    return new MV_Workaround();
+})()
