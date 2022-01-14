@@ -1,3 +1,18 @@
+//=============================================================================
+// Mano_InputConfig.js
+// ----------------------------------------------------------------------------
+// Copyright (c) 2022-2022 Sigureya
+// This software is released under the MIT License.
+// http://opensource.org/licenses/mit-license.php
+// ----------------------------------------------------------------------------
+// Version
+// ver 0.9.0 2021/01/14
+// ----------------------------------------------------------------------------
+// [Twitter]: https://twitter.com/Sigureya/
+//=============================================================================
+
+
+
 /*:
  * @plugindesc ゲームオーバー時にタイトルに戻さず、特殊処理を行います。
  * @author しぐれん(https://github.com/Sigureya/RPGmakerMV)
@@ -8,11 +23,6 @@
  * @command SetRespawn
  * @text 復活地点の設定
  * @desc 現在の位置を全滅時の復活位置として設定します。
- * 
- * 
- * @command MoveRepawnPoint
- * @text 復活地点に移動
- * @desc 手動で移動させる場合に使います。
  * 
  * @param recoverTarget
  * @desc 回復対象
