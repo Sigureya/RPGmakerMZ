@@ -21,11 +21,12 @@
  * @target MZ
  * 
  * @command SetRespawn
- * @text 復活地点の設定
+ * @text 復活地点の設定/SetRespawnPoint
  * @desc 現在の位置を全滅時の復活位置として設定します。
+ * ※プラグインパラメータで保存先を設定する必要があります。
  * 
  * @param recoverTarget
- * @desc 回復対象
+ * @text 回復対象
  * @type select
  * @option 全員
  * @value 0
@@ -36,14 +37,18 @@
  * @default 0
  *  
  * @param mapId
+ * @text 【必須】マップ番号
  * @type variable
- * @desc 復帰用のマップが無い場合、復帰は行わずにタイトルへ戻ります。
+ * @desc 復帰用マップが無い場合、そのままタイトルへ戻ります。
  * @default 0
+ * 
  * @param x
+ * @text 【必須】マップX
  * @type variable
  * @default 0
  * 
  * @param y
+ * @text 【必須】マップY
  * @type variable
  * @default 0
  * 
@@ -54,6 +59,7 @@
  * 
  * 
  * @param callbackEvent
+ * @text 復帰時に呼び出すイベント
  * @desc ゲームオーバーから復帰した際に、
  * このイベントを呼び出します。
  * @type common_event
@@ -108,13 +114,22 @@
     TestFileNameValid(PLUGIN_NAME);
 
     class Respawn{
+        /**
+         * @param {Number} mapId 
+         * @param {Number} x 
+         * @param {Number} y 
+         * @param {Number} direction 
+         * @param {Number} callbackEvent 
+         */
         constructor(mapId,x,y,direction,callbackEvent){
             this._mapId=mapId;
             this._x =x;
             this._y =y;
             this._direction=direction;
             this._callbackEvent=callbackEvent;
-
+        }
+        paramatorValid(){
+            return this._mapId > 0 && this._x > 0 && this._y > 0 ;
         }
         onGameOver(){
             this.loadPosition();
@@ -131,22 +146,15 @@
             $gameVariables.setValue(this._y,$gamePlayer.y);
             $gameVariables.setValue(this._direction,$gamePlayer.direction());
         }
-        createTranferParam(){
-            return {
-                mapId: $gameVariables.value(this._mapId),
-                x:$gameVariables.value(this._x),
-                y:$gameVariables.value(this._y),
-                direction :$gameVariables.value(this._direction),
-            }
-        }
         loadPosition(){
-            const param =this.createTranferParam();
-            $gamePlayer.reserveTransfer(param.mapId,param.x,param.y,param.direction,0);
-
+            const mapId= $gameVariables.value(this._mapId);
+            const x=$gameVariables.value(this._x);
+            const y=$gameVariables.value(this._y);
+            const direction= $gameVariables.value(this._direction);
+            $gamePlayer.reserveTransfer(mapId,x,y,direction,0);
         }
         callEvent(){
             $gameTemp.reserveCommonEvent(this._callbackEvent);
-
         }
     }
     function getParam(){ return PluginManager.parameters(PLUGIN_NAME);  }
@@ -160,7 +168,7 @@
             Number(param.callbackEvent)
         )
         const result ={
-            recoverTargets:Number(0),
+            recoverTargets:Number(param.recoverTarget),
             respawn:respawn,
         };
         return result;
@@ -196,7 +204,6 @@
     }
 const Scene_Gameover_gotoTitle=Scene_Gameover.prototype.gotoTitle;
 Scene_Gameover.prototype.gotoTitle =function(){
-    this;
     if(setting.respawn.isPositionValid()){
         const targets = recoverTargets($gameParty);
         for (const iterator of targets) {
@@ -207,7 +214,15 @@ Scene_Gameover.prototype.gotoTitle =function(){
         Scene_Gameover_gotoTitle.call(this);
     }
 };
+const Scene_Boot_terminate=Scene_Boot.prototype.terminate;
+Scene_Boot.prototype.terminate =function(){
 
+    if(!setting.respawn.paramatorValid()){
+        throw new Error(`${PLUGIN_NAME}のプラグインパラメータが未設定です`);
+    }
+    Scene_Boot_terminate.call(this);
+
+};
 
 PluginManager.registerCommand(PLUGIN_NAME,"SetRespawn",()=>{
     setting.respawn.savePostion();
