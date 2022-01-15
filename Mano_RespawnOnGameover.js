@@ -16,7 +16,7 @@
 /*:
  * @plugindesc ゲームオーバー時にタイトルに戻さず、特殊処理を行います。
  * @author しぐれん(https://github.com/Sigureya/RPGmakerMV)
- * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_InputConfig.js
+ * @url https://github.com/Sigureya/RPGmakerMZ/blob/master/Mano_RespawnOnGameover.js
  * 
  * @target MZ
  * 
