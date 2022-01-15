@@ -1,5 +1,5 @@
 //=============================================================================
-// Mano_InputConfig.js
+// Mano_RespawnOnGameover.js
 // ----------------------------------------------------------------------------
 // Copyright (c) 2022-2022 Sigureya
 // This software is released under the MIT License.
@@ -23,49 +23,59 @@
  * @command SetRespawn
  * @text 復活地点の設定/SetRespawnPoint
  * @desc 現在の位置を全滅時の復活位置として設定します。
- * ※プラグインパラメータで保存先を設定する必要があります。
+ * Sets the current position to the respawn position.
  * 
  * @param recoverTarget
- * @text 回復対象
+ * @text 回復対象/recoverTarget
  * @type select
- * @option 全員
+ * @option パーティ全員/all
  * @value 0
- * @option IDの小さいアクター1人
+ * @option ID最小1人/ActorIdMinimum
  * @value 1
- * @option 先頭の1人
+ * @option 先頭の1人/top
  * @value 2
  * @default 0
  *  
  * @param mapId
- * @text 【必須】マップ番号
+ * @text マップ番号/MapId
  * @type variable
  * @desc 復帰用マップが無い場合、そのままタイトルへ戻ります。
  * @default 0
  * 
  * @param x
- * @text 【必須】マップX
+ * @text マップX/MapX
  * @type variable
  * @default 0
  * 
  * @param y
- * @text 【必須】マップY
+ * @text マップY/MapY
  * @type variable
  * @default 0
  * 
  * @param direction
- * @text 向き
+ * @text 向き/Direction
  * @type variable
  * @default 0
  * 
- * 
  * @param callbackEvent
- * @text 復帰時に呼び出すイベント
- * @desc ゲームオーバーから復帰した際に、
- * このイベントを呼び出します。
+ * @text 復帰時のイベント/Event
+ * @desc 復活後に指定したイベントを呼び出します。
+ * Calls the specified event after Respawn.
  * @type common_event
  * @default 0
  * 
  * @help
+ * When returning, the actor will be fully recovered and restarted.
+ *
+ * Set the return location with the plug-in command.
+ * Since the return position is determined using normal variables,
+ * manual setting is also possible.
+ * One common event can be called when returning.
+ *
+ * ■ Return processing
+ * Move to the resurrection point.
+ * Then execute the specified common event.
+ *  
  * ドラクエとかポケモンのような、全滅してもタイトルに戻らないゲームオーバー。
  * 復帰の際、アクターを全回復させて再開します。
  * 
@@ -74,7 +84,8 @@
  * 復帰時にコモンイベントを一つ呼び出すことができます。
  * 
  * ■復帰処理
- * 初期設定では、復活地点へ移動し、コモンイベントを呼び出すのみです。
+ * 復活地点へ移動します。
+ * そのあとで、指定されたコモンイベントを実行します。
  * 
  * ■注意点
  * プレイヤーが任意のタイミングで場所移動することになるため、
@@ -91,7 +102,7 @@
     /**
      * @type {String}
      */
-    const  PLUGIN_NAME= ('Mano_GameoverEX');
+    const  PLUGIN_NAME= ('Mano_RespawnOnGameover');
     function getCurrentScriptName(){
        const pluginName = decodeURIComponent(document.currentScript.src).match(/([^/]+)\.js$/);
        if(pluginName){ return pluginName[1];}
@@ -140,7 +151,7 @@
             const mapId = $gameVariables.value(this._mapId) || 0;
             return !!($dataMapInfos[mapId]);
         }
-        savePostion(){
+        savePosition(){
             $gameVariables.setValue(this._mapId,$gameMap.mapId());
             $gameVariables.setValue(this._x,$gamePlayer.x);
             $gameVariables.setValue(this._y,$gamePlayer.y);
@@ -216,15 +227,17 @@ Scene_Gameover.prototype.gotoTitle =function(){
 };
 const Scene_Boot_terminate=Scene_Boot.prototype.terminate;
 Scene_Boot.prototype.terminate =function(){
-
     if(!setting.respawn.paramatorValid()){
         throw new Error(`${PLUGIN_NAME}のプラグインパラメータが未設定です`);
     }
     Scene_Boot_terminate.call(this);
-
 };
-
-PluginManager.registerCommand(PLUGIN_NAME,"SetRespawn",()=>{
-    setting.respawn.savePostion();
-})
+if(PluginManager.registerCommand){
+    PluginManager.registerCommand(PLUGIN_NAME,"SetRespawn",()=>{
+        setting.respawn.savePosition();
+    });    
+    PluginManager.registerCommand("Mano_GameoverEX","SetRespawn",()=>{
+        setting.respawn.savePosition();
+    });    
+}
 }())
