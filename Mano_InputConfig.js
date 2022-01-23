@@ -122,6 +122,7 @@
  * @default {"name":"{\"jp\":\"前\",\"en\":\"prev\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
  * 
+ * 
  * @param mapperDelete
  * @text 設定を消去/delete
  * @type struct<MultiLangString>
@@ -266,6 +267,7 @@
  * SceneManager.push (Mano_InputConfig.Scene_GamepadConfig); // Gamepad Config
  * SceneManager.push (Mano_InputConfig.Scene_KeyConfig); // Keyboard config
  * You can now move to the specified scene.
+ * 
  * ゲームの起動時の設定を初期値として読み込みます。
  * プラグインの導入位置に関わらず、入力の変更を検知します。
  * 他のプラグインでボタンが改造されていてもOKです。
@@ -459,52 +461,9 @@
  * @type struct<MultiLangNote>
  * @default {"jp":"","en":""}
  * 
+ * @param event
+ * @type struct<EventCaller>
  */
-/*
-//TODO:いずれ追加するかもしれない機能
-//extendsSymbolとの共通化が壁 
- * @param exKeys
- * @type string
- * @desc 指定したキーに対してアクションを割り当てます。
- * Assigns an action to the specified key.
- * @default
- * 
- * @param exButton
- * @text パッドボタン/padButton
- * @desc ボタン設定。配置と名前は任天堂のスタイルを想定。
- * Button settings. The layout and name the style of Nintendo.
- * @type select
- * @default NaN
- * @option none
- * @value NaN
- * @option 0(B/×)
- * @value 0
- * @option 1(A/○)
- * @value 1
- * @option 2(X/□)
- * @value 2
- * @option 3(Y/△)
- * @value 3
- * @option 4(L1)
- * @value 4
- * @option 5(R1)
- * @value 5
- * @option 6(L2)
- * @value 6
- * @option 7(R2)
- * @value 7
- * @option 8(select)
- * @value 8
- * @option 9(start)
- * @value 9
- * @option 10(L3)
- * @value 10
- * @option 11(R3)
- * @value 11
- * @option 16(center)
- * @value 16
- * 
-*/
 
 /*~struct~TouchButton:
  * @param image
@@ -678,6 +637,11 @@
  * @type struct<AdvancedSetting>
  * @default {"symbol":"","overwrite":"0","mandatory":"false"}
  * 
+ * @param enabled
+ * @text 有効化
+ * @desc テスト用に一時的に無効化したい場合などで使います。
+ * @type boolean
+ * @default true
  */
 
 
@@ -1230,6 +1194,9 @@ class I_SymbolDefine{
     name(){
         return "";
     }
+    hasName(){
+        return !!this.name();
+    }
     isEnabled(){
         return !this.isEmpty();
     }
@@ -1255,12 +1222,10 @@ class I_SymbolDefine{
         if(this.isEmpty()){
             return setting.errorText.symbolEmpty.currentName();
         }
-        const name = this.name();
-        if(!name){
+        if(!this.hasName()){
             return setting.errorText.nameEmpty.currentName()+this.symbol();
         }
         return "";
-
     }
     helpText(){
         return ""
@@ -1333,6 +1298,9 @@ class SymbolDeleteObject extends I_SymbolDefine{
     }
     symbol(){
         return null;
+    }
+    errorText(){
+        return "";
     }
     helpText(){
         return this.name();
@@ -1583,6 +1551,9 @@ class AdovancedSetting{
         const mandatory = (obj.mandatory==="true");
         return new AdovancedSetting(symbol,overwiteType,mandatory);
     }
+    isSymbolValid(){
+        return !symbolManager.isBasicSymbol(this._symbol);
+    }
     symbol(){
         return this._symbol;
     }
@@ -1610,17 +1581,25 @@ class AdovancedSetting{
  */
 const createExtendsSymbol=function(objText){
     const obj = JSON.parse(objText);
+    //名前が滅茶苦茶だけど、==="true"が使えない状態なのでやむを得ずこれ
+    const enabled =(obj.enabled ==="false");
+    if(enabled){
+        return {
+            exSymbol:null,
+            button:null
+        };
+    }
     const adovanced = AdovancedSetting.create(obj.adovanced);
     const buttonId =Number(obj.button);
 
     const mtext = MultiLanguageText.create(obj.name);
     const keys =String(obj.keys||"");
-    const keyText =String(obj.keyText||"");
+    //const keyText =String(obj.keyText||"");
     const helpText =MultiLanguageText.create(obj.helpText||"{}");
     const keySetting = KeySetting.create(obj.keySetting);
 
     const eventObj =EventCaller.create(obj.event);
-    const def = new ExtendsSymbol(adovanced,mtext, buttonId, keys,eventObj ,keyText,helpText,keySetting);
+    const def = new ExtendsSymbol(adovanced,mtext, buttonId, keys,eventObj ,enabled,helpText,keySetting);
 
     /**
      * @type {String}
@@ -1644,11 +1623,11 @@ class ExtendsSymbol extends I_SymbolDefine{
      * @param {Number} buttonId 
      * @param {String} keys 
      * @param {EventCaller} eventCaller
-     * @param {String} keyText
+     * @param {Boolean} enabled
      * @param {MultiLanguageText} helpText
      * @param {KeySetting} keySetting
      */
-    constructor(adovanced,actionName,buttonId,keys ,eventCaller,keyText,helpText,keySetting){
+    constructor(adovanced,actionName,buttonId,keys ,eventCaller,enabled,helpText,keySetting){
         super();
         this._event = eventCaller;
         this._symbol =null;
@@ -1681,7 +1660,7 @@ class ExtendsSymbol extends I_SymbolDefine{
         }
         return super.displayKeyName();
     }
-    eventCaller(){
+    eventParam(){
         return this._event;
     }
     helpText(){
@@ -1690,18 +1669,35 @@ class ExtendsSymbol extends I_SymbolDefine{
         }
         return null;
     }
+    hasName(){
+        return !!this._actionName.currentName();
+    }
     name(){
         const name= this._actionName.currentName();
-        if(this._symbol){
-            return name;
+        if(!this._symbol){
+            return `empty(${this.overwriteType()}):${name}`;
         }
-        return `empty(${this.overwriteType()}):${name}`;
+        if(!name){
+            return `unnamed:${this._symbol}`;
+        }
+        return name;
     }
     customBackColor(){
         return this._keySetting.backColor();
     }
     symbol(){
         return this._symbol;
+    }
+    /**
+     * @param {(symbol:string)=>Boolean} isBasicSymbol
+     * @returns {String}
+     */
+    readManualySymbol(isBasicSymbol){
+        const symbol = this._advanced.symbol();
+        if(isBasicSymbol(symbol)){
+            return null;
+        }
+        return symbol;
     }
     /**
      * @param {(symbol:string)=>Boolean} isBasicSymbol
@@ -1740,7 +1736,6 @@ class ExtendsSymbol extends I_SymbolDefine{
             }
         }
         return null
-
     }
 
     /**
@@ -1749,7 +1744,7 @@ class ExtendsSymbol extends I_SymbolDefine{
      * @description 優先シンボルの読み込み
      */
     readPreferredSymbol(isBasicSymbol){
-        const manualSymbol=this._advanced.symbol();
+        const manualSymbol=this.readManualySymbol(isBasicSymbol);
         if(manualSymbol){
             return manualSymbol;
         }
@@ -1835,6 +1830,15 @@ class ExtendsSymbol extends I_SymbolDefine{
             }
         }
     }
+    errorText(){
+
+        //シンボル手動設定で、標準シンボルと同じ文字列が指定されている
+        if(!this._advanced.isSymbolValid()){
+            return setting.errorText.advanceSymbolInvalid.currentName();
+        }
+
+        return super.errorText();
+    }
     debugInfo(){
         return `ot:${this.overwriteType()},id:${this._buttonId},keys:${this.getKeys()}`;
     }
@@ -1905,7 +1909,13 @@ class UnknowSymbol extends I_SymbolDefine{
         return setting.errorText.unknowSymbol.currentName()+"\n" + this.debugInfo();
     }
 }
+class BasicSymbolList{
 
+    constructor(ok,cancel,shift,pageup,pagedown,menu,shift_){
+
+
+    }
+}
 
 class SymbolManager_T {
     /**
@@ -1927,6 +1937,7 @@ class SymbolManager_T {
         this.addDictionaryItems(this._basicSymbols);
         this.addDictionaryItems(this._moveSymbols);
         this._initialized=false;
+        this._event=null;
     }
     /**
      * @param {String} symbolString 
@@ -1953,16 +1964,6 @@ class SymbolManager_T {
         this._extendSymbols =list;
     }
 
-    callButtonEvent(){
-        for (const iterator of this._extendSymbols) {
-            //既に予約されている場合、あるいはupdateEventCall()で予約されたら処理を止める
-            if($gameTemp.isCommonEventReserved()){
-                break;
-            }
-
-            iterator.updateEventCall();
-        }
-    }
     onBoot(){
         if(this._initialized){
             return;
@@ -2038,6 +2039,22 @@ class SymbolManager_T {
         this.addDictionaryItems(this._unknowList)
     }
 
+    
+
+    callButtonEvent(){
+
+        //this._event.updateEventCall();
+
+        //TODO:イベント呼び出し機能を切り離す
+        //ちょっとだけ最適化にもつながる
+        for (const iterator of this._extendSymbols) {
+            //既に予約されている場合、あるいはupdateEventCall()で予約されたら処理を止める
+            if($gameTemp.isCommonEventReserved()){
+                break;
+            }
+            iterator.updateEventCall();
+        }
+    }
     /**
      * @param {I_SymbolDefine[]} list 
      */
@@ -2124,8 +2141,8 @@ class SymbolManager_T {
         }
         return true;
     }
-
 }
+
 const symbolManager = new SymbolManager_T(
     createBasicSymbols(),
     createMoveSymbols()
@@ -2146,10 +2163,12 @@ function setupExtendsSymbols(symbolManager,buttonManager){
     const symbols=[];
     for (const iterator of textList) {
         const item=createExtendsSymbol(iterator);
-        symbols.push(item.exSymbol);
+        if(item.exSymbol){
+            symbols.push(item.exSymbol);
+        }
         if(item.button){
             buttons.push(item.button);
-        }
+        }    
     }
     symbolManager.setExtendSymbols(symbols);
     buttonManager.setList(buttons);
@@ -2562,7 +2581,7 @@ class Gamepad extends InputDeviceBase{
         
     }
     //TODO:ALT側で使っているのでしばらく残す
-     maxItems(){
+     maxButtons(){
          return this._list.length;
      }
     /**
@@ -2663,14 +2682,14 @@ class ErrorObject{
 }
 
 function createErrorTexts(){
+    const advanceSymbolInvalid =new MultiLanguageText("","拡張シンボルは標準シンボルと異なる内容でなければいけません。");
     const initFauled =new MultiLanguageText("The initialization process was not performed correctly. \nThere is a possibility of a plugin conflict. \nMove the plugin down may help.","初期化処理が正しく行われませんでした。\nプラグインの競合の可能性があります。\nプラグインを下の方に移動すると解決する場合があります。");
     const unknowSymbol = new MultiLanguageText("This is an unknown symbol. Add an item to the input extension","不明なシンボルです 入力拡張に項目を追加してください");
     const symbolEmpty=new MultiLanguageText("The symbol is not set \n Check the contents of the inputExtension from the plugin parameters","シンボルが設定されていません\nプラグインパラメータから拡張設定の内容を確認してください");
     const nameEmpty= new MultiLanguageText("The name for display is not set\nsymbol:","表示用の名称が設定されていません\nsymbol:");
-    //シンボル名の打ち間違いを調べる
-    const symbolManual =new MultiLanguageText("","シンボルが手動で設定されていますが、mapper内から見つけることができませんでした。");
 
     return {
+        advanceSymbolInvalid:advanceSymbolInvalid,
         initFauled:initFauled,
         unknowSymbol:unknowSymbol,
         symbolEmpty:symbolEmpty,
@@ -4193,7 +4212,7 @@ class Window_GamepadConfig_ALT extends Window_Selectable_InputConfigVer{
         return 4;
     }
     maxItems(){
-        return setting.gamepad.maxItems();
+        return setting.gamepad.maxButtons();
     }
     currentItem(){
         return this.itemAt(this.index());
@@ -4257,6 +4276,7 @@ class Window_GamepadConfig_ALT extends Window_Selectable_InputConfigVer{
 
 //アクション→ボタンの順で設定するタイプ
 //TODO:開発中断・気が向いたら続きを作る
+//表示切替実装時にSupport終了にする
 class Scene_GamepadConfig_ALT extends Scene_InputConfigBase_MA{
 
     create(){
@@ -4631,6 +4651,9 @@ class Key_CommandManager_T{
         this._changeLayout=Key_Command.create(params.changeLayout,"keylayout");
 
     }
+    buttonLayout(){
+        return this._changeButtonLayout;
+    }
     keylayout(){
         return this._changeLayout;
     }
@@ -4681,6 +4704,7 @@ class Key_CommandManager_T{
         return result;
     }
     createCommandList_ForGamepad(){
+        const layout = this.buttonLayout();
         const exit =this.exit();
         const reset =this.reset()
         const alt = this.alt();
@@ -5593,12 +5617,14 @@ if(Utils.RPGMAKER_NAME =="MV"){
 }else{
     PluginManager.registerCommand( PLUGIN_NAME,"IsGamepadValid",function(arg){
         const sid = (arg.switchId);
-        const value = symbolManager.isValidMapper(Input.gamepadMapper);
+        const set = new Set( Object.values(Input.gamepadMapper))
+        const value = symbolManager.isValidMapper_v3(set);
         $gameSwitches.setValue(sid,value);
     });
     PluginManager.registerCommand( PLUGIN_NAME,"IsKeyboardValid",function(arg){
         const sid = (arg.switchId);
-        const value = symbolManager.isValidMapper(Input.keyMapper);
+        const set = new Set( Object.values(Input.keyMapper))
+        const value = symbolManager.isValidMapper_v3(set);
         $gameSwitches.setValue(sid,value);
     });
     PluginManager.registerCommand( PLUGIN_NAME,"GetButtonName",GetButtonName);
