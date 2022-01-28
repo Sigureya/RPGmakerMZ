@@ -10,9 +10,88 @@
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
-
-
 /*:
+ * @plugindesc Make a backup of your save data as the game progresses.
+ * @author siguren(https://github.com/Sigureya/RPGmakerMV)
+ * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_BackupSave.js
+ * 
+ * @target MZ
+ * 
+ * @command BackupSave
+ * @text createBackup
+ * @arg id
+ * @text BackupNumber
+ * @desc Even if they are not serial numbers, 
+ * they are arranged in numerical order.
+ * @type number
+ * @min 1
+ * @default 1
+ * 
+ * @arg switchId
+ * @text Multiple call prevention (blank OK)
+ * @desc Use the switch to make a one-time backup.
+ * @type switch
+ * @default 0
+ * 
+ * @arg text
+ * @text helpText
+ * @desc It is used for display on the reading screen.
+ * 
+ * @command BackupScene
+ * @text OpenBackup
+ * @desc Open the backup load scene.
+ * 
+ * @param titleWidth
+ * @text titleWidth
+ * @type number
+ * @default 180
+ * 
+ * @param titleFormat
+ * @text titleFormat
+ * @type string
+ * @default backup %1
+ * 
+ * @param commandName
+ * @text CommandNamne
+ * @desc Command name to display in the title scene
+ * @default Backup Load
+ * 
+ * @param commandHeight
+ * @type number
+ * @default 44
+ * 
+ * 
+ * @help
+ * Only one save data is created when advancing the game,
+ * You may get stuck when you get caught in a bug.
+ * This plugin forces data to be saved separately from regular save files.
+ *
+ * Save data is created with a plug-in command.
+ * 
+ * ■ Timing of backup creation
+ * Call "Create Backup" when the following conditions are met.
+ * In theory, it is possible at any time, but for safety.
+ * ・ Timing that is called only once (can be automated with a switch)
+ * ・ Map with few events for production (affects the size of save data, etc.)
+ * -The last line of the event command (Avoiding problems by updating game data-described later)
+ * When you arrive in a new city, it is easy to meet these conditions.
+ *  
+ * ■ When backing up with different save data
+ * Different save data ・ When backing up in the same location
+ * Overwrite the old one with a later backup.
+ *
+ * ■ About the effect of updating game data
+ * If you have saved a chapter, please end the event as soon as possible.
+ * It is recommended to place it as the last command of the map event.
+ *
+ * If there is a process immediately after the backup save,
+ * The process will be executed after loading.
+ * This will cause the old process to be executed when updating the game data.  
+ * 
+*/
+
+
+/*:ja
  * @plugindesc ゲームの進行に合わせて、セーブデータのバックアップを作成します。
  * @author しぐれん(https://github.com/Sigureya/RPGmakerMV)
  * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_BackupSave.js
@@ -20,10 +99,11 @@
  * @target MZ
  * 
  * @command BackupSave
- * @text バックアップ作成
+ * @text バックアップ作成/createBackup
  * @arg id
- * @text バックアップ番号
- * @desc 連番でなくても、内部では番号順に並びます。
+ * @text バックアップ番号/BackupNumber
+ * @desc 連番でなくても、番号順に並びます。
+ * Even if they are not serial numbers, they are arranged in numerical order.
  * @type number
  * @min 1
  * @default 1
@@ -35,24 +115,27 @@
  * @default 0
  * 
  * @arg text
- * @text 名称
+ * @text 名称/helpText
  * @desc 読み込み画面での表示に使います。
  * 
  * @command BackupScene
+ * @text バックアップを開く/OpenBackup
  * @desc バックアップ読み込み画面を開きます。
  * 
  * @param titleWidth
- * @text タイトルの幅
+ * @text タイトルの幅/titleWidth
  * @type number
  * @default 180
  * 
  * @param titleFormat
- * @text タイトル書式
+ * @text タイトル書式/titleFormat
  * @type string
  * @default バックアップ %1
  * 
  * @param commandName
- * @text コマンド名
+ * @text コマンド名/CommandNamne
+ * @desc タイトル画面でのコマンド名
+ * CommandName for SceneTitle
  * @default バックアップ読み込み
  * 
  * @param commandHeight
@@ -494,6 +577,7 @@ PluginManager.registerCommand(PLUGIN_NAME,"BackupSave",function(arg){
     }
     const chapterId =Number(arg.id);
     $gameSwitches.setValue(switchId,true);
+    //非同期処理の書き込みが終わるまでイベントを止める
     inter.wait(Number.MAX_SAFE_INTEGER);
     backupManager.saveChappter(chapterId,arg.text).finally( ()=>{ 
         inter.wait(0);
