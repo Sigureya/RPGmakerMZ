@@ -15,6 +15,7 @@
 /*:
  * @plugindesc ゲームの進行に合わせて、セーブデータのバックアップを作成します。
  * @author しぐれん(https://github.com/Sigureya/RPGmakerMV)
+ * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_BackupSave.js
  * 
  * @target MZ
  * 
@@ -86,6 +87,9 @@
  * 読み込み後にその処理が実行されてしまいます。
  * これはゲームデータ更新の際に古い処理が実行される原因になります。
  * 
+ * ■更新履歴
+ * 2022/01/29 ver 1.1
+ * 非同期処理に関する問題を修正。
  * 
 */
 
@@ -174,7 +178,6 @@ class BackupInfo{
         } )
     }
     removeInvalidGlobalInfo(){
-        //TODO:
         this._globalInfo = this._globalInfo.filter( (info)=>{
             if(info){
                 const filename = this.makeFileName(info.chapterId);
@@ -360,7 +363,7 @@ class ChapterSaveManager_T{
      * @param {String} chapterText
      */
     saveChappter(chapterId,chapterText){
-        this._globalInfoV2.saveChappter(chapterId,chapterText);
+        return this._globalInfoV2.saveChappter(chapterId,chapterText);
     }
     /**
      * @param {Number} index 
@@ -480,14 +483,21 @@ Scene_Title.prototype.commandWindowRect =function(){
 PluginManager.registerCommand(PLUGIN_NAME,"BackupScene",()=>{
     SceneManager.push(Scene_BackupLoad)
 })
-PluginManager.registerCommand(PLUGIN_NAME,"BackupSave",(arg)=>{
+PluginManager.registerCommand(PLUGIN_NAME,"BackupSave",function(arg){
+    /**
+     * @type {Game_Interpreter}
+     */
+    const inter=this;
     const switchId =Number(arg.switchId);
     if($gameSwitches.value(switchId)){
         return;
     }
     const chapterId =Number(arg.id);
     $gameSwitches.setValue(switchId,true);
-    backupManager.saveChappter(chapterId,arg.text);
+    inter.wait(Number.MAX_SAFE_INTEGER);
+    backupManager.saveChappter(chapterId,arg.text).finally( ()=>{ 
+        inter.wait(0);
+    } )
 });
 
 }())
