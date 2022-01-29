@@ -6,7 +6,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// 1.0.2 2022/01/29 
+// 1.0.0 2022/01/28 初版 
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -171,7 +171,7 @@
  * これはゲームデータ更新の際に古い処理が実行される原因になります。
  * 
  * ■更新履歴
- * 2022/01/29 ver 1.2
+ * 2022/01/29 ver 1.1
  * 非同期処理に関する問題を修正。
  * 
 */
@@ -409,7 +409,6 @@ class BackupInfo{
      */
     async saveChappter(chapterId,chapterText){
         $gameSystem.onBeforeSave();
-        //TODO:ここでインタプリタのロックを解除
         const contents = DataManager.makeSaveContents();
         const fileName=this.makeFileName(chapterId);
         this.makeDirectory();
@@ -585,9 +584,7 @@ function createCode(code,indent,paramators){
 }
 const WAIT_FOR_WRITE ="WaitForFileWrite"
 const awaitEventCode =[
-    createCode(112,0,[]),
-    createCode(357,1,[PLUGIN_NAME,WAIT_FOR_WRITE]),
-    createCode(413,0,[])
+    createCode(357,0,[PLUGIN_NAME,WAIT_FOR_WRITE])
 ];
 
 PluginManager.registerCommand(PLUGIN_NAME,WAIT_FOR_WRITE,function(){
@@ -597,14 +594,18 @@ PluginManager.registerCommand(PLUGIN_NAME,WAIT_FOR_WRITE,function(){
     const inter =this;
     if(backupManager.isFileWriting() ){
         inter.wait(10);
-    }else{
-        inter.terminate();
+        inter.jumpTo(0);
     }
 });
 PluginManager.registerCommand(PLUGIN_NAME,"BackupScene",()=>{
     SceneManager.push(Scene_BackupLoad)
 })
 PluginManager.registerCommand(PLUGIN_NAME,"BackupSave",function(arg){
+
+    if(backupManager.isFileWriting()){
+        return;
+    }
+
     /**
      * @type {Game_Interpreter}
      */
