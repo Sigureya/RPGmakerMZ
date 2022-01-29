@@ -6,7 +6,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// 1.0.0 2022/01/28 初版 
+// 1.0.2 2022/01/29 
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -171,7 +171,7 @@
  * これはゲームデータ更新の際に古い処理が実行される原因になります。
  * 
  * ■更新履歴
- * 2022/01/29 ver 1.1
+ * 2022/01/29 ver 1.2
  * 非同期処理に関する問題を修正。
  * 
 */
@@ -409,6 +409,7 @@ class BackupInfo{
      */
     async saveChappter(chapterId,chapterText){
         $gameSystem.onBeforeSave();
+        //TODO:ここでインタプリタのロックを解除
         const contents = DataManager.makeSaveContents();
         const fileName=this.makeFileName(chapterId);
         this.makeDirectory();
@@ -421,7 +422,11 @@ class BackupInfo{
 
 class ChapterSaveManager_T{
     constructor(){
+        this._fileWriting = false;
         this._globalInfoV2 = new BackupInfo();
+    }
+    isFileWriting(){
+        return this._fileWriting;
     }
     loadGloablInfo(){
         return this._globalInfoV2.loadGloablInfo();
@@ -446,7 +451,10 @@ class ChapterSaveManager_T{
      * @param {String} chapterText
      */
     saveChappter(chapterId,chapterText){
-        return this._globalInfoV2.saveChappter(chapterId,chapterText);
+        this._fileWriting=true;
+        return this._globalInfoV2.saveChappter(chapterId,chapterText).finally(()=>{
+            this._fileWriting=false;
+        });
     }
     /**
      * @param {Number} index 
@@ -562,7 +570,37 @@ Scene_Title.prototype.commandWindowRect =function(){
     rect.height +=setting.commandHeight;
     return rect;
 };
+/**
+ * @param {Number} code 
+ * @param {Number} indent 
+ * @param {[]} paramators 
+ * @returns 
+ */
+function createCode(code,indent,paramators){
+    return {
+        code:code,
+        indent:indent,
+        parameters:paramators,
+    }
+}
+const WAIT_FOR_WRITE ="WaitForFileWrite"
+const awaitEventCode =[
+    createCode(112,0,[]),
+    createCode(357,1,[PLUGIN_NAME,WAIT_FOR_WRITE]),
+    createCode(413,0,[])
+];
 
+PluginManager.registerCommand(PLUGIN_NAME,WAIT_FOR_WRITE,function(){
+    /**
+     * @type {Game_Interpreter}
+     */
+    const inter =this;
+    if(backupManager.isFileWriting() ){
+        inter.wait(10);
+    }else{
+        inter.terminate();
+    }
+});
 PluginManager.registerCommand(PLUGIN_NAME,"BackupScene",()=>{
     SceneManager.push(Scene_BackupLoad)
 })
@@ -575,13 +613,12 @@ PluginManager.registerCommand(PLUGIN_NAME,"BackupSave",function(arg){
     if($gameSwitches.value(switchId)){
         return;
     }
+
+    //実行完了までの待機用イベントをセットする
+    inter.setupChild(awaitEventCode,0);
     const chapterId =Number(arg.id);
     $gameSwitches.setValue(switchId,true);
-    //非同期処理の書き込みが終わるまでイベントを止める
-    inter.wait(Number.MAX_SAFE_INTEGER);
-    backupManager.saveChappter(chapterId,arg.text).finally( ()=>{ 
-        inter.wait(0);
-    } )
+    backupManager.saveChappter(chapterId,arg.text);
 });
 
 }())
