@@ -1,3 +1,5 @@
+//@ts-check
+
 /*:
  * @plugindesc バトル中のパーティコマンドに任意の要素を追加します。
  * @author しぐれん
@@ -10,15 +12,21 @@
  * 
  * @help
  * パーティコマンドからコモンイベントを呼び出します。
+ * 
+ * シーン遷移系のコマンドを呼び出すと不具合が発生する可能性があります。
+ * 
+ * 
 */
 
 
 /*~struct~PartyCommand:
   * @param name
+  * @text コマンド名
   * @type string
   * @default コマンド
   * 
   * @param eventId
+  * @text 呼び出すイベント
   * @type common_event
   * @default 0
   * 
@@ -31,6 +39,25 @@
   * @desc コマンド表示スイッチ
   * @desc 指定されたスイッチがONの場合のみ表示。
   * @default 0
+  * 
+  * @param helpText
+  * @text ヘルプ文章
+  * @desc 画面上部に表示します。
+  * @type string
+  * @default
+  * 
+  * @param partyCommandVisible
+  * @type boolean
+  * @on 表示する
+  * @off 表示しない
+  * @default true
+  * 
+  * @param actorStatusVisible
+  * @type boolean
+  * @on 表示する
+  * @off 表示しない
+  * @default true
+  * 
 */
 
 (function(){
@@ -39,6 +66,7 @@
      */
     const  PLUGIN_NAME= ('Mano_PartyCommandEvent');
     function getParam(){ return PluginManager.parameters(PLUGIN_NAME);  }
+    const SYMBOL_STRING="UZ_EX";
     
 
     class SwitchCasset{
@@ -58,29 +86,50 @@
             return true;
         }
     }
-const SYMBOL_STRING="UZ_EX";
+
 
     class PartyCommand{
         /**
-         * @param {String} name 
-         * @param {Number} eventId 
-         * @param {Number} addSwitch 
-         * @param {Number} enableSwitch 
+         * @param {String} name
+         * @param {Number} eventId
+         * @param {Number} addSwitch
+         * @param {Number} enableSwitch
+         * @param {Boolean} partyCommandWidnow
+         * @param {Boolean} actorStatusWinodw
+         * @param {String} helpText
          */
-        constructor(name,eventId,addSwitch,enableSwitch){
+        constructor(name,eventId,addSwitch,enableSwitch,partyCommandWidnow,actorStatusWinodw,helpText){
             this._name =name;
             this._eventId=eventId;
 
             this._addSwtich= SwitchCasset.createFromNumber(addSwitch);
             this._enableSwitch=SwitchCasset.createFromNumber(enableSwitch);
+            this._partyComamandVisible=partyCommandWidnow;
+            this._actorStatusWindow=actorStatusWinodw;
+
+            this._helpText=helpText;
         }
+        /**
+         * @param {String} objText 
+         * @returns 
+         */
         static create(objText){
             const obj=JSON.parse(objText);
             const name =obj.name;
             const eventId =Number(obj.eventId);
             const addSwitch =Number(obj.addSwitch);
             const enableSwitch=Number(obj.enableSwitch);
-            return new PartyCommand(name,eventId,addSwitch,enableSwitch);
+
+            const partyCommandWidnow =(obj.partyCommandVisible==="true");
+            const actorStatusWinodw =(obj.actorStatusVisible==="true");
+            const helpText = String(obj.helpText||"");
+            return new PartyCommand(name,eventId,addSwitch,enableSwitch,partyCommandWidnow,actorStatusWinodw,helpText);
+        }
+        partyCommandVisible(){
+            return this._partyComamandVisible;
+        }
+        actorStatusVisible(){
+            return this._actorStatusWindow;
         }
         get eventId(){
             return this._eventId;
@@ -90,6 +139,9 @@ const SYMBOL_STRING="UZ_EX";
         }
         symbol(){
             return SYMBOL_STRING;
+        }
+        helpText(){
+            return this._helpText;
         }
         isEnabled(){
             if(this._enableSwitch){
@@ -115,6 +167,8 @@ const SYMBOL_STRING="UZ_EX";
             this._inter=null;
         }
 
+
+
         commandList(){
             return this._list;
 
@@ -131,6 +185,9 @@ const SYMBOL_STRING="UZ_EX";
                 this._inter.setup(eventCode.list,0);
                 this._endEventFunction=onEndEvent;
             }
+        }
+        startTask(){
+
         }
         update(){
             if(this._inter){
@@ -178,6 +235,7 @@ Window_PartyCommand.prototype.addCommand =function(name,symbol,enabled,ext){
 const Scene_Battle_createPartyCommandWindow=Scene_Battle.prototype.createPartyCommandWindow;
 Scene_Battle.prototype.createPartyCommandWindow =function(){
     Scene_Battle_createPartyCommandWindow.call(this);
+    //@ts-ignore
     this._partyCommandWindow.setHandler(SYMBOL_STRING,this.onExtraCommandOk.bind(this));
 };
 const Scene_Battle_update=Scene_Battle.prototype.update;
@@ -185,6 +243,7 @@ Scene_Battle.prototype.update =function(){
     PartyCommandManager.update();
     Scene_Battle_update.call(this);
 };
+//@ts-ignore
 Scene_Battle.prototype.onExtraCommandOk =function(){
     /**
      * @type {PartyCommand}
@@ -192,7 +251,17 @@ Scene_Battle.prototype.onExtraCommandOk =function(){
     const ext = this._partyCommandWindow.currentExt();
     const eventId = ext.eventId;
     if(!isNaN(eventId)){
+        const help=ext.helpText();
+        if(help){
+            this._helpWindow.setText(help);
+            this._helpWindow.visible=true;
+        }
+        this._partyCommandWindow.visible =ext.partyCommandVisible();
+        this._statusWindow.visible =ext.actorStatusVisible();
         PartyCommandManager.startEvent(eventId,()=>{
+            this._helpWindow.clear();
+            this._helpWindow.visible=false;
+            this._partyCommandWindow.visible=true;
             this._partyCommandWindow.activate();
             this._partyCommandWindow.open();
         });
