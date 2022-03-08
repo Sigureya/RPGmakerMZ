@@ -1,3 +1,5 @@
+//@ts-check
+
 //=============================================================================
 // Mano_InputConfig.js
 // ----------------------------------------------------------------------------
@@ -325,6 +327,11 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 2022/03/08
+ * シンボルに対してボタンを割り当てる方式の廃止。
+ * メンテナンスコストが大きいため。
+ * ver8.0に向けた準備工事。
+ * 
  * 2022/01/18 ver7.0.1
  * PP_Optionとの連携関連で不具合があったのを修正。
  * 
@@ -461,8 +468,6 @@
  * @type struct<MultiLangNote>
  * @default {"jp":"","en":""}
  * 
- * @param event
- * @type struct<EventCaller>
  */
 
 /*~struct~TouchButton:
@@ -772,7 +777,7 @@
  * @type boolean
  * @default true
  */
-
+//@ts-ignore
 var Imported = Imported || {};
 if(Imported.Mano_InputConfig){
     throw new Error("Mano_InputConfig is Duplicate")
@@ -781,6 +786,15 @@ Imported.Mano_InputConfig = true;
 
 var Mano_InputConfig=( function(){
     'use strict'
+
+    /**
+     * @typedef {Object} MyRectType
+     * @property {Number} x
+     * @property {Number} y
+     * @property {Number} width
+     * @property {Number} height
+     * @property {()=>MyRectType} clone
+     */
 
     const GetEnabledPlugins =function(){
         /**
@@ -800,6 +814,7 @@ var Mano_InputConfig=( function(){
      */
     const  PLUGIN_NAME= ('Mano_InputConfig');
     function getCurrentScriptName(){
+        //@ts-ignore
        const pluginName = decodeURIComponent(document.currentScript.src).match(/([^/]+)\.js$/);
        if(pluginName){ return pluginName[1];}
        return ''; 
@@ -819,6 +834,7 @@ var Mano_InputConfig=( function(){
         throw new Error(message);
     }
     TestFileNameValid(PLUGIN_NAME);
+    //@ts-ignore
     const IS_Atsumaru = location.hostname==="html5.nicogame.jp";
 
     function getParam(){
@@ -826,9 +842,9 @@ var Mano_InputConfig=( function(){
     }
     
 /**
- * @param {Window_Base} window_ 
- * @param {Rectangle} rect 
- * @param {(window:Window_Base,rect:Rectangle)=>void} initFunction
+ * @param {Window_Base|Window_Selectable} window_ 
+ * @param {MyRectType} rect 
+ * @param {(srect:Rectangle)=>void} initFuncton
  */
 function window_initializeMVMZ(window_,rect,initFuncton){
     if(Utils.RPGMAKER_NAME==="MZ"){
@@ -1006,6 +1022,7 @@ class TouchButton{
         return true;
     }
     bitmap(){
+        //@ts-ignore
         return ImageManager.loadBitmap(this._folder,this._fileName);
     }
     rect(){
@@ -1376,7 +1393,7 @@ class BasicSymbol extends I_SymbolDefine{
     }
     static create(symbol,objText){
         if(!objText){
-            return new BasicSymbol(symbol,null,null,null);
+            return new BasicSymbol(symbol,null,null,null,null,null);
         }
         const obj = JSON.parse(objText);
         const name =MultiLanguageText.create(obj.name);
@@ -1716,7 +1733,7 @@ class ExtendsSymbol extends I_SymbolDefine{
      */
     firstKeySymbol(isBasicSymbol){
         const keys = this.getKeys();
-        const charLen =keys;
+        const charLen =keys.length;
         for(let i =0; i <charLen; ++i){
            const char_=  keys.charCodeAt(i);
            const symbol = Input.keyMapper[char_];
@@ -1998,11 +2015,11 @@ class SymbolManager_T {
     }
     loadUnknowSymbols(){
         /**
-         * @type {String}
+         * @type {String[]}
          */
         const padSymbols = Object.values(Input.gamepadMapper);
         /**
-         * @type {String}
+         * @type {String[]}
          */
         const keySymbols =Object.values(Input.keyMapper)
         //mapperにある全てのシンボルを列挙する
@@ -2274,16 +2291,14 @@ if(ButtonManager.isTouchButtonEnabled()){
         }
     }
 
-    Scene_Map.prototype.createTouchButtonMA =function(){
-        const spriteset = new Spriteset_TouchButton();
-        this.addWindow(spriteset);
-        this._touchButtonsMA = spriteset;
-    };
     const Scene_Map_createButtons = Scene_Map.prototype.createButtons;
     Scene_Map.prototype.createButtons =function(){
         Scene_Map_createButtons.call(this);
         if(ConfigManager.touchUI){
-            this.createTouchButtonMA();
+            const spriteset = new Spriteset_TouchButton();
+            this.addWindow(spriteset);
+            //@ts-ignore
+            this._touchButtonsMA = spriteset;
         }
     };
     const Scene_Map_isAnyButtonPressed=Scene_Map.prototype.isAnyButtonPressed;
@@ -2292,12 +2307,13 @@ if(ButtonManager.isTouchButtonEnabled()){
         if(result){
             return true;
         }
+        //@ts-ignore
         return this._touchButtonsMA && this._touchButtonsMA.isAnyButtonPressed();
     };
 
 }
 //ボタンとキーの共通基底クラス
-class InputButtonBase{
+class I_InputButton{
 
     name(){
         return "";
@@ -2318,7 +2334,7 @@ class I_ReadonlyMapper{
     }
     /**
      * @param {String} symbol 
-     * @param {InputButtonBase[]} buttonList
+     * @param {I_InputButton[]} buttonList
      * @returns 
      */
     buttonFromSymbol_XX(symbol,buttonList){
@@ -2352,10 +2368,17 @@ class I_ReadonlyMapper{
 
     }
     /**
-     * @returns {}
+     * @returns {*}
      */
     cloneMapper(){
         throw new Error("未実装")
+    }
+    isValidMapper(){
+        return false;
+    }
+    //gamepadMapperへ書き込む
+    applyGamepad(){
+
     }
 }
 
@@ -2424,20 +2447,20 @@ class InputDeviceBase extends I_ReadonlyMapper{
 
     /**
      * @desc ABC順に並んだリスト
-     * @returns {InputButtonBase[]}
+     * @returns {I_InputButton[]}
      */
     indexList(){
         return [];
     }
     /**
-     * @returns {InputButtonBase[]}
+     * @returns {I_InputButton[]}
      */
     buttonList(){
         return []
     }
     /**
      * @param {Number} buttonId 
-     * @returns {InputButtonBase}
+     * @returns {I_InputButton}
      */
     buttonAt(buttonId){
         return null
@@ -2446,7 +2469,7 @@ class InputDeviceBase extends I_ReadonlyMapper{
         return this.buttonList().length;
     }
     /**
-     * @returns {DefaultMapper}
+     * @returns {I_ReadonlyMapper}
      */
     defaultMapper_v2(){
         return null;
@@ -2484,15 +2507,21 @@ class InputDeviceBase extends I_ReadonlyMapper{
         return tmp;
     }
 }
-class GamepadButton extends InputButtonBase{
+class GamepadButtonObj extends I_InputButton{
     /**
      * @param {Number} buttonId 
      * @param {String} name 
      */
     constructor(buttonId,name){
         super();
+        /**
+         * @private
+         */
         this._name =name;
-        this._buttonId=buttonId;
+        /**
+         * @private
+         */
+         this._buttonId=buttonId;
     }
 
     name(){
@@ -2515,80 +2544,160 @@ class GamepadButton extends InputButtonBase{
 }
 //ハードメーカーの違いに対応するためのやつ
 
-//ボタンの名前を入れておくクラス
-//また、編集可能なボタンを制御する際にも使う
-//TODO:ボタン名称を作り直す
-//何度も名前が違うと文句を言われるので、Xスタイル・Nスタイル・Pスタイルを用意
-class Gamepad extends InputDeviceBase{
-    constructor(n,p,x){
-        super();
-        this._defaultMapper_V2=null;//new InputDevice_Readonly()
-        const moves =[
-            new GamepadButton(12,"↑"),
-            new GamepadButton(13,"↓"),
-            new GamepadButton(14,"←"),
-            new GamepadButton(15,"→")
-        ];
-        this._moves =moves;
-        const buttons =[
-            new GamepadButton(0,"B/×"),
-            new GamepadButton(1,"A/○"),
-            new GamepadButton(2,"X/□"),
-            new GamepadButton(3,"Y/△"),
-            new GamepadButton(4,"L1"),
-            new GamepadButton(5,"R1"),
-            new GamepadButton(6,"L2"),
-            new GamepadButton(7,"R2"),
-            new GamepadButton(8,"select"),
-            new GamepadButton(9,"start"),
-            new GamepadButton(10,"L3"),
-            new GamepadButton(11,"R3")
-//          ,new GamepadButton(16,"center")
-        ];
-        this._list = buttons;
-    }
-    onBoot(){
 
+
+/**
+ * @template {I_InputButton} T_Button
+ */
+class I_DeviceLayout{
+    deviceSymbol(){
+        return "";
     }
-    button(buttonId){
-        return this._list[buttonId];
+    name(){
+        return "";
     }
-    indexList(){
+    /**
+     * @param {Number} index 
+     * @returns {T_Button}
+     */
+    button(index){
+        return null;
+    }
+    numButtons(){
+        return 0;
+    }
+}
+/**
+ * @template {I_InputButton} T_Button
+ * @extends {I_DeviceLayout<T_Button>}
+ */
+class DeviceLayout extends I_DeviceLayout{
+    /**
+     * @param {T_Button[]} list 
+     * @param {String} name 
+     * @param {String} symbol 
+     */
+    constructor(list,name,symbol){
+        super();
+        this._name=name;
+        this._list=list;
+        this._symbol=symbol;
+    }
+    /**
+     * @returns {T_Button[]}
+     */
+    buttons(){
         return this._list;
     }
-    findNormalButton(code){
-        const buttonA = this._list[code];
-        if(buttonA.buttonId()===code){
-            return buttonA;
-        }
-        for (const iterator of this._list) {
-            if(iterator.buttonId()===code){
-                return iterator
-            }
-            
-        }
-        return;
+    name(){
+        return this._name;
+    }
+    deviceSymbol(){
+        return this._symbol;
+    }
+    numButtons(){
+        return this._list.length;
+    }
+    /**
+     * @param {Number} index 
+     */
+    button(index){
+        return this._list[index];
     }
     /**
      * @param {Number} code 
      */
     getButtonByCode(code){
+        for (const iterator of this._list) {
+            if(iterator.mapperId()===code){
+                return iterator;
+            }
+        }
+        return null;
+    }
+}
+/**
+ * 
+ * @param {String} symbol 
+ * @param {String} name 
+ * @param {String} button0 
+ * @param {String} button1 
+ * @param {String} button2 
+ * @param {String} button3 
+ */
+function createGamepadLayout(symbol,name,button0,button1,button2,button3){
+
+    const buttons=[
+        new GamepadButtonObj(0,button0),
+        new GamepadButtonObj(1,button1),
+        new GamepadButtonObj(2,button2),
+        new GamepadButtonObj(3,button3),
+        new GamepadButtonObj(4,"L1"),
+        new GamepadButtonObj(5,"R1"),
+        new GamepadButtonObj(6,"L2"),
+        new GamepadButtonObj(7,"R2"),
+        new GamepadButtonObj(8,"select"),
+        new GamepadButtonObj(9,"start"),
+        new GamepadButtonObj(10,"L3"),
+        new GamepadButtonObj(11,"R3")
+    ];
+    return new DeviceLayout(buttons,name,symbol);
+}
+
+
+
+//ボタンの名前を入れておくクラス
+//また、編集可能なボタンを制御する際にも使う
+//TODO:ボタン名称を作り直す
+//何度も名前が違うと文句を言われるので、Xスタイル・Nスタイル・Pスタイルを用意
+class Gamepad extends InputDeviceBase{
+    /**
+     * @param {GamepadLayoutSelector} layout 
+     */
+    constructor(layout){
+        super();
+        this._selector=layout;
+        this._defaultMapper_V2=null;
+    }
+    onBoot(){
+
+    }
+    buttonList(){
+        const d= this._selector.currentLayout();
+        if(d){
+            return d.buttons();
+        }
+        return [];
+    }
+    // /**
+    //  * @param {Number} buttonId 
+    //  * @returns 
+    //  */
+    // buttonObject(buttonId){
+    //     return this._list[buttonId];
+    // }
+    // indexList(){
+    //     return this._list;
+    // }
+    /**
+     * @param {Number} code 
+     */
+    getButtonByCode(code){
         if(code <=11){
-            return this.findNormalButton(code);
+            return this._selector.getButtonByCode(code);
+//            return this._selector.
+//            return this.currentGGG().getButtonByCode(code);
         }
 
         return null;
         
     }
-    //TODO:ALT側で使っているのでしばらく残す
-     maxButtons(){
-         return this._list.length;
-     }
     /**
      * @param {number} index
      */
     buttonAt(index){
-        return this._list[index];
+        return this._selector.buttonAt(index);
+        //return this.currentGGG().button(index);
     }
     /**
      * @param {Number} index
@@ -2598,9 +2707,9 @@ class Gamepad extends InputDeviceBase{
         if(b){ return b.name();}
         return "";
     }
-    buttonList(){
-        return this._list;
-    }
+    // buttonList(){
+    //     return this._list;
+    // }
     defaultMapper(){
         return Mano_InputConfig.defaultGamepadMapper;
     }
@@ -2621,6 +2730,9 @@ class Gamepad extends InputDeviceBase{
     defaultMapper_v2(){
         const tmp = new TemporaryMappper(this.defaultMapper());
         return tmp;
+    }
+    numButtons(){
+        return this._selector.numButtons();
     }
 }
 
@@ -2735,6 +2847,93 @@ class DeviceXXX{
         return this._defaultGamepadMapper;
     }
 }
+/**
+ * @template {I_InputButton} T_Button
+ */
+ class LayoutSelecter{
+    /**
+     * @param {DeviceLayout<T_Button>[]} list 
+     */
+    constructor(list){
+        this._list=list;
+        this._index=0;
+    }
+    /**
+     * 
+     * @param {String} symbolText 
+     */
+    selectOfSymbol(symbolText){
+        for (let index = 0; index < this._list.length; index++) {
+            const element = this._list[index];
+            if(element && element.deviceSymbol()===symbolText){
+                this._index =index;
+                return;
+            }
+        }
+        this._index=-1;
+    }
+    changeNext(){
+        this._index+=1;
+        if(this._index >= this._list.length){
+            this._index=0;
+        }
+
+    }
+    /**
+     * @param {Number} code 
+     * @returns 
+     */
+    getButtonByCode(code){
+        const d =this.currentLayout();
+        if(d){
+            return d.getButtonByCode(code);
+        }
+        return null;
+    }
+    currentLayout(){
+        return this._list[this._index];
+    }
+    currentDeviceSymbol(){
+        const device=this.currentLayout();
+        if(device){
+            return device.deviceSymbol();
+        }
+        return "";
+    }
+    buttonAt(index) {
+        const device =this.currentLayout();
+        if(device){
+            return device.button(index);
+        }
+        return null;
+    }
+    numButtons(){
+        const device=this.currentLayout();
+        if(device){
+            return device.numButtons();
+        }
+        return 0;
+    }
+    /**
+     * @param {Number} index 
+     * @returns 
+     */
+    buttonName(index) {
+        const device=this.currentLayout();
+        if(device){
+            //TODO:
+            //return device.button(index)
+        }
+        return "";
+    }
+}
+
+/**
+ * @typedef {LayoutSelecter<GamepadButtonObj>} GamepadLayoutSelector
+ */
+
+
+
 
 const setting = (function(){
     const params = getParam();
@@ -2745,17 +2944,25 @@ const setting = (function(){
         left:"←"
     };
 
-    const buttonUsedForALT =new MultiLanguageText();
+    const buttonUsedForALT =new MultiLanguageText("","");
     buttonUsedForALT.setNameJP("このボタンには%1が割り当て済みです");
-    buttonUsedForALT.setNameEN("%1 has been assigned to this button")
+    buttonUsedForALT.setNameEN("%1 has been assigned to this button");
 
+    const nintendo=createGamepadLayout("N","nintendo","B","A","Y","X");
+    const playstation=createGamepadLayout("P","playstation","×","○","□","△");
+    const xbox =createGamepadLayout("X","xbox","A","B","X","Y");
+
+    const ddd = new LayoutSelecter([nintendo,playstation,xbox]);
+
+    const gamepad= new Gamepad(ddd);
     const result= {
+        gamepadSelector:ddd,
+        gamepad :gamepad,
         device:new DeviceXXX(),
         errorText:createErrorTexts(),
         text:createText(params),
         buttonUsedForALT:buttonUsedForALT,
         keyWindowLineHeight:22,
-        gamepad :new Gamepad(),
         keyText:keyText,
         emptySymbolText:String(params.textEmpty),
         mandatorySymbols:createMandatorySymbols(params),
@@ -2780,14 +2987,115 @@ function currentKeyConfigText(){
 }
 
 /**
+ * @typedef {Object} ConfigSavedata 
+ * @param {String} keyboardLayout
+ * @param {String} padLayout
+ * @param {Object} gamepadConfig
+ * @param {Object} keyboardConfig
+ */
+
+/**
  * @param {String} base 
  */
 function makeCONFIG_KEY(base) {
     if(IS_Atsumaru){
+        //@ts-ignore
         return base +location.pathname;
     }
     return base;
 }
+
+class I_MVMZ_Workaround{
+    /**
+     * 
+     * @param {Rectangle} rect 
+     * @returns {Window_Help}
+     */
+    createHelpWindow(rect){
+        return null;
+    }
+}
+class MZ_Impriment extends I_MVMZ_Workaround{
+    constructor(){
+        super();
+    }
+    /**
+     * 
+     * @param {Rectangle} rect 
+     * @returns {Window_Help}
+     */
+    createHelpWindow(rect){
+        return new Window_Help(rect);
+    }
+}
+
+class InputConfigReadOnly{
+    /**
+     * @param {I_MVMZ_Workaround} workaround 
+     */
+    constructor(workaround){
+        this._workaround=workaround;
+    }
+    workaround(){
+        return this._workaround;
+    }
+
+}
+
+class InputConfigManager_T{
+    /**
+     * @param {InputConfigReadOnly} readonlyData 
+     */
+    constructor(readonlyData){
+        this._readonly=readonlyData;
+    }
+
+    /**
+     * @param {Rectangle} rect 
+     * @returns 
+     */
+    createHelpWindow(rect){
+        return this._readonly.workaround().createHelpWindow(rect);
+    }
+
+
+    /**
+     * @param {ConfigSavedata} config 
+     */
+    setConfigObject(config){
+        this._config=config;
+    }
+    defaultKeyLayout() {
+        //オプション系プラグインで先行してmakeData()するタイプへの対策
+        if($gameSystem && $gameSystem.isJapanese()){
+            return 'JIS';
+        }
+        return 'US';
+    }
+    applyGamepadConfig(){
+
+
+    }
+    isAllButtonDetouch(){
+        return Input._latestButton===null;
+    }
+
+    isAnyButtonLongPressed(){
+        return Input._pressedTime >60;
+    }
+
+}
+
+const InputConfigManager =(function(){
+
+    const mvmz = (Utils.RPGMAKER_NAME==="MV") ? null :new MZ_Impriment();
+    const readonlyData =new InputConfigReadOnly(mvmz)
+
+    return new InputConfigManager_T(readonlyData);
+}())
+
+const MA_INPUTCONFIG_CONTENTS =makeCONFIG_KEY("MANO_INPUTCONFIG");
+
 const MA_INPUTCONFIG_STYLE =makeCONFIG_KEY( "MA_INPUTCONFIG_STYLE");
 const MA_KEYBOARD_CONFIG =makeCONFIG_KEY('KEYBOARD_CONFIG');
 const MA_GAMEPAD_CONFIG = makeCONFIG_KEY('GAMEPAD_CONFIG');
@@ -2810,10 +3118,13 @@ function readKeyboardConfig(config){
 /**
  * @param {String} value 
  */
+//@ts-ignore
 ConfigManager.setInputConfigStyle =function(value){
     this[MA_INPUTCONFIG_STYLE]=value;
 };
+//@ts-ignore
 ConfigManager.setKeyLayoutMA =function(layout){
+    //@ts-ignore
     ConfigManager.keyLayout_MA =layout;
 };
 
@@ -2831,6 +3142,7 @@ ConfigManager.makeData =function(){
     result[MA_INPUTCONFIG_STYLE] = ConfigManager[MA_INPUTCONFIG_STYLE] ||"normal";
     result[MA_GAMEPAD_CONFIG] =Input.gamepadMapper;
     result[MA_KEYBOARD_CONFIG] = Input.keyMapper;
+    //@ts-ignore
     result[MA_KEYBOARD_LAYOUT] = ConfigManager.keyLayout_MA ||defaultKeyLayout();
     return result;
 };
@@ -2846,15 +3158,17 @@ ConfigManager.applyData =function(config){
     if(keyMapper){
         Input.keyMapper =keyMapper;
     }
+    //@ts-ignore
     ConfigManager.setInputConfigStyle( config[MA_INPUTCONFIG_STYLE]);
+    //@ts-ignore
     ConfigManager.setKeyLayoutMA(config[MA_KEYBOARD_LAYOUT]||'JIS');
     Input.clear();
 };
-
+//@ts-ignore
 const ColorSrc = window["ColorManager"] || null;
 /**
  * @returns {Window_Base}
- * @param {Window_Base} window_base 
+ * @param {Window_Base|Window_Selectable} window_base 
  */
 function getColorSrc(window_base){
     return ColorSrc||window_base;
@@ -2941,6 +3255,14 @@ class TemporaryMappper extends TemporaryMappperBase{
         }
         return result;
     }
+    /**
+     * 
+     * @param {I_InputButton} button 
+     */
+    getSymbolObjectByCode_V8(button){
+        return this.getSymbolObjectByCode(button.mapperId());
+    }
+
     /**
      * @param {Number} codeId 
      * @returns 
@@ -3034,7 +3356,6 @@ class TemporaryMappper extends TemporaryMappperBase{
     }
 }
 
-
 class Window_Selectable_InputConfigVer extends Window_Selectable{
     /**
      * @param {Rectangle} rect 
@@ -3058,7 +3379,7 @@ class Window_Selectable_InputConfigVer extends Window_Selectable{
         return this.y + this.height;
     }
     /**
-     * @param {Rectangle} rect 
+     * @param {MyRectType} rect 
      */
     initialize(rect){
         window_initializeMVMZ(this,rect,super.initialize);
@@ -3073,8 +3394,8 @@ class Window_Selectable_InputConfigVer extends Window_Selectable{
         return 6;
     }
     /**
-     * @param {Rectangle} rect
-     * @param {String} coorCord
+     * @param {MyRectType} rect
+     * @param {String} color
      */
     drawSymbolBack(rect, color) {
         this.changePaintOpacity(false);
@@ -3086,6 +3407,7 @@ class Window_Selectable_InputConfigVer extends Window_Selectable{
      * @desc MV/MZ共用処理。ソースコードはMZ向けで記述。
      */
     colorSrc(){
+        //@ts-ignore
         return getColorSrc(this);
     }
     /**
@@ -3103,7 +3425,7 @@ class Window_Selectable_InputConfigVer extends Window_Selectable{
         return 26;
     }
     /**
-     * @param {InputButtonBase} button 
+     * @param {I_InputButton} button 
      * @param {Number} x 
      * @param {Number} y 
      * @param {Number} width 
@@ -3118,6 +3440,9 @@ class Window_Selectable_InputConfigVer extends Window_Selectable{
 }
 class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
 
+    /**
+     * @param {MyRectType} rect 
+     */
     initialize(rect){
         this.initializeMapper();
         super.initialize(rect);
@@ -3196,17 +3521,6 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
     callDrawCommand(){
 
     }
-    // /**
-    //  * @param {Number} index 
-    //  */
-    //  drawItem(index) {
-    //     if(index< this.buttonItems()){
-    //         this.callDrawButton(index);
-    //         return;
-    //     }
-    //     this.drawCommand(index);
-    // }
-
     playLayoutChangeSound(){
         SoundManager.playEquip();
     }
@@ -3336,6 +3650,14 @@ class Window_InputConfigBase_workaround extends Window_InputConfigBase{
         return this.mainItems()+ this.commandLength();
     }
 
+    /**
+     * @param {Number} index 
+     * @returns {Boolean}
+     */
+    isItemEnabled(index){
+        return false;
+    }
+    
     processOk() {
         const index = this.index();
         if (index < 0) { return; }
@@ -3473,9 +3795,11 @@ class Window_InputSymbolList extends Window_InputSymbolListBase{
 }
 
 function createPadState(padId) {
+    //@ts-ignore
     if (!navigator.getGamepads) {
         return null;
     }
+    //@ts-ignore
     const gamepads =navigator.getGamepads();
     if(!gamepads){return null}
     return  gamepads[padId];
@@ -3483,6 +3807,10 @@ function createPadState(padId) {
 
 
 class Window_GamepadButtons extends Window_InputConfigBase_workaround{
+    /**
+     * 
+     * @param {MyRectType} rect 
+     */
     initialize(rect) {
         super.initialize( rect);
         this.select(0);
@@ -3492,6 +3820,7 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
 
     }
     gamepad(){
+        //return setting.gamepadSelector;
         return setting.gamepad;
     }
     initializeMapper(){
@@ -3506,17 +3835,10 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
     }
 
     numButton(){
-        return this.gamepad().numButtons()
+        return this.gamepad().numButtons();
     }
     isItemEnabled(index){
         return index < this.numButton();
-    }
-    currentButtonCode(){
-        const button= this.padButton(this.index());
-        if(button){
-            return button.buttonId();
-        }
-        return -1;
     }
 
     callDefaultHandler() {
@@ -3524,11 +3846,9 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
     }
     processPadInfo(){
         if(!this._helpWindow){return;}
-        if(this._helpWindow.visble){
+        if(this._helpWindow.visible){
             this._helpWindow.hide();
             this._helpWindow.clear();
-        }else{
-            this._helpWindow.setText(this._padInfoText);
         }
         this.activate();
     }
@@ -3539,11 +3859,11 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
 
     /**
      * @param {number} index
-     * @return {string} buttonNumber
      */
     buttonNumber(index) {
         const button= this.gamepad().buttonAt(index);
-        return button.buttonId();
+        //TODO;
+        return button.mapperId();
     }
     currentButtonCode(){
         return this.buttonNumber(this._index);
@@ -3585,7 +3905,7 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
     }
 
     /**
-     * @param {GamepadButton} button 
+     * @param {I_InputButton} button 
      * @param {string} symbol
      * @param {Number} x 
      * @param {Number} y 
@@ -3593,7 +3913,7 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
      */
     drawButton_V2(button,symbol,x,y,width){
         const numberWidth  = this.numberWidth();
-        this.drawText(button.buttonId()+":",x,y,numberWidth);
+        this.drawText(button.mapperId()+":",x,y,numberWidth);
         const nameWidth= this.butttonNameWidth();
         const nameX = x + numberWidth;
         this.drawText(button.name(),nameX,y,nameWidth);
@@ -3649,6 +3969,7 @@ class Window_GamepadButtons extends Window_InputConfigBase_workaround{
 }
 //TODO:マッパー関連をこっちへ移動
 class Window_GamepadConfig_MA extends Window_GamepadButtons{
+    
     initialize(rect){
         this.makeCommandList();
         super.initialize(rect);
@@ -3662,6 +3983,169 @@ class Window_GamepadConfig_MA extends Window_GamepadButtons{
     }
     commandList(){
         return this._command;
+    }
+}
+
+class V8_Item{
+    /**
+     * @param {String} handlerSymbol 
+     */
+    constructor(handlerSymbol){
+        this._symbol=handlerSymbol;
+
+    }
+    leftText(){
+        return "";
+    }
+    rigthText(){
+        return "";
+    }
+    needsColon(){
+        return false;
+    }
+    xxOpacity(){
+        return true;
+    }
+    handlerSymbol(){
+        return this._symbol;
+    }
+    /**
+     * @returns {GamepadButtonObj}
+     */
+    button(){
+        return null;
+    }
+}
+class V8Item_Button extends V8_Item{
+
+    /**
+     * @param {GamepadButtonObj} button 
+     * @param {TemporaryMappper} mapper
+     */
+    constructor(button,mapper){
+        super("button");
+        this._button=button;
+        this._mapper =mapper;
+    }
+    button(){
+        return this._button;
+    }
+    needsColon(){
+        return true;
+    }
+    leftText(){
+        return this._button.name();
+    }
+    rigthText(){
+        const symbol= this._mapper.getSymbolObjectByCode_V8(this._button);
+        if(symbol){
+            return symbol.name();
+        }
+        return "";
+    }
+}
+
+class V8_Item_ApplyCommand extends V8_Item{
+
+    /**
+     * @param {String} text 
+     */
+    constructor(text){
+        super("");
+        this._text =text;
+        this.setMapper(null);
+    }
+
+    leftText(){
+        return this._text;
+    }
+    /**
+     * @param {I_ReadonlyMapper} readOnlyMapper 
+     */
+    setMapper(readOnlyMapper){
+        this._mapper=readOnlyMapper;
+    }
+    xxOpacity(){
+        return this._mapper.isValidMapper();
+    }
+}
+
+
+class Window_GamepadConfig_V8 extends Window_Selectable_InputConfigVer{
+
+    initialize(rect){
+        this._tmpMapper= new TemporaryMappper();
+        this._applyCommand = new V8_Item_ApplyCommand("apply");
+        this._applyCommand.setMapper(this._tmpMapper);
+        const layout= setting.gamepadSelector.currentLayout()
+        this.setLayout(layout);
+        super.initialize(rect);
+    }
+    makeV8Item(){
+
+        const self_=this;
+        const baseList =this._layout.buttons().map(  function(b){
+            /**
+             * @type {V8_Item}
+             */
+            const result= new V8Item_Button(b,self_._tmpMapper);
+            return result;
+        });
+        baseList.push(this._applyCommand);
+        this._v8List=baseList;
+    }
+    processOk(){
+        const item=this._v8List[this._index];
+        if(item){
+            const handlerSymbol = item.handlerSymbol();
+            this.callHandler(handlerSymbol);
+        }
+    }
+    gamepad(){
+        return setting.gamepadSelector
+    }
+    /**
+     * @param {GamepadButtonObj} button 
+     */
+    buttonName(button){
+        return button.name();
+    }
+
+    /**
+     * @param {Window_InputSymbolList} symbolList 
+     */
+    setSymbolListWindow(symbolList){
+        this._symbolList = symbolList;
+    }
+
+    /**
+     * @param {DeviceLayout<GamepadButtonObj>} layout 
+     */
+    setLayout(layout){
+        this._layout =layout;
+        this.makeV8Item();
+
+    }
+    changeLayout(){
+        
+        this.activate();
+    }
+
+}
+
+class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
+
+    createListWindow(){
+        const ww = new Window_GamepadConfig_V8(null);
+        this._gamepadWindow=ww;
+    }
+    xx(){
+        return setting.gamepadSelector
+    }
+    onChangeLayoutOk(){
+        this.xx().changeNext();
+        this._gamepadWindow.setLayout(this.xx().currentLayout() );
+        this._gamepadWindow.activate();
     }
 }
 
@@ -3680,6 +4164,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBaseMVMZ{
      * @param {String} value 
      */
     setAltMode(value){
+        //@ts-ignore
         ConfigManager.setInputConfigStyle(value);
     }
     start(){
@@ -3729,7 +4214,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBaseMVMZ{
     }
     helpWindowInitParam(){
         if(Utils.RPGMAKER_NAME ==="MV"){
-            return this.helpWindowLines();;
+            return this.helpWindowLines();
         }
         return this.helpWindowRect();
     }
@@ -3949,7 +4434,6 @@ class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
         gcw.setHandler(CommandManager.exit().handle, this.onConfigCancel.bind(this));
         gcw.setHandler(CommandManager.apply().handle, this.applyConfig.bind(this));
         gcw.setHandler(CommandManager.reset().handle, this.resetMapper.bind(this));
-        //gcw.setHandler(CommandManager.alt().handle,this.gotoALT.bind(this));
         gcw.setHelpWindow(this._helpWindow);
         this._gamepadWindow = gcw;
         this.addWindow(gcw);
@@ -3974,10 +4458,11 @@ class Scene_GamepadConfigMA extends Scene_InputConfigBase_MA{
         this.createSymbolListWindow();
         this._gamepadWindow.activate();
     }
+
 }
 
 
-class Key_Base extends InputButtonBase{
+class Key_Base extends I_InputButton{
     /**
      * @returns {String}
      */
@@ -4197,11 +4682,12 @@ class Key_Command extends Key_Base{
     }
     /**
      * @param {Window_KeyConfig_MA} keyWindow 
+     * @param {Number} index
      */
     draw(keyWindow,index){
       if(index ===this._index){
         const rect = this.rect(keyWindow,index);
-        keyWindow.drawCommand(this.char,rect);
+        keyWindow.drawCommandXX(this.char,rect);
       }
     }
     helpText(){
@@ -4222,7 +4708,7 @@ class Key_CommandManager_T{
         this._wasd=Key_Command.create(params.WASD,"WASD");
         this._exit=Key_Command.create(params.exit,"exit");
         this._reset=Key_Command.create(params.reset,"reset");
-        //this._alt = Key_Command.create(params.alt,"ALT");
+        this._alt = Key_Command.create(params.style,"ALT");
         this._changeButtonLayout =createButtonLayoutChangeCommand();
         this._changeLayout=Key_Command.create(params.changeLayout,"keylayout");
 
@@ -4444,7 +4930,7 @@ class Key_Layout extends InputDeviceBase{
         this._buttonItems = srcList.length;
         const list = srcList.concat(CommandManager.createCommandList_ForKeyLayout());
         Key_Layout.keylayout_SetupIndex(list);
-        this._list =Object.freeze( list);
+        this._list =list;//Object.freeze( list);
         this._enterKeyIndex = this._list.indexOf(KEYS.ENTER_JIS);
     }
 
@@ -4708,6 +5194,7 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
      * @param {Rectangle} rect 
      */
     initialize(rect) {
+        //@ts-ignore
         this.setKeyLayout(ConfigManager.keyLayout_MA);
         super.initialize(rect);
         this.refresh();
@@ -4734,7 +5221,7 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
         for (const key in WASD_KEYMAP) {
             if (WASD_KEYMAP.hasOwnProperty(key)) {
                 const element = WASD_KEYMAP[key];
-                this._mapper217.change(key,element);
+                this._mapper217.change(Number(key),element);
             }
         }
         this.refresh();
@@ -4971,9 +5458,9 @@ class Window_KeyConfig_MA extends Window_InputConfigBase {
     }
     /**
      * @param {String} commandName 
-     * @param {Rectangle} rect 
+     * @param {MyRectType} rect 
      */
-    drawCommand(commandName, rect) {
+    drawCommandXX(commandName, rect) {
         this.drawSymbolBack(rect, this.commandBackColor());
         this.changeTextColor(this.commandColor());
         this.drawText(commandName, rect.x, rect.y, rect.width, 'center');
@@ -5043,49 +5530,41 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
 }
 
 
-    Window_Options.prototype.addGamepadOptions_MA =function(){
-        this.addCommand(currentGamepadConfigText(),MA_GAMEPAD_CONFIG);
-    };
-    Window_Options.prototype.addKeyboardConfig_MA=function(){
-        this.addCommand(currentKeyConfigText(),MA_KEYBOARD_CONFIG);
-    };
+
     const Window_Options_addVolumeOptions=Window_Options.prototype.addVolumeOptions;
     Window_Options.prototype.addVolumeOptions=function(){
         Window_Options_addVolumeOptions.call(this);
-        this.addGamepadOptions_MA();
-        this.addKeyboardConfig_MA();
+        this.addCommand(currentGamepadConfigText(),MA_GAMEPAD_CONFIG,true);
+        this.addCommand(currentKeyConfigText(),MA_KEYBOARD_CONFIG,true);
     }
     const Window_Options_statusText=Window_Options.prototype.statusText;
+    /**
+     * @param {Number} index 
+     * @returns 
+     */
     Window_Options.prototype.statusText =function(index){
-        if(this.isGamepadConfig(index)){
+        const symbol=this.commandSymbol(index)
+        if(symbol===MA_GAMEPAD_CONFIG){
             return "";
         }
-        if(this.isKeyboardConfig(index)){
+        if(symbol===MA_KEYBOARD_CONFIG){
             return "";
         }
         return Window_Options_statusText.call(this,index);
     }
 
-    Window_Options.prototype.isGamepadConfig=function(index){
-        const elem= this._list[index];
-        return(elem &&elem.symbol ===MA_GAMEPAD_CONFIG);
-    }
-    Window_Options.prototype.isKeyboardConfig=function(index){
-        const elem= this._list[index];
-        return (elem &&elem.symbol ===MA_KEYBOARD_CONFIG);
-    }
     const Window_Options_processOk = Window_Options.prototype.processOk;
     Window_Options.prototype.processOk =function(){
         Window_Options_processOk.call(this);
         if(SceneManager.isSceneChanging()){
             return;
         }
-        if(this.isGamepadConfig(this._index)){
+        if(this.currentSymbol()===MA_GAMEPAD_CONFIG){
             this.playOkSound();
             Mano_InputConfig.gotoGamepad();
             return;
         }
-        if(this.isKeyboardConfig(this._index)){
+        if(this.currentSymbol()===MA_KEYBOARD_CONFIG){
             this.playOkSound();
             Mano_InputConfig.gotoKey();
             return;
@@ -5161,7 +5640,7 @@ const GetButtonNameMV =function(symbol){
 };
 
 /**
- * @param {{symbol:String nameVariable:Number}} arg 
+ * @param {{symbol:String, nameVariable:Number}} arg 
  */
 const GetButtonName =function(arg){
     const device =getCurrentDevice();
@@ -5233,11 +5712,11 @@ const exportClass ={
         SceneManager.push(Mano_InputConfig.Scene_KeyConfig );
     },
     gotoGamepad:function(){
-        SceneManager.push(Mano_InputConfig.Scene_GamepadConfig );
-        // if(ConfigManager[MA_INPUTCONFIG_STYLE]==="ALT"){
-        //     //SceneManager.push(Mano_InputConfig.Scene_GamepadConfig_ALT );
-        // }else{
-        // }
+        if(ConfigManager[MA_INPUTCONFIG_STYLE]==="ALT"){
+            SceneManager.push(Mano_InputConfig.Scene_GamepadConfig_ALT );
+        }else{
+            SceneManager.push(Mano_InputConfig.Scene_GamepadConfig );
+        }
     },
 };
 
@@ -5254,12 +5733,15 @@ return exportClass;
         //インポート情報を偽装し、GamepadConfig/KeybordConfigと認識させる
         if(obj.gamepad==="true"){
             Imported.GamepadConfig = true;
+            //@ts-ignore
             window["Scene_GamepadConfig"] =Mano_InputConfig.Scene_GamepadConfig;
             //何かよくわからない関数が追加されているので、適当に追加する
+            //@ts-ignore
             Input.isControllerConnected =Input.isControllerConnected||function(){return true;};
         }
         if(obj.Keyboard==="true"){
             Imported.YEP_KeyboardConfig = true;
+            //@ts-ignore
             window["Scene_KeyConfig"] = Mano_InputConfig.Scene_KeyConfig;    
         }
     }
