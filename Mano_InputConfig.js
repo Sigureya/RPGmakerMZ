@@ -1,4 +1,3 @@
-//@ts-check
 
 //=============================================================================
 // Mano_InputConfig.js
@@ -8,7 +7,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 7.0.1 2022/01/18
+// ver 8.0.1 2022/03/15
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -200,11 +199,11 @@
  * 
  * @param gamepadBackground
  * @type file
- * @dir img/background/
+ * @dir img/title1/
  * 
  * @param keyBackground
  * @type file
- * @dir img/background/
+ * @dir img/title1/
  * 
  * @param SettingsForYEP_OptionsCore
  * @type struct<DisguiseAsYEP>
@@ -327,8 +326,10 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
- * 2022/03/08 ver 8.0.0 beta
+ * 
+ * 2022/03/15 ver 8.0.1
  * ゲームパッドコンフィグをリニューアル。
+ * MV環境での不具合を修正
  * 
  * 2022/03/08 ver 7.1.0
  * シンボルに対してボタンを割り当てる方式の廃止。
@@ -864,6 +865,12 @@ class Scene_MenuBaseMVMZ extends Scene_MenuBase{
     bottomAreaHeight(){
         return 20;
     }
+    createHelpWindow(){
+        const helpRect = this.helpWindowRect ? this.helpWindowRect():null;
+        const hw = InputConfigManager.getWorkaround().createHelpWindow(helpRect);
+        this.addWindow(hw);
+        this._helpWindow=hw;
+    }
     /**
      * @returns {Number}
      */
@@ -884,6 +891,16 @@ class Scene_MenuBaseMVMZ extends Scene_MenuBase{
     }
     helpWindowLines(){
         return 3;
+    }
+    /**
+     * @param {Number} numLines
+     * @param {Boolean} selectable
+     */
+     calcWindowHeight(numLines,selectable){
+        if(selectable){
+            return Window_Selectable.prototype.fittingHeight(( numLines))
+        }
+        return Window_Base.prototype.fittingHeight(numLines);
     }
 }
 
@@ -3004,7 +3021,7 @@ const setting = (function(){
     const xbox =createGamepadLayout("X","xbox","A","B","X","Y");
     const numberGamepad =createButtonNumberLayout("Number","ButtonNumber");
 
-    const gamepadLayoutSelector = new LayoutSelecter([nintendo,playstation,xbox,numberGamepad]);
+    const gamepadLayoutSelector = new LayoutSelecter([numberGamepad,nintendo,playstation,xbox]);
 
     const gamepad= new Gamepad(gamepadLayoutSelector);
     const result= {
@@ -3059,18 +3076,50 @@ function makeCONFIG_KEY(base) {
 
 class I_MVMZ_Workaround{
     /**
-     * 
-     * @param {Rectangle} rect 
      * @returns {Window_Help}
+     * @param {Rectangle} rect
      */
     createHelpWindow(rect){
         return null;
     }
-}
-class MZ_Impriment extends I_MVMZ_Workaround{
-    constructor(){
-        super();
+    /**
+     * @param {Scene_MenuBase} scene 
+     */
+    mainAreaHeigth(scene){
+        return 0;
+
     }
+    /**
+     * @param {Number} numLines
+     * @param {Boolean} selectable
+     */
+    calcWindowHeight(numLines,selectable){
+        if(selectable){
+            return Window_Selectable.prototype.fittingHeight(( numLines))
+        }
+        return Window_Base.prototype.fittingHeight(numLines);
+    }
+
+}
+class MV_Impriment extends I_MVMZ_Workaround{
+    /**
+     * @param {Rectangle} rect 
+     * @returns 
+     */
+    createHelpWindow(rect){
+        const lines =this.helpWindowLines()
+        return new Window_Help(lines);
+    }
+    mainAreaHeigth(){
+        const helpAreaHeight = this.calcWindowHeight(this.helpWindowLines());
+        return Graphics.boxHeight -helpAreaHeight;
+    }
+    helpWindowLines(){
+        return 3;
+    }
+}
+
+class MZ_Impriment extends I_MVMZ_Workaround{
     /**
      * 
      * @param {Rectangle} rect 
@@ -3078,6 +3127,19 @@ class MZ_Impriment extends I_MVMZ_Workaround{
      */
     createHelpWindow(rect){
         return new Window_Help(rect);
+    }
+    /**
+     * 
+     * @param {Scene_MenuBase} scene 
+     */
+    mainAreaHeigth(scene){
+        return scene.mainAreaHeight();
+    }
+    /**
+     * @param {Window_Base} window 
+     */
+    colorSrc(window){
+        return ColorManager;
     }
 }
 
@@ -3106,6 +3168,9 @@ class InputConfigManager_T{
         this._saveData=null;
         this._defaultGamepad =null;
     }
+    getWorkaround(){
+        return this._readonly.workaround();
+    }
     makeDefaultMapper(){
         this._defaultGamepad= new DefaultMapper(Input.gamepadMapper);
     }
@@ -3118,7 +3183,7 @@ class InputConfigManager_T{
      * @returns 
      */
     createHelpWindow(rect){
-        return this._readonly.workaround().createHelpWindow(rect);
+        return this._readonly.workaround().createHelpWindow(rect,3);
     }
 
     makeSaveData(){
@@ -3172,7 +3237,7 @@ class InputConfigManager_T{
 
 const InputConfigManager =(function(){
 
-    const mvmz = (Utils.RPGMAKER_NAME==="MV") ? null :new MZ_Impriment();
+    const mvmz = (Utils.RPGMAKER_NAME==="MV") ? new MV_Impriment() :new MZ_Impriment();
     const readonlyData =new InputConfigReadOnly(mvmz)
 
     return new InputConfigManager_T(readonlyData);
@@ -3983,7 +4048,11 @@ class Window_GamepadConfig_V8 extends Window_Selectable_InputConfigVer{
         this._exitCommand = new V8Item_Command(CommandManager.exit());
         this._resetCommand = new V8Item_Command(CommandManager.reset());
         this._applyCommand = new V8_Item_ApplyCommand(CommandManager.apply(),this._tmpMapper);
-        const layout= setting.gamepadSelector.currentLayout()
+        const layout= setting.gamepadSelector.currentLayout();
+        /**
+         * @type {V8_Item[]}
+         */
+        this._v8List=[];
         super.initialize(rect);
         this.setLayout(layout);
     }
@@ -4117,7 +4186,8 @@ class Window_GamepadConfig_V8 extends Window_Selectable_InputConfigVer{
 class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
 
     symbolListHeight(){
-        return this.mainAreaHeight()- this.mainWindowHeight();
+        const mainAreaHeight=InputConfigManager.getWorkaround().mainAreaHeigth(this);
+        return mainAreaHeight- this.mainWindowHeight();
     }
     mainWindowHeight(){
         return this.calcWindowHeight(4,true);
@@ -4318,16 +4388,6 @@ class Scene_InputConfigBase_MA extends Scene_MenuBaseMVMZ{
         return Graphics.boxWidth;
     }
 
-    /**
-     * @param {Number} numLines
-     * @param {Boolean} selectable
-     */
-    calcWindowHeight(numLines,selectable){
-        if(selectable){
-            return Window_Selectable.prototype.fittingHeight(( numLines))
-        }
-        return Window_Base.prototype.fittingHeight(numLines);
-    }
     helpWindowInitParam(){
         if(Utils.RPGMAKER_NAME ==="MV"){
             return this.helpWindowLines();
@@ -5540,7 +5600,7 @@ class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
     }
     backBitmap(){
         if(setting.keyBackground){
-            return ImageManager.loadBattleback1(setting.keyBackground);
+            return ImageManager.loadTitle1(setting.keyBackground);
         }
         return null;
     }
