@@ -7,7 +7,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 1.0.1 2022/03/02
+// ver 1.1.0 2022/04/11
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -31,7 +31,7 @@
  * If you call a scene transition command, a problem may occur.
  * 
  * ■更新履歴/UpdateLogs
- * 2022/04/11 ver1.1 Added English commentary
+ * 2022/04/11 ver1.1.0 Added English commentary
  * 2022/03/02 ver1.0 公開
  * 
 */
