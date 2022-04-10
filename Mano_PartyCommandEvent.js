@@ -255,7 +255,7 @@ Window_PartyCommand.prototype.addCommand =function(name,symbol,enabled,ext){
     if(symbol==="escape"){
         for (const iterator of PartyCommandManager.commandList()) {
             if(iterator.canAdd()){
-                this.addCommand(iterator.name(),SYMBOL_STRING,iterator.isEnabled(),iterator.eventId);
+                this.addCommand(iterator.name(),SYMBOL_STRING,iterator.isEnabled(),iterator.eventId());
             }
         }
     }
