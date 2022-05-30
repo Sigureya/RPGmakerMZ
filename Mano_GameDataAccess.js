@@ -1,4 +1,16 @@
-//@ts-check
+
+//=============================================================================
+// Mano_GameDataAccess.js
+// ----------------------------------------------------------------------------
+// Copyright (c) 2022-2022 Sigureya
+// This software is released under the MIT License.
+// http://opensource.org/licenses/mit-license.php
+// ----------------------------------------------------------------------------
+// Version
+// ver 1.1.0 2022/05/17
+// ----------------------------------------------------------------------------
+// [Twitter]: https://twitter.com/Sigureya/
+//=============================================================================
 /*:
  * @plugindesc 変数操作拡張
  * @author しぐれん
@@ -207,6 +219,7 @@
  * @default 0
  * 
  * 
+ * 
  * @command NumItems
  * @text 所持数を数える/NumItems
  * @arg item
@@ -271,6 +284,76 @@
  * @type number
  * @default 0
  * 
+ * @command NumMembers
+ * @text パーティの人数を取得
+ * @arg variableId
+ * @type variable
+ * @default 0
+ * 
+ * @command GetActorClass
+ * @text アクターの職業を取得
+ * 
+ * @arg actorVariable
+ * @text アクターID
+ * @type variable
+ * @default 0
+ * 
+ * @arg name
+ * @text 職業名称
+ * @type variable
+ * @default 0
+ * 
+ * @arg classId
+ * @text 職業番号
+ * @type variable
+ * @default 0
+ * 
+ * @command GetExp
+ * @text 経験値情報の取得
+ * 
+ * @arg actorVariable
+ * @text アクターID
+ * @type variable
+ * @default 0
+ * 
+ * @arg currentExp
+ * @text 現在の経験値
+ * @type variable
+ * @default 0
+ * 
+ * @arg nextRequired
+ * @text 次のレベルまでの経験値
+ * @type variable
+ * @default 0
+ * 
+ * @arg nextLevel
+ * @text 次のレベルに必要な経験値
+ * @type variable
+ * @default 0
+ * 
+ * @command GetMapGridSize
+ * @text マップの大きさの取得(マス目)
+ * @arg width
+ * @text マップの幅
+ * @type variable
+ * @default 0
+ * 
+ * @arg height
+ * @text マップの高さ
+ * @type variable
+ * @default 0
+ * 
+ * @command GetMapScreenSize
+ * @text マップの大きさの取得(画面上)
+ * @arg width
+ * @text マップの幅
+ * @type variable
+ * @default 0
+ * 
+ * @arg height
+ * @text マップの高さ
+ * @type variable
+ * @default 0
  * 
  * @help
  * イベントコマンド「変数の操作」で取得できないデータを変数に入れることができます。
@@ -333,6 +416,20 @@ const setting = (function(){
     };
     return result;
 })();
+
+
+/**
+ * 
+ * @typedef {object} WeaponData 
+ * @property {number} animationId
+ * @property {string} description
+ * @property {number} etypeId
+ * @property  {number} iconIndex
+ * @property {number} wtypeId
+ * @property {number[]} params
+ */
+
+
 
 /**
  * @param {number} variableId 
@@ -443,7 +540,7 @@ PluginManager.registerCommand(PLUGIN_NAME,"GainItem",(arg)=>{
     }
 });
 /**
- * @param {rm.types.Weapon} weapon 
+ * @param {WeaponData} weapon 
  */
 function weapontypeText(weapon){
     if(!weapon){
@@ -529,7 +626,63 @@ PluginManager.registerCommand(PLUGIN_NAME,"GetSkillText",(arg)=>{
 
 });
 
+PluginManager.registerCommand(PLUGIN_NAME,"NumMembers",(arg)=>{
+    const variableId =Number(arg.variableId);
+    if(variableId >0){
+        const value= $gameParty._actors.length;
+        $gameVariables.setValue(variableId,value);
+    }
+});
+
+PluginManager.registerCommand(PLUGIN_NAME,"GetActorClass",(arg)=>{
+    const actorVariable =Number(arg.actorVariable);
+    if(actorVariable > 0){
+        const actorId =$gameVariables.value(actorVariable);
+        const actor =$gameActors.actor(actorId);
+        if(!actor){
+            return;
+        }
+        const classObject =actor.currentClass();
+        if(classObject){
+            $gameVariables.setValue(Number(arg.classId), classObject.id );
+            $gameVariables.setValue(Number(arg.name), classObject.name );    
+        }
+    }
+});
+
+PluginManager.registerCommand(PLUGIN_NAME,"GetExp",(arg)=>{
+
+    const actorVariable = Number(arg.actorVariable);
+    if(actorVariable > 0){
+        const actorId = $gameVariables.value(actorVariable);
+        const actor =$gameActors.actor(actorId);
+        if(!actor){
+            return;
+        }
+        const currentExp =actor.currentExp();
+        const nextExp= actor.nextLevelExp();
+        const nextRequired = actor.nextRequiredExp();
+        $gameVariables.setValue(Number(arg.currentExp),currentExp);
+        $gameVariables.setValue(Number(arg.nextLevel),nextExp);
+        $gameVariables.setValue(Number(arg.nextRequired),nextRequired);
+    }
+});
+
+PluginManager.registerCommand(PLUGIN_NAME,"GetMapGridSize",(arg)=>{
+    const width = Number(arg.width);
+    const height =Number(arg.height)
+    $gameVariables.setValue(width,$dataMap.width);
+    $gameVariables.setValue(height,$dataMap.height);
+});
+
+PluginManager.registerCommand(PLUGIN_NAME,"GetMapScreenSize",(arg)=>{
+    const widthVariable = Number(arg.width);
+    const heightVariable =Number(arg.height)
+    const tileSize =48;
+    $gameVariables.setValue(widthVariable,$dataMap.width * tileSize);
+    $gameVariables.setValue(heightVariable,$dataMap.height* tileSize);
+});
 
 
-}())
+}());
 
