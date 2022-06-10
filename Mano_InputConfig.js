@@ -903,6 +903,8 @@ Imported.Mano_InputConfig = true;
 var Mano_InputConfig=( function(){
     'use strict'
 
+//型Conceptp宣言 クラスの前方宣言みたいなやつ
+
     /**
      * @typedef {Object} MyRectType
      * @property {Number} x
@@ -911,7 +913,25 @@ var Mano_InputConfig=( function(){
      * @property {Number} height
      * @property {()=>MyRectType} clone
      */
-
+/**
+ * @typedef {object} KeyBase_Concept
+ */
+/**
+ * 
+ * @typedef {object} CommandConcept
+ * @property {()=>string} text
+ * @property {string} handle
+ * @property {()=>string} name
+ * 
+ */
+/**
+ * @typedef {object} KeyConfigWindowConcept
+ * @property {(index:number)=>Rectangle} baseRect
+ * @property {(index:number)=>Rectangle} itemRect
+ * @property {(commandName:string,rect:Rectangle)=>void} drawCommandXX
+ * @property {(keyNumber:number)=>I_SymbolDefine} symbolObjectFromKeyNumber
+ * @property {(key,inputDef:I_SymbolDefine,rect:Rectangle)=>void} drawInputDefine
+ */ 
     const GetEnabledPlugins =function(){
         /**
          * @type {Set<String>}
@@ -1109,333 +1129,6 @@ class MultiLanguageText{
     }
 }
 
-const KEY_LAYOUT_JIS=(function(){ 
-    const list =[
-        KEYS.ESC,
-        KEYS._1 ,
-        KEYS._2 ,
-        KEYS._3 ,
-        KEYS._4, 
-        KEYS._5, 
-        KEYS._6, 
-        KEYS._7, 
-        KEYS._8, 
-        KEYS._9, 
-        KEYS._0, 
-        KEYS.MINUS,
-        KEYS.CARET,
-        KEYS.INSERT ,
-        KEYS.BACK ,
-        KEYS.HOME ,
-        KEYS.END ,
-        KEYS.PAGEUP ,
-        KEYS.PAGEDOWN ,
-    
-        KEYS.TAB,
-    
-        KEYS.Q ,
-        KEYS.W ,
-        KEYS.E ,
-        KEYS.R ,
-        KEYS.T ,
-        KEYS.Y ,
-        KEYS.U ,
-        KEYS.I ,
-        KEYS.O ,
-        KEYS.P ,
-        KEYS.ATMARK,
-        KEYS.SQUARE_BRACKETS_OPEN,
-        KEYS.ENTER_JIS,
-        KEYS.ENTER_JIS,
-        KEYS.TENKEY7 ,
-        KEYS.TENKEY8 ,
-        KEYS.TENKEY9 ,
-        KEYS.TENKEY_MINUS,
-        KEYS.NULL,
-        KEYS.A ,
-        KEYS.S ,
-        KEYS.D ,
-        KEYS.F ,
-        KEYS.G ,
-        KEYS.H ,
-        KEYS.J ,
-        KEYS.K ,
-        KEYS.L ,
-        KEYS.SEMICOLON,
-        KEYS.COLON,
-        KEYS.SQUARE_BRACKETS_CLOSE, 
-        KEYS.ENTER_JIS,
-        KEYS.ENTER_JIS,
-        KEYS.TENKEY4 ,
-        KEYS.TENKEY5 ,
-        KEYS.TENKEY6 ,
-        KEYS.TENKEY_PLUS,
-    
-        KEYS.SHIFT ,
-        KEYS.Z ,
-        KEYS.X ,
-        KEYS.C ,
-        KEYS.V ,
-        KEYS.B ,
-        KEYS.N ,
-        KEYS.M ,
-        KEYS.COMMA,
-        KEYS.DOT,
-        KEYS.SLASH,
-        
-        KEYS.BACKSLASH,
-        KEYS.SHIFT,
-        KEYS.UP,
-        KEYS.NULL,
-        
-        KEYS.TENKEY1 ,
-        KEYS.TENKEY2 ,
-        KEYS.TENKEY3 ,
-        KEYS.NULL,
-    
-        KEYS.CTRL  ,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.LEFT,
-        KEYS.DOWN,
-        KEYS.RIGHT,
-        KEYS.TENKEY0,
-        KEYS.TENKEY0,
-        KEYS.TENKEY_DOT,
-        KEYS.NULL,
-    ];
-    const layout= new Key_Layout("JIS",list);
-    layout.setEnterKey(KEYS.ENTER_JIS);
-    return Object.freeze( layout);
-})();
-const KEY_LAYOUT_US =(function(){
-    const list =[    KEYS.ESC,
-        KEYS._1 ,
-        KEYS._2 ,
-        KEYS._3 ,
-        KEYS._4, 
-        KEYS._5, 
-        KEYS._6, 
-        KEYS._7, 
-        KEYS._8, 
-        KEYS._9, 
-        KEYS._0, 
-        KEYS.MINUS,
-        KEYS.EQUAL_JIS,
-        KEYS.INSERT ,
-        KEYS.BACK ,
-        KEYS.HOME ,
-        KEYS.END ,
-        KEYS.PAGEUP ,
-        KEYS.PAGEDOWN ,
-    
-        KEYS.TAB,
-        KEYS.Q ,
-        KEYS.W ,
-        KEYS.E ,
-        KEYS.R ,
-        KEYS.T ,
-        KEYS.Y ,
-        KEYS.U ,
-        KEYS.I ,
-        KEYS.O ,
-        KEYS.P ,
-        KEYS.SQUARE_BRACKETS_OPEN,
-        KEYS.SQUARE_BRACKETS_CLOSE, 
-        KEYS.BACKSLASH,
-        KEYS.NULL,
-        KEYS.TENKEY7 ,
-        KEYS.TENKEY8 ,
-        KEYS.TENKEY9 ,
-        KEYS.TENKEY_MINUS,
-        KEYS.NULL,
-        KEYS.A ,
-        KEYS.S ,
-        KEYS.D ,
-        KEYS.F ,
-        KEYS.G ,
-        KEYS.H ,
-    
-        KEYS.J ,
-        KEYS.K ,
-        KEYS.L ,
-        KEYS.SEMICOLON,
-        KEYS.APOSTROPHE, 
-        KEYS.ENTER_US,
-        KEYS.ENTER_US,
-        KEYS.ENTER_US,
-        KEYS.TENKEY4 ,
-        KEYS.TENKEY5 ,
-        KEYS.TENKEY6 ,
-        KEYS.TENKEY_PLUS,
-
-        KEYS.SHIFT ,
-        KEYS.Z ,
-        KEYS.X ,
-        KEYS.C ,
-        KEYS.V ,
-        KEYS.B ,
-        KEYS.N ,
-        KEYS.M ,
-        KEYS.COMMA,
-        KEYS.DOT,
-        KEYS.SLASH,
-        
-        KEYS.NULL,
-        KEYS.SHIFT,
-        KEYS.UP,
-        KEYS.NULL,
-        
-        KEYS.TENKEY1 ,
-        KEYS.TENKEY2 ,
-        KEYS.TENKEY3 ,
-        KEYS.NULL,
-        
-        KEYS.CTRL  ,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.LEFT,
-        KEYS.DOWN,
-        KEYS.RIGHT,
-        KEYS.TENKEY0,
-        KEYS.TENKEY0,
-        KEYS.TENKEY_DOT,
-        KEYS.NULL,
-    ];
-    const layout =new Key_Layout("US",list);
-    layout.setEnterKey(KEYS.ENTER_US);
-    return Object.freeze( layout);
-})();
-const KEY_LAYOUT_FR=(function(){
-    const list =[
-        KEYS.ESC,
-        KEYS._1 ,
-        KEYS._2 ,
-        KEYS._3 ,
-        KEYS._4, 
-        KEYS._5, 
-        KEYS._6, 
-        KEYS._7, 
-        KEYS._8, 
-        KEYS._9, 
-        KEYS._0, 
-        KEYS.MINUS,
-        KEYS.EQUAL_JIS,
-        KEYS.INSERT ,
-        KEYS.BACK ,
-        KEYS.HOME ,
-        KEYS.END ,
-        KEYS.PAGEUP ,
-        KEYS.PAGEDOWN ,
-    
-        KEYS.TAB,
-        KEYS.A ,
-        KEYS.Z ,
-        KEYS.E ,
-        KEYS.R ,
-        KEYS.T ,
-        KEYS.Y ,
-        KEYS.U ,
-        KEYS.I ,
-        KEYS.O ,
-        KEYS.P ,
-        KEYS.SQUARE_BRACKETS_OPEN,
-        KEYS.SQUARE_BRACKETS_CLOSE, 
-        KEYS.BACKSLASH,
-        KEYS.NULL,
-        KEYS.TENKEY7 ,
-        KEYS.TENKEY8 ,
-        KEYS.TENKEY9 ,
-        KEYS.TENKEY_MINUS,
-        KEYS.NULL,
-        KEYS.Q ,
-        KEYS.S ,
-        KEYS.D ,
-        KEYS.F ,
-        KEYS.G ,
-        KEYS.H ,
-    
-        KEYS.J ,
-        KEYS.K ,
-        KEYS.L ,
-        KEYS.M,
-        KEYS.APOSTROPHE, 
-        KEYS.ENTER_US,
-        KEYS.ENTER_US,
-        KEYS.ENTER_US,
-        KEYS.TENKEY4 ,
-        KEYS.TENKEY5 ,
-        KEYS.TENKEY6 ,
-        KEYS.TENKEY_PLUS,
-
-        KEYS.SHIFT ,
-        KEYS.W ,
-        KEYS.X ,
-        KEYS.C ,
-        KEYS.V ,
-        KEYS.B ,
-        KEYS.N ,
-        KEYS.M ,
-        KEYS.COMMA,
-        KEYS.DOT,
-        KEYS.SLASH,
-        
-        KEYS.NULL,
-        KEYS.SHIFT,
-        KEYS.UP,
-        KEYS.NULL,
-        
-        KEYS.TENKEY1 ,
-        KEYS.TENKEY2 ,
-        KEYS.TENKEY3 ,
-        KEYS.NULL,
-        
-        KEYS.CTRL  ,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.LEFT,
-        KEYS.DOWN,
-        KEYS.RIGHT,
-        KEYS.TENKEY0,
-        KEYS.TENKEY0,
-        KEYS.TENKEY_DOT,
-        KEYS.NULL,
-    ];
-    const layout =new Key_Layout("FR",list);
-    layout.setEnterKey(KEYS.ENTER_US);
-    return Object.freeze( layout);
-}  )()
-const KEY_LAYOUT_DE =(function(){
-
-    //de_DE
-})();
 
 class TouchButton{
     /**
@@ -3088,6 +2781,8 @@ class GamepadButtonObj extends I_InputButton{
         return "#000000";
     }
 }
+
+
 //ハードメーカーの違いに対応するためのやつ
 
 
@@ -3127,6 +2822,9 @@ class DeviceLayout extends I_DeviceLayout{
         super();
         this._name=name;
         this._list=list;
+        /**
+         * @private
+         */
         this._symbol=symbol;
     }
     /**
@@ -3162,12 +2860,8 @@ class DeviceLayout extends I_DeviceLayout{
         return null;
     }
 }
-/**
- * @extends {DeviceLayout<Key_Base>}
- */
-class KeyboardLayout extends DeviceLayout{
 
-}
+
 /**
  * 
  * @param {String} symbol 
@@ -3208,10 +2902,103 @@ function createButtonNumberLayout(symbol,name){
     });
     return new DeviceLayout(buttons,name,symbol);
 }
+/**
+ * @template {I_InputButton} T_Button
+ */
+ class LayoutSelecter{
+    /**
+     * @param {DeviceLayout<T_Button>[]} list 
+     */
+    constructor(list){
+        this._list=list;
+        this._index=0;
+    }
+    /**
+     * 
+     * @param {String} symbolText 
+     */
+    selectOfSymbol(symbolText){
+        for (let index = 0; index < this._list.length; index++) {
+            const element = this._list[index];
+            if(element && element.deviceSymbol()===symbolText){
+                this._index =index;
+                return;
+            }
+        }
+        this._index=-1;
+    }
+    changeNext(){
+        this._index+=1;
+        if(this._index >= this._list.length){
+            this._index=0;
+        }
+
+    }
+    /**
+     * @param {Number} code 
+     * @returns 
+     */
+    getButtonByCode(code){
+        const d =this.currentLayout();
+        if(d){
+            return d.getButtonByCode(code);
+        }
+        return null;
+    }
+    /**
+     * @returns {DeviceLayout<T_Button> }
+     */
+    currentLayout(){
+        return this._list[this._index];
+    }
+    currentDeviceSymbol(){
+        const device=this.currentLayout();
+        if(device){
+            return device.deviceSymbol();
+        }
+        return "";
+    }
+    /**
+     * @param {number} index 
+     * @returns 
+     */
+    buttonAt(index) {
+        const device =this.currentLayout();
+        if(device){
+            return device.button(index);
+        }
+        return null;
+    }
+    numButtons(){
+        const device=this.currentLayout();
+        if(device){
+            return device.numButtons();
+        }
+        return 0;
+    }
+    /**
+     * @private
+     * @param {Number} index 
+     * @returns 
+     */
+    buttonName(index) {
+        const device=this.currentLayout();
+        if(device){
+            //TODO:
+            //return device.button(index)
+        }
+        return "";
+    }
+}
+
+/**
+ * @extends {LayoutSelecter<GamepadButtonObj>}
+ */
+ class GamepadLayoutSelector extends LayoutSelecter{}
 
 //ボタンの名前を入れておくクラス
 //また、編集可能なボタンを制御する際にも使う
-class Gamepad extends InputDeviceBase{
+class GamepadObject extends InputDeviceBase{
     /**
      * @param {GamepadLayoutSelector} layout 
      */
@@ -3271,9 +3058,9 @@ class Gamepad extends InputDeviceBase{
     // buttonList(){
     //     return this._list;
     // }
-    defaultMapper(){
-        return Mano_InputConfig.defaultGamepadMapper;
-    }
+    // defaultMapper(){
+    //     return Mano_InputConfig.defaultGamepadMapper;
+    // }
     currentMapper(){
         return Input.gamepadMapper;
     }
@@ -3380,141 +3167,41 @@ class InputDevice_Readonly{
     }
 
 }
-/**
- * @template {I_InputButton} T_Button
- */
- class LayoutSelecter{
-    /**
-     * @param {DeviceLayout<T_Button>[]} list 
-     */
-    constructor(list){
-        this._list=list;
-        this._index=0;
-    }
-    /**
-     * 
-     * @param {String} symbolText 
-     */
-    selectOfSymbol(symbolText){
-        for (let index = 0; index < this._list.length; index++) {
-            const element = this._list[index];
-            if(element && element.deviceSymbol()===symbolText){
-                this._index =index;
-                return;
-            }
-        }
-        this._index=-1;
-    }
-    changeNext(){
-        this._index+=1;
-        if(this._index >= this._list.length){
-            this._index=0;
-        }
 
-    }
-    /**
-     * @param {Number} code 
-     * @returns 
-     */
-    getButtonByCode(code){
-        const d =this.currentLayout();
-        if(d){
-            return d.getButtonByCode(code);
-        }
-        return null;
-    }
-    /**
-     * @returns {DeviceLayout<T_Button> }
-     */
-    currentLayout(){
-        return this._list[this._index];
-    }
-    currentDeviceSymbol(){
-        const device=this.currentLayout();
-        if(device){
-            return device.deviceSymbol();
-        }
-        return "";
-    }
-    /**
-     * @param {number} index 
-     * @returns 
-     */
-    buttonAt(index) {
-        const device =this.currentLayout();
-        if(device){
-            return device.button(index);
-        }
-        return null;
-    }
-    numButtons(){
-        const device=this.currentLayout();
-        if(device){
-            return device.numButtons();
-        }
-        return 0;
-    }
-    /**
-     * @private
-     * @param {Number} index 
-     * @returns 
-     */
-    buttonName(index) {
-        const device=this.currentLayout();
-        if(device){
-            //TODO:
-            //return device.button(index)
-        }
-        return "";
-    }
-}
+(function(){})
 
-class Keyboard_V10 extends InputDeviceBase{
-    /**
-     * 
-     * @param {LayoutSelecter<Key_Base>} layoutSelecter 
-     */
-    constructor(layoutSelecter){
-        super();
-        this._selector = layoutSelecter;
-    }
-    numButtons(){
-        return this._selector.numButtons();
-    }
-}
+
+
+
 //TODO:新たなるマネージャー
 class DeviceXXX{
     constructor(){
         this._defaultKeyMapper=null;
         this._defaultGamepadMapper=null;
-        this.setKeyLayout(null,null);
+        //this.setKeyLayout(null,null);
     }
-    /**
-    * @param {Key_Layout} jis 
-     * @param {Key_Layout} us 
-     */
-    setKeyLayout(jis,us){
-        this._keyLayoutJIS=jis;
-        this._keyLayoutUS =us;
-    }
+    // /**
+    // * @param {Key_Layout} jis 
+    //  * @param {Key_Layout} us 
+    //  */
+    // setKeyLayout(jis,us){
+    //     this._keyLayoutJIS=jis;
+    //     this._keyLayoutUS =us;
+    // }
     onBoot(){
         this.setupDefaultMapper()
     }
     setupDefaultMapper(){
-        this._defaultKeyMapper= new InputDevice_Readonly(  Object.freeze(objectClone(Input.keyMapper)));
+        //this._defaultKeyMapper= new InputDevice_Readonly(  Object.freeze(objectClone(Input.keyMapper)));
         this._defaultGamepadMapper =new InputDevice_Readonly(  Object.freeze(objectClone(Input.gamepadMapper)));
     }
-    keyMapper(){
-        return this._defaultKeyMapper;
-    }
+    // keyMapper(){
+    //     return this._defaultKeyMapper;
+    // }
     gamepadMapper(){
         return this._defaultGamepadMapper;
     }
 }
-
-/**
- * @typedef {LayoutSelecter<GamepadButtonObj>} GamepadLayoutSelector
- */
 
 
 const setting = (function(){
@@ -3536,11 +3223,13 @@ const setting = (function(){
     const numberGamepad =createButtonNumberLayout("Number","ButtonNumber");
 
     const gamepadLayoutSelector = new LayoutSelecter([numberGamepad,nintendo,xbox,playstation]);
-    //const keyboardLayoutSelector = new LayoutSelecter([KEY_LAYOUT_US])
+    //const keyboardLayoutSelector = new LayoutSelecter([KEY_LAYOUT_US,KEY_LAYOUT_JIS])
 
-    const gamepad= new Gamepad(gamepadLayoutSelector);
+    //const keyboardV10 = new Keyboard_V10(keyboardLayoutSelector);
+    const gamepad= new GamepadObject(gamepadLayoutSelector);
     const result= {
         gamepadSelector:gamepadLayoutSelector,
+        //keyboard:keyboardV10,
         gamepad :gamepad,
         device:new DeviceXXX(),
         errorText:createErrorTexts(),
@@ -4145,14 +3834,14 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
     }
 
     /**
-     * @returns {Key_Command[]}
+     * @returns {CommandConcept[]}
      */
     commandList(){
         return [];
     }
     /**
      * @param {Number} index 
-     * @returns 
+     * @returns {CommandConcept}
      */
     command(index){
         const commandList = this.commandList();
@@ -4495,7 +4184,7 @@ class V8Item_Button extends V8_Item{
 class V8Item_Command extends V8_Item{
     /**
      * 
-     * @param {Key_Command} command 
+     * @param {CommandConcept} command 
      */
     constructor(command){
         super(command.handle);
@@ -4511,7 +4200,7 @@ class V8Item_Command extends V8_Item{
 }
 class V8_Itemn_LayoutCommand extends V8Item_Command{
     /**
-     * @param {Key_Command} command 
+     * @param {CommandConcept} command 
      */
     constructor(command){
         super(command);
@@ -4535,7 +4224,7 @@ class V8_Itemn_LayoutCommand extends V8Item_Command{
 class V8_Item_ApplyCommand extends V8Item_Command{
 
     /**
-     * @param {Key_Command} command 
+     * @param {CommandConcept} command 
      * @param {I_ReadonlyMapper} mapper
      */
     constructor(command,mapper){
@@ -4695,7 +4384,6 @@ class Window_GamepadConfig_V8 extends Window_Selectable_InputConfigVer{
             this._helpWindow.setText(item.helpText());
         }
     }
-
 }
 
 class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
@@ -5102,171 +4790,23 @@ class Scene_InputConfigBase_MA extends Scene_MenuBaseMVMZ{
         //override
     }
 }
-
-
-class Key_Base extends I_InputButton{
-    /**
-     * @returns {String}
-     */
-    get handle(){
-        return "ok";
-    }
-    get locked(){
-        return false;
-    }
-    get char(){
-        return "";
-    }
-    get isLink(){
-        return false;
-    }
-    get keycord(){
-        return 0;
-    }
-    name(){
-        return this.char;
-    }
-    mapperId(){
-        return this.keycord;
-    }
-    /**
-     * @param {Window_KeyConfig_MA} keyWindow 
-     * @param {Number} index 
-     */
-    draw(keyWindow,index){
-        this.drawBasicChar(keyWindow,index);
-    }
-    /**
-     * @param {Window_KeyConfig_MA} keyWindow 
-     * @param {Number} index 
-     */
-    redraw(keyWindow,index){
-        this.drawBasicChar(keyWindow,index);
-    }
-    /**
-     * @param {Number} index 
-     * @desc 一部の複数マスにまたがるキーのための機能 基本実装しないでいい
-     */
-    setIndex(index){
-
-    }
-    /**
-     * @param {Window_KeyConfig_MA} keyWindow 
-     * @param {Number} index 
-     */
-    drawBasicChar(keyWindow,index){
-        const s = keyWindow.symbolObjectFromKeyNumber(this.keycord);
-        const rect = keyWindow.itemRect(index);
-        keyWindow.drawInputDefine(this,s,rect);
-    }
-    /**
-     * @param {Window_KeyConfig_MA} keyWindow 
-     * @param {Number} index 
-     */
-    rect(keyWindow,index){
-        return keyWindow.baseRect(index);
-    }
-}
-class Key_Null extends Key_Base{
-    get locked(){
-        return true;
-    }
-    /**
-     * @param {Window_KeyConfig_MA} keyWindow 
-     * @param {Number} index 
-     */
-    draw(keyWindow,index){}
-}
-
-class Key_Char extends Key_Base{
-    /**
-     * @param {String} char 
-     * @param {Number} keycord 
-     */
-    constructor(char,keycord){
-        super();
-        this._char = char;
-        this._keycord = keycord;
-    }
-    get char(){
-        return this._char;
-    }
-    get keycord(){
-        return this._keycord;
-    }
-}
-
-class Key_Locked extends Key_Char{
-    get locked(){
-        return true;
-    }
-}
-
-class Key_Big extends Key_Char{
-    /**
-     * @param {String} char 
-     * @param {Number} keycord 
-     * @param {Number} width 
-     * @param {Number} height 
-     * @param {boolean} looked
-     */
-    constructor(char,keycord,width,height,looked){
-        super(char,keycord);
-        this._widthEx=Math.max(width,1);
-        this._heightEx=Math.max(height,1);
-        this._locked = looked||false; 
-    }
-    get locked(){
-        return this._locked;
-    }
-    /**
-     * @param {Window_KeyConfig_MA} keyWindow 
-     */
-    rect(keyWindow){
-        const rect = keyWindow.baseRect(this._index);
-        rect.width *=this._widthEx;
-        rect.height *= this._heightEx;
-        return rect;
-    }
-    /**
-     * @param {Number} index 
-     */
-    setIndex(index){
-        if(isNaN( this._index)){
-            this._index = index;
-
-        }
-    }
-    /**
-     * @param {Window_KeyConfig_MA} keyWindow 
-     * @param {Number} index 
-     */
-    draw(keyWindow,index){
-        if(index ===this._index){
-            super.draw(keyWindow,index);
-        }
-    }
-    /**
-     * @param {Window_KeyConfig_MA} keyWindow 
-     * @param {Number} index 
-     */
-    redraw(keyWindow,index){
-        super.draw(keyWindow,this._index);
-    }
-}
-
-class Key_Command extends Key_Base{
+class Key_Command {
     /**
      * @param {String} handlerName 
      * @param {MultiLanguageText} mtext 
      * @param {Number} width 
      */
     constructor(handlerName,mtext,width){
-        super();
         this._callBackHandle =handlerName;
         this._widthEx =width;
         this._mtext = mtext;
     }
+    /**
+     * 
+     * @param {string} objText 
+     * @param {string} handler 
+     * @returns 
+     */
     static create(objText,handler){
         const obj = JSON.parse(objText);
         return new Key_Command(
@@ -5282,6 +4822,9 @@ class Key_Command extends Key_Base{
         return this.char;
     }
 
+    name(){
+        return this._mtext.currentName();
+    }
 
     get isLink(){
         return this._widthEx >1;
@@ -5299,7 +4842,7 @@ class Key_Command extends Key_Base{
         return this._callBackHandle;
     }
     /**
-     * @param {Window_KeyConfig_MA} keyConfigWindow 
+     * @param {Window_Selectable} keyConfigWindow 
      */
     onOk(keyConfigWindow){
         keyConfigWindow.callHandler(this._callBackHandle);
@@ -5314,7 +4857,7 @@ class Key_Command extends Key_Base{
     }
 
     /**
-     * @param {Window_KeyConfig_MA} keyWindow 
+     * @param {KeyConfigWindowConcept} keyWindow 
      * @param {Number} index
      */
     rect(keyWindow,index){
@@ -5323,7 +4866,7 @@ class Key_Command extends Key_Base{
         return rect;
     }
     /**
-     * @param {Window_KeyConfig_MA} keyWindow 
+     * @param {KeyConfigWindowConcept} keyWindow 
      * @param {Number} index
      */
     draw(keyWindow,index){
@@ -5336,6 +4879,7 @@ class Key_Command extends Key_Base{
         return "コマンドのヘルプ";
     }
 }
+
 function createButtonLayoutChangeCommand(){
     const mText = new MultiLanguageText("Change button notation","ボタン表記変更");
     const command = new Key_Command("ButtonLayout",mText,3);
@@ -5425,13 +4969,6 @@ const CommandManager =(function(){
 
     return new Key_CommandManager_T();
 })()
-/**
- * @param {string} char 
- * @param {number} keycord 
- */
-function keyinfo(char,keycord){
-    return new Key_Char(char,keycord);
-}
 
 
 const WASD_KEYMAP={
@@ -5443,160 +4980,6 @@ const WASD_KEYMAP={
     68:"right",     //D
 };
 
-const KEYS ={
-    SPACE: new Key_Big("Space",32,4,1,false),
-    ENTER_JIS: new Key_Big('Enter',13,2,2,true),
-    ENTER_US:new Key_Big("Entre",13,3,1,true),
-    NULL:new Key_Null(),
-    UP:new Key_Locked(setting.keyText.up,38),
-    DOWN:new Key_Locked(setting.keyText.down,40),
-    LEFT:new Key_Locked(setting.keyText.left,37),
-    RIGHT:new Key_Locked(setting.keyText.right,39),
-    TENKEY0:new Key_Big('0',96,2,1,false),
-    TENKEY1:keyinfo('1',97),
-    TENKEY2:keyinfo('2',98),
-    TENKEY3:keyinfo('3',99),
-    TENKEY4:keyinfo('4',100),
-    TENKEY5:keyinfo('5',101),
-    TENKEY6:keyinfo('6',102),
-    TENKEY7:keyinfo('7',103),
-    TENKEY8:keyinfo('8',104),
-    TENKEY9:keyinfo('9',105),
-    TENKEY_DOT:keyinfo('.',110),
-    TAB:keyinfo("TAB",9),
-    _0:keyinfo('0',48),
-    _1:keyinfo('1',49),
-    _2:keyinfo('2',50),
-    _3:keyinfo('3',51),
-    _4:keyinfo('4',52),
-    _5:keyinfo('5',53),
-    _6:keyinfo('6',54),
-    _7:keyinfo('7',55),
-    _8:keyinfo('8',56),
-    _9:keyinfo('9',57),
-
-    A:keyinfo('A',65),
-    B:keyinfo('B',66),
-    C:keyinfo('C',67),
-    D:keyinfo('D',68),
-    E:keyinfo('E',69),
-    F:keyinfo('F',70),
-    G:keyinfo('G',71),
-    H:keyinfo('H',72),
-    I:keyinfo('I',73),
-    J:keyinfo('J',74),
-    K:keyinfo('K',75),
-    L:keyinfo('L',76),
-    M:keyinfo('M',77),
-    N:keyinfo('N',78),
-    O:keyinfo('O',79),
-    P:keyinfo('P',80),
-    Q:keyinfo('Q',81),
-    R:keyinfo('R',82),
-    S:keyinfo('S',83),
-    T:keyinfo('T',84),
-    U:keyinfo('U',85),
-    V:keyinfo('V',86),
-    W:keyinfo('W',87),
-    X:keyinfo('X',88),
-    Y:keyinfo('Y',89),
-    Z:keyinfo('Z',90),
-
-    SHIFT:new Key_Locked('Shift',16),
-    CTRL:new Key_Locked('CTRL',17),
-    INSERT:keyinfo('Ins',45),
-    BACK:keyinfo('Back',8),
-    HOME:keyinfo('Home',36),
-    END:keyinfo('End',35),
-    PAGEUP:keyinfo('PgUp',33),
-    PAGEDOWN:keyinfo('PgDn',34),
-    ESC:keyinfo('esc',27),
-
-    ATMARK:keyinfo("@", 192),
-
-    TENKEY_MINUS :keyinfo('-',109),
-    TENKEY_PLUS :keyinfo('+',107),
-    MINUS :keyinfo('-',189),
-    COMMA :keyinfo(',',188),
-    SEMICOLON:keyinfo(';',186),
-
-    SLASH:keyinfo('/',191),
-    BACKSLASH:keyinfo('\\',226),
-    DOT :keyinfo('.',190),
-    
-    COLON:keyinfo(':',58),
-    CARET:keyinfo('^',222),
-    APOSTROPHE:keyinfo("'",222), 
-
-    EQUAL_JIS:keyinfo('=',189),
-    
-    SQUARE_BRACKETS_OPEN :keyinfo('[',219),
-    SQUARE_BRACKETS_CLOSE :keyinfo(']',221),
-};
-const keyXXXX =[
-    KEYS.A,KEYS.B,KEYS.C,KEYS.D,
-    KEYS.E,KEYS.F,KEYS.G,
-    KEYS.H,KEYS.I,KEYS.J,KEYS.K,
-    KEYS.L,KEYS.M,KEYS.N,
-    KEYS.O,KEYS.P,KEYS.Q,KEYS.R,
-    KEYS.S,KEYS.T,KEYS.U,
-    KEYS.V,KEYS.W, KEYS.X,KEYS.Y,KEYS.Z,
-    KEYS._0,KEYS._1,KEYS._2,KEYS._3,KEYS._4,
-    KEYS._5,KEYS._6,KEYS._7,KEYS._8,KEYS._9
-];
-class Key_Layout extends InputDeviceBase{
-    /**
-     * @param {Key_Base[]} keyList 
-     */
-    static keylayout_SetupIndex(keyList){
-        for (let index = 0; index < keyList.length; index++) {
-            const element = keyList[index];
-            element.setIndex(index);
-        }
-    }
-
-    indexList(){
-        return keyXXXX;
-    }
-    button(buttonCode){
-        return null;
-    }
-    /**
-     * @param {String} layoutName
-     * @param {Key_Base[]} srcList 
-     */
-    constructor(layoutName,srcList){
-        super();
-        this._name = layoutName;
-        this._buttonItems = srcList.length;
-        const list = srcList.concat(CommandManager.createCommandList_ForKeyLayout());
-        Key_Layout.keylayout_SetupIndex(list);
-        this._list =list;//Object.freeze( list);
-        this._enterKeyIndex = this._list.indexOf(KEYS.ENTER_JIS);
-    }
-    name(){
-        return this._name;
-    }
-
-    numButtons(){
-        return this._buttonItems;
-    }
-    buttonList(){
-        return this._list;
-    }
-    /**
-     * @param {Key_Big} enter 
-     */
-    setEnterKey(enter){
-        this._enter=enter;
-    }
-    defaultMapper(){
-        return Mano_InputConfig.defaultKeyMapper;
-    }
-    currentMapper(){
-        return Input.keyMapper;
-    }
-}
 
 
 
@@ -5609,7 +4992,7 @@ function getCurrentDevice(){
     if(setting.gamepad.isConected()){
         return setting.gamepad;
     }
-    return KEY_LAYOUT_JIS;
+    return setting.keyboard;
 }
 class Window_KeyConfig_MA_V10 extends Window_InputConfigBase{
 
@@ -5617,356 +5000,6 @@ class Window_KeyConfig_MA_V10 extends Window_InputConfigBase{
 
 
 
-
-//TODO:カーソル移動に異常があるので修正する
-class Window_KeyConfig_MA extends Window_InputConfigBase {
-
-    initializeMapper(){
-        const device = this.inputDevice();
-        this._mapper217 = device.createTemporaryMapper();
-         //new TemporaryMappper(device.currentMapper());
-    }
-    temporaryMappper(){
-        return this._mapper217;
-    }
-    /**
-     * @param {Rectangle} rect 
-     */
-    initialize(rect) {
-        //@ts-ignore
-        this.setKeyLayout(ConfigManager.keyLayout_MA);
-        super.initialize(rect);
-        this.refresh();
-        this.activate();
-        this.select(0);
-    }
-
-    lineHeight(){
-        return setting.keyWindowLineHeight;
-    }
-
-    mainFontFace(){
-        if(Utils.RPGMAKER_NAME ==="MV"){
-            return this.standardFontFace();
-        }
-        return $gameSystem.mainFontFace();
-    }
-    resetFontSettings(){
-        this.contents.fontFace = this.mainFontFace();
-        this.contents.fontSize = this.lineHeight()-2;//$gameSystem.mainFontSize();
-        this.resetTextColor();
-    }
-    setWASD_Move(){
-        for (const key in WASD_KEYMAP) {
-            if (WASD_KEYMAP.hasOwnProperty(key)) {
-                const element = WASD_KEYMAP[key];
-                this._mapper217.change(Number(key),element);
-            }
-        }
-        this.refresh();
-    }
-    /**
-     * @param {String} layoutText 
-     */
-    setKeyLayout(layoutText){
-        this._layout = layoutText ==="JIS"? KEY_LAYOUT_JIS : KEY_LAYOUT_US;
-    }
-    inputDevice(){
-        return this._layout;
-    }
-    getKeyLayout() {
-        return this._layout._name;
-    }
-    itemTextAlign() {
-        return 'center';
-    }
-    exitCommandIndex(){
-        return CommandManager.exit()._index;
-    }
-    processChangeLayout() {
-        this.playLayoutChangeSound();
-        const L = this.getKeyLayout();
-        if (L !== 'JIS') {
-            this.setKeyLayout('JIS');
-        }
-        else {
-            this.setKeyLayout('US');
-        }
-        this.refresh();
-    }
-    processOk() {
-        const index = this.index();
-        if (index < 0) {
-            return;
-        }
-        const item = this.item(index);
-        if(!item){
-            this.playBuzzerSound();
-            return;
-        }
-        if(item.locked){
-            this.playBuzzerSound();
-            return;
-        }
-        if(item.handle==="ok"){
-            this.playSymbolSetSound()
-            this.updateInputData();
-            this.deactivate();
-            this.callOkHandler();
-            return
-        }
-        this.callHandler(item.handle);
-    }
-    itemHeight() {
-        return this.lineHeight() * 2;
-    }
-    maxPageRows() {
-        return 100;
-    }
-    maxCols() {
-        return 19;
-    }
-    numVisibleRows() {
-        return this._layout._list.length;
-    }
-    /**
-     * @param {Number} index 
-     */
-    baseRect(index){
-        return super.itemRect(index);
-    }
-    /**
-     * @param {Number} index 
-     */
-    itemRect(index){
-        const item = this.item(index);
-        if(!item){
-            return new Rectangle(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER,0,0);
-        }
-        return item.rect(this,index);
-    }
-    maxItems() {
-        return this._layout.buttonList().length;
-    }
-    spacing() {
-        return 0;
-    }
-    /**
-     * @param {number}index
-     */
-    keyNumber(index) {
-        return this.item(index).keycord;
-    }
-    currentButtonCode() {
-        return this.keyNumber(this.index());
-    }
-    keyName(index) {
-        return this.item(index).char;
-    }
-
-    cursorUp(wrap) {
-        if (wrap || this._index >= this.maxCols()) {
-            this.cursorMoveCheck(-this.maxCols());
-        }
-    }
-    cursorDown(wrap) {
-        if (wrap || this._index < this.maxItems() - this.maxCols()) {
-            this.cursorMoveCheck(this.maxCols());
-        }
-    }
-    cursorLeft(wrap) {
-        if (wrap || this._index > 0) {
-            this.cursorMoveCheck(-1);
-        }
-    }
-    cursorRight(wrap) {
-        if (wrap || this._index < this.maxItems() - 1) {
-            this.cursorMoveCheck(1);
-        }
-    }
-    nextIndex(current, moveDir) {
-        const maxItems = this.maxItems();
-        return (current + moveDir + maxItems) % maxItems;
-    }
-    cursorMoveCheck(moveDir) {
-        const current = this.index();
-        let next = this.nextIndex(current, moveDir);
-        const last = Math.abs(this.maxItems() / moveDir);
-        for (var i = 0; i < last; ++i) {
-            const itemA = this.item(current);
-            const itemB = this.item(next);
-            if (itemB === KEYS.NULL) {
-                break;
-            }
-            if (itemA !== itemB) {
-                break;
-            }
-            next = this.nextIndex(next, moveDir);
-        }
-        this.select(next);
-    }
-    symbolTextColor() {
-        return this.textColor(4);
-    }
-    /**
-     * @param {I_SymbolDefine} inputDef 
-     * @param {Rectangle} rect 
-     */
-    drawKeyback(inputDef,rect){
-        if(!inputDef){
-            this.drawSymbolBack(rect,SymbolColorManager.emptyColor());
-            return;
-        }
-        if(inputDef.isParamatorValid()){
-            this.drawSymbolBack(rect,inputDef.backColor());
-        }else{
-            this.drawSymbolBack(rect,SymbolColorManager.paramatorInvalidColor());
-        }
-    }
-    /**
-     * @param {Key_Base} key
-     * @param {I_SymbolDefine} inputDef 
-     * @param {Rectangle} rect 
-     */
-    drawInputDefine(key,inputDef,rect){
-        this.drawKeyback(inputDef,rect);
-        this.drawText(key.char,rect.x,rect.y,rect.width,"center");
-        if(inputDef && !inputDef.isEmpty()){
-            const symbolY = rect.y + this.lineHeight()-6;
-            this.drawText(inputDef.displayKeyName(),rect.x,symbolY,rect.width,"center");
-        }
-    }
-
-    /**
-     * @param {Number} index 
-     * @returns 
-     */
-    symbolString(index){
-        const keyNumber = this.keyNumber(index);
-        return this.temporaryMappper().findSymbolByCode(keyNumber);
-    }
-    /**
-     * @param {Number} index 
-     */
-    symbolObject(index) {
-        const keyNumber = this.keyNumber(index);
-        return this.symbolObjectFromKeyNumber(keyNumber);
-    }
-
-    symbolObjectFromKeyNumber(keyNumber){
-        const symbol = this.temporaryMappper().findSymbolByCode(keyNumber)
-        return symbolManager.findSymbol(symbol);
-    }
-
-    /**
-     * @param {Number} index 
-     * @desc 画面に表示するシンボル文字列の取得
-     */
-    symbolText(index) {
-        const symbol = this.symbolString(index);
-        return symbol;
-    }
-    /**
-     * @param {Number} index 
-     */
-    item(index){
-        return this._layout.buttonList()[index];
-    }
-    /**
-     * @param {Number} index 
-     */
-    drawItem(index){
-        const item = this.item(index);
-        if(item){
-            item.draw(this,index);
-        }
-    }
-    redrawItem(index){
-        const item = this.item(index);
-        if(item){
-            this.clearItem(index);
-            item.redraw(this,index);
-        }
-    }
-
-    commandBackColor() {
-        return getColorSrc(this).gaugeBackColor();
-    }
-    commandColor() {
-        return getColorSrc(this).normalColor();
-    }
-    /**
-     * @param {String} commandName 
-     * @param {MyRectType} rect 
-     */
-    drawCommandXX(commandName, rect) {
-        this.drawSymbolBack(rect, this.commandBackColor());
-        this.changeTextColor(this.commandColor());
-        this.drawText(commandName, rect.x, rect.y, rect.width, 'center');
-    }
-}
-
-class Scene_KeyConfig_MA extends Scene_InputConfigBase_MA{
-    helpWindowLines(){
-        return 2;
-    }
-    backBitmap(){
-        if(setting.keyBackground){
-            return ImageManager.loadTitle1(setting.keyBackground);
-        }
-        return null;
-    }
-
-    create() {
-        super.create();
-        this.createHelpWindow();
-        this.createKeyboradConfigWindow();
-        this.createSymbolListWindow();
-    }
-    onKeyLayoutOk(){
-        this._keyconfigWindow.processChangeLayout();
-    }
-    configKey(){
-        return MA_KEYBOARD_CONFIG;
-    }
-    saveMapper(){
-        Input.keyMapper = this._keyconfigWindow.cloneMapper();
-    }
-    setWASD_Move(){
-        this._keyconfigWindow.setWASD_Move();
-        this._keyconfigWindow.playApplySound();
-    }
-    keyconfigWindowRect(){
-        return this.mainWindowRect();
-    }
-    calcKeyWindowHeight(){
-        const lineHeight =0;
-        return 12*24;
-    }
-    createKeyboradConfigWindow() {
-        const rect = this.keyconfigWindowRect();
-        const kcw = new Window_KeyConfig_MA(rect);
-        kcw.setHandler('cancel', this.onConfigCancel.bind(this));
-        kcw.setHandler('ok', this.onConfigOk.bind(this));
-        kcw.setHandler(CommandManager.reset().handle, this.resetMapper.bind(this));
-        kcw.setHandler(CommandManager.apply().handle, this.applyConfig.bind(this));
-        kcw.setHandler(CommandManager.wasd().handle,this.setWASD_Move.bind(this));
-        kcw.setHandler(CommandManager.keylayout().handle,this.onKeyLayoutOk.bind(this));
-        kcw.setHandler(CommandManager.exit().handle,this.onConfigCancel.bind(this));
-        kcw.setHelpWindow(this._helpWindow);
-        this.addWindow(kcw);
-        this._keyconfigWindow = kcw;
-    }
-    mainWidnow() {
-        return this._keyconfigWindow;
-    }
-    subWindow(){
-        return this._symbolListWindow;
-    }
-    currentButtonCode(){
-        return this._keyconfigWindow.currentButtonCode();
-    }
-}
 
 
 
@@ -6046,14 +5079,6 @@ Game_Map.prototype.setupStartingEvent =function(){
     return Game_Map_setupStartingEvent.call(this);
 };
 
-// const Scene_Boot_onDatabaseLoaded =Scene_Boot.prototype.onDatabaseLoaded ||(function(){});
-// Scene_Boot.prototype.onDatabaseLoaded =function(){  
-//     setupDefaultMapper();
-//     if(Imported.PP_Option ){
-//         this.PP_Option_InputConfig();
-//     }
-//     Scene_Boot_onDatabaseLoaded.call(this);
-// };
 
 class Window_DebugSymbols extends Window_InputSymbolListBase{
 
@@ -6140,16 +5165,16 @@ const exportClass ={
     //MV用・ヘルプへの記載予定なし
     GetButtonNameMV:GetButtonNameMV,
     Scene_ConfigBase:Scene_InputConfigBase_MA,
-    Scene_KeyConfig:Scene_KeyConfig_MA,
+    //Scene_KeyConfig:Scene_KeyConfig_MA,
     Scene_GamepadConfig: Scene_GamepadConfig_V8,
     //Scene_GamepadConfig_ALT:Scene_GamepadConfig_ALT,
     // Window_InputSymbolList:Window_InputSymbolList,
     // Window_GamepadConfig:Window_GamepadConfig_MA,
-    Window_KeyConfig:Window_KeyConfig_MA,
+    //Window_KeyConfig:Window_KeyConfig_MA,
     defaultKeyMapper:{},
     defaultGamepadMapper:{},
     gotoKey:function(){
-        SceneManager.push(Mano_InputConfig.Scene_KeyConfig );
+        //SceneManager.push(Mano_InputConfig.Scene_KeyConfig );
     },
     gotoGamepad:function(){
         SceneManager.push(Scene_GamepadConfig_V8 );
