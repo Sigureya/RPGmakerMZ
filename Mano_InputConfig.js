@@ -1,4 +1,4 @@
-
+//@ts-check
 //=============================================================================
 // Mano_InputConfig.js
 // ----------------------------------------------------------------------------
@@ -7,7 +7,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 8.0.1 2022/03/15
+// ver 8.1.0 2022/06/10
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -1108,6 +1108,335 @@ class MultiLanguageText{
         return this._defaultName;
     }
 }
+
+const KEY_LAYOUT_JIS=(function(){ 
+    const list =[
+        KEYS.ESC,
+        KEYS._1 ,
+        KEYS._2 ,
+        KEYS._3 ,
+        KEYS._4, 
+        KEYS._5, 
+        KEYS._6, 
+        KEYS._7, 
+        KEYS._8, 
+        KEYS._9, 
+        KEYS._0, 
+        KEYS.MINUS,
+        KEYS.CARET,
+        KEYS.INSERT ,
+        KEYS.BACK ,
+        KEYS.HOME ,
+        KEYS.END ,
+        KEYS.PAGEUP ,
+        KEYS.PAGEDOWN ,
+    
+        KEYS.TAB,
+    
+        KEYS.Q ,
+        KEYS.W ,
+        KEYS.E ,
+        KEYS.R ,
+        KEYS.T ,
+        KEYS.Y ,
+        KEYS.U ,
+        KEYS.I ,
+        KEYS.O ,
+        KEYS.P ,
+        KEYS.ATMARK,
+        KEYS.SQUARE_BRACKETS_OPEN,
+        KEYS.ENTER_JIS,
+        KEYS.ENTER_JIS,
+        KEYS.TENKEY7 ,
+        KEYS.TENKEY8 ,
+        KEYS.TENKEY9 ,
+        KEYS.TENKEY_MINUS,
+        KEYS.NULL,
+        KEYS.A ,
+        KEYS.S ,
+        KEYS.D ,
+        KEYS.F ,
+        KEYS.G ,
+        KEYS.H ,
+        KEYS.J ,
+        KEYS.K ,
+        KEYS.L ,
+        KEYS.SEMICOLON,
+        KEYS.COLON,
+        KEYS.SQUARE_BRACKETS_CLOSE, 
+        KEYS.ENTER_JIS,
+        KEYS.ENTER_JIS,
+        KEYS.TENKEY4 ,
+        KEYS.TENKEY5 ,
+        KEYS.TENKEY6 ,
+        KEYS.TENKEY_PLUS,
+    
+        KEYS.SHIFT ,
+        KEYS.Z ,
+        KEYS.X ,
+        KEYS.C ,
+        KEYS.V ,
+        KEYS.B ,
+        KEYS.N ,
+        KEYS.M ,
+        KEYS.COMMA,
+        KEYS.DOT,
+        KEYS.SLASH,
+        
+        KEYS.BACKSLASH,
+        KEYS.SHIFT,
+        KEYS.UP,
+        KEYS.NULL,
+        
+        KEYS.TENKEY1 ,
+        KEYS.TENKEY2 ,
+        KEYS.TENKEY3 ,
+        KEYS.NULL,
+    
+        KEYS.CTRL  ,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.LEFT,
+        KEYS.DOWN,
+        KEYS.RIGHT,
+        KEYS.TENKEY0,
+        KEYS.TENKEY0,
+        KEYS.TENKEY_DOT,
+        KEYS.NULL,
+    ];
+    const layout= new Key_Layout("JIS",list);
+    layout.setEnterKey(KEYS.ENTER_JIS);
+    return Object.freeze( layout);
+})();
+const KEY_LAYOUT_US =(function(){
+    const list =[    KEYS.ESC,
+        KEYS._1 ,
+        KEYS._2 ,
+        KEYS._3 ,
+        KEYS._4, 
+        KEYS._5, 
+        KEYS._6, 
+        KEYS._7, 
+        KEYS._8, 
+        KEYS._9, 
+        KEYS._0, 
+        KEYS.MINUS,
+        KEYS.EQUAL_JIS,
+        KEYS.INSERT ,
+        KEYS.BACK ,
+        KEYS.HOME ,
+        KEYS.END ,
+        KEYS.PAGEUP ,
+        KEYS.PAGEDOWN ,
+    
+        KEYS.TAB,
+        KEYS.Q ,
+        KEYS.W ,
+        KEYS.E ,
+        KEYS.R ,
+        KEYS.T ,
+        KEYS.Y ,
+        KEYS.U ,
+        KEYS.I ,
+        KEYS.O ,
+        KEYS.P ,
+        KEYS.SQUARE_BRACKETS_OPEN,
+        KEYS.SQUARE_BRACKETS_CLOSE, 
+        KEYS.BACKSLASH,
+        KEYS.NULL,
+        KEYS.TENKEY7 ,
+        KEYS.TENKEY8 ,
+        KEYS.TENKEY9 ,
+        KEYS.TENKEY_MINUS,
+        KEYS.NULL,
+        KEYS.A ,
+        KEYS.S ,
+        KEYS.D ,
+        KEYS.F ,
+        KEYS.G ,
+        KEYS.H ,
+    
+        KEYS.J ,
+        KEYS.K ,
+        KEYS.L ,
+        KEYS.SEMICOLON,
+        KEYS.APOSTROPHE, 
+        KEYS.ENTER_US,
+        KEYS.ENTER_US,
+        KEYS.ENTER_US,
+        KEYS.TENKEY4 ,
+        KEYS.TENKEY5 ,
+        KEYS.TENKEY6 ,
+        KEYS.TENKEY_PLUS,
+
+        KEYS.SHIFT ,
+        KEYS.Z ,
+        KEYS.X ,
+        KEYS.C ,
+        KEYS.V ,
+        KEYS.B ,
+        KEYS.N ,
+        KEYS.M ,
+        KEYS.COMMA,
+        KEYS.DOT,
+        KEYS.SLASH,
+        
+        KEYS.NULL,
+        KEYS.SHIFT,
+        KEYS.UP,
+        KEYS.NULL,
+        
+        KEYS.TENKEY1 ,
+        KEYS.TENKEY2 ,
+        KEYS.TENKEY3 ,
+        KEYS.NULL,
+        
+        KEYS.CTRL  ,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.LEFT,
+        KEYS.DOWN,
+        KEYS.RIGHT,
+        KEYS.TENKEY0,
+        KEYS.TENKEY0,
+        KEYS.TENKEY_DOT,
+        KEYS.NULL,
+    ];
+    const layout =new Key_Layout("US",list);
+    layout.setEnterKey(KEYS.ENTER_US);
+    return Object.freeze( layout);
+})();
+const KEY_LAYOUT_FR=(function(){
+    const list =[
+        KEYS.ESC,
+        KEYS._1 ,
+        KEYS._2 ,
+        KEYS._3 ,
+        KEYS._4, 
+        KEYS._5, 
+        KEYS._6, 
+        KEYS._7, 
+        KEYS._8, 
+        KEYS._9, 
+        KEYS._0, 
+        KEYS.MINUS,
+        KEYS.EQUAL_JIS,
+        KEYS.INSERT ,
+        KEYS.BACK ,
+        KEYS.HOME ,
+        KEYS.END ,
+        KEYS.PAGEUP ,
+        KEYS.PAGEDOWN ,
+    
+        KEYS.TAB,
+        KEYS.A ,
+        KEYS.Z ,
+        KEYS.E ,
+        KEYS.R ,
+        KEYS.T ,
+        KEYS.Y ,
+        KEYS.U ,
+        KEYS.I ,
+        KEYS.O ,
+        KEYS.P ,
+        KEYS.SQUARE_BRACKETS_OPEN,
+        KEYS.SQUARE_BRACKETS_CLOSE, 
+        KEYS.BACKSLASH,
+        KEYS.NULL,
+        KEYS.TENKEY7 ,
+        KEYS.TENKEY8 ,
+        KEYS.TENKEY9 ,
+        KEYS.TENKEY_MINUS,
+        KEYS.NULL,
+        KEYS.Q ,
+        KEYS.S ,
+        KEYS.D ,
+        KEYS.F ,
+        KEYS.G ,
+        KEYS.H ,
+    
+        KEYS.J ,
+        KEYS.K ,
+        KEYS.L ,
+        KEYS.M,
+        KEYS.APOSTROPHE, 
+        KEYS.ENTER_US,
+        KEYS.ENTER_US,
+        KEYS.ENTER_US,
+        KEYS.TENKEY4 ,
+        KEYS.TENKEY5 ,
+        KEYS.TENKEY6 ,
+        KEYS.TENKEY_PLUS,
+
+        KEYS.SHIFT ,
+        KEYS.W ,
+        KEYS.X ,
+        KEYS.C ,
+        KEYS.V ,
+        KEYS.B ,
+        KEYS.N ,
+        KEYS.M ,
+        KEYS.COMMA,
+        KEYS.DOT,
+        KEYS.SLASH,
+        
+        KEYS.NULL,
+        KEYS.SHIFT,
+        KEYS.UP,
+        KEYS.NULL,
+        
+        KEYS.TENKEY1 ,
+        KEYS.TENKEY2 ,
+        KEYS.TENKEY3 ,
+        KEYS.NULL,
+        
+        KEYS.CTRL  ,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.LEFT,
+        KEYS.DOWN,
+        KEYS.RIGHT,
+        KEYS.TENKEY0,
+        KEYS.TENKEY0,
+        KEYS.TENKEY_DOT,
+        KEYS.NULL,
+    ];
+    const layout =new Key_Layout("FR",list);
+    layout.setEnterKey(KEYS.ENTER_US);
+    return Object.freeze( layout);
+}  )()
+const KEY_LAYOUT_DE =(function(){
+
+    //de_DE
+})();
+
 class TouchButton{
     /**
      * @param {String} filePath 
@@ -2834,6 +3163,12 @@ class DeviceLayout extends I_DeviceLayout{
     }
 }
 /**
+ * @extends {DeviceLayout<Key_Base>}
+ */
+class KeyboardLayout extends DeviceLayout{
+
+}
+/**
  * 
  * @param {String} symbol 
  * @param {String} name 
@@ -3045,35 +3380,6 @@ class InputDevice_Readonly{
     }
 
 }
-
-class DeviceXXX{
-    constructor(){
-        this._defaultKeyMapper=null;
-        this._defaultGamepadMapper=null;
-        this.setKeyLayout(null,null);
-    }
-    /**
-    * @param {Key_Layout} jis 
-     * @param {Key_Layout} us 
-     */
-    setKeyLayout(jis,us){
-        this._keyLayoutJIS=jis;
-        this._keyLayoutUS =us;
-    }
-    onBoot(){
-        this.setupDefaultMapper()
-    }
-    setupDefaultMapper(){
-        this._defaultKeyMapper= new InputDevice_Readonly(  Object.freeze(objectClone(Input.keyMapper)));
-        this._defaultGamepadMapper =new InputDevice_Readonly(  Object.freeze(objectClone(Input.gamepadMapper)));
-    }
-    keyMapper(){
-        return this._defaultKeyMapper;
-    }
-    gamepadMapper(){
-        return this._defaultGamepadMapper;
-    }
-}
 /**
  * @template {I_InputButton} T_Button
  */
@@ -3117,6 +3423,9 @@ class DeviceXXX{
         }
         return null;
     }
+    /**
+     * @returns {DeviceLayout<T_Button> }
+     */
     currentLayout(){
         return this._list[this._index];
     }
@@ -3127,6 +3436,10 @@ class DeviceXXX{
         }
         return "";
     }
+    /**
+     * @param {number} index 
+     * @returns 
+     */
     buttonAt(index) {
         const device =this.currentLayout();
         if(device){
@@ -3142,6 +3455,7 @@ class DeviceXXX{
         return 0;
     }
     /**
+     * @private
      * @param {Number} index 
      * @returns 
      */
@@ -3152,6 +3466,49 @@ class DeviceXXX{
             //return device.button(index)
         }
         return "";
+    }
+}
+
+class Keyboard_V10 extends InputDeviceBase{
+    /**
+     * 
+     * @param {LayoutSelecter<Key_Base>} layoutSelecter 
+     */
+    constructor(layoutSelecter){
+        super();
+        this._selector = layoutSelecter;
+    }
+    numButtons(){
+        return this._selector.numButtons();
+    }
+}
+//TODO:新たなるマネージャー
+class DeviceXXX{
+    constructor(){
+        this._defaultKeyMapper=null;
+        this._defaultGamepadMapper=null;
+        this.setKeyLayout(null,null);
+    }
+    /**
+    * @param {Key_Layout} jis 
+     * @param {Key_Layout} us 
+     */
+    setKeyLayout(jis,us){
+        this._keyLayoutJIS=jis;
+        this._keyLayoutUS =us;
+    }
+    onBoot(){
+        this.setupDefaultMapper()
+    }
+    setupDefaultMapper(){
+        this._defaultKeyMapper= new InputDevice_Readonly(  Object.freeze(objectClone(Input.keyMapper)));
+        this._defaultGamepadMapper =new InputDevice_Readonly(  Object.freeze(objectClone(Input.gamepadMapper)));
+    }
+    keyMapper(){
+        return this._defaultKeyMapper;
+    }
+    gamepadMapper(){
+        return this._defaultGamepadMapper;
     }
 }
 
@@ -3179,6 +3536,7 @@ const setting = (function(){
     const numberGamepad =createButtonNumberLayout("Number","ButtonNumber");
 
     const gamepadLayoutSelector = new LayoutSelecter([numberGamepad,nintendo,xbox,playstation]);
+    //const keyboardLayoutSelector = new LayoutSelecter([KEY_LAYOUT_US])
 
     const gamepad= new Gamepad(gamepadLayoutSelector);
     const result= {
@@ -5216,6 +5574,9 @@ class Key_Layout extends InputDeviceBase{
         this._list =list;//Object.freeze( list);
         this._enterKeyIndex = this._list.indexOf(KEYS.ENTER_JIS);
     }
+    name(){
+        return this._name;
+    }
 
     numButtons(){
         return this._buttonItems;
@@ -5237,221 +5598,9 @@ class Key_Layout extends InputDeviceBase{
     }
 }
 
-const KEY_LAYOUT_JIS=(function(){ 
-    const list =[
-        KEYS.ESC,
-        KEYS._1 ,
-        KEYS._2 ,
-        KEYS._3 ,
-        KEYS._4, 
-        KEYS._5, 
-        KEYS._6, 
-        KEYS._7, 
-        KEYS._8, 
-        KEYS._9, 
-        KEYS._0, 
-        KEYS.MINUS,
-        KEYS.CARET,
-        KEYS.INSERT ,
-        KEYS.BACK ,
-        KEYS.HOME ,
-        KEYS.END ,
-        KEYS.PAGEUP ,
-        KEYS.PAGEDOWN ,
-    
-        KEYS.TAB,
-    
-        KEYS.Q ,
-        KEYS.W ,
-        KEYS.E ,
-        KEYS.R ,
-        KEYS.T ,
-        KEYS.Y ,
-        KEYS.U ,
-        KEYS.I ,
-        KEYS.O ,
-        KEYS.P ,
-        KEYS.ATMARK,
-        KEYS.SQUARE_BRACKETS_OPEN,
-        KEYS.ENTER_JIS,
-        KEYS.ENTER_JIS,
-        KEYS.TENKEY7 ,
-        KEYS.TENKEY8 ,
-        KEYS.TENKEY9 ,
-        KEYS.TENKEY_MINUS,
-        KEYS.NULL,
-        KEYS.A ,
-        KEYS.S ,
-        KEYS.D ,
-        KEYS.F ,
-        KEYS.G ,
-        KEYS.H ,
-        KEYS.J ,
-        KEYS.K ,
-        KEYS.L ,
-        KEYS.SEMICOLON,
-        KEYS.COLON,
-        KEYS.SQUARE_BRACKETS_CLOSE, 
-        KEYS.ENTER_JIS,
-        KEYS.ENTER_JIS,
-        KEYS.TENKEY4 ,
-        KEYS.TENKEY5 ,
-        KEYS.TENKEY6 ,
-        KEYS.TENKEY_PLUS,
-    
-        KEYS.SHIFT ,
-        KEYS.Z ,
-        KEYS.X ,
-        KEYS.C ,
-        KEYS.V ,
-        KEYS.B ,
-        KEYS.N ,
-        KEYS.M ,
-        KEYS.COMMA,
-        KEYS.DOT,
-        KEYS.SLASH,
-        
-        KEYS.BACKSLASH,
-        KEYS.SHIFT,
-        KEYS.UP,
-        KEYS.NULL,
-        
-        KEYS.TENKEY1 ,
-        KEYS.TENKEY2 ,
-        KEYS.TENKEY3 ,
-        KEYS.NULL,
-    
-        KEYS.CTRL  ,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.LEFT,
-        KEYS.DOWN,
-        KEYS.RIGHT,
-        KEYS.TENKEY0,
-        KEYS.TENKEY0,
-        KEYS.TENKEY_DOT,
-        KEYS.NULL,
-    ];
-    const layout= new Key_Layout("JIS",list);
-    layout.setEnterKey(KEYS.ENTER_JIS);
-    return Object.freeze( layout);
-})();
-const KEY_LAYOUT_US =(function(){
-    const list =[    KEYS.ESC,
-        KEYS._1 ,
-        KEYS._2 ,
-        KEYS._3 ,
-        KEYS._4, 
-        KEYS._5, 
-        KEYS._6, 
-        KEYS._7, 
-        KEYS._8, 
-        KEYS._9, 
-        KEYS._0, 
-        KEYS.MINUS,
-        KEYS.EQUAL_JIS,
-        KEYS.INSERT ,
-        KEYS.BACK ,
-        KEYS.HOME ,
-        KEYS.END ,
-        KEYS.PAGEUP ,
-        KEYS.PAGEDOWN ,
-    
-        KEYS.TAB,
-        KEYS.Q ,
-        KEYS.W ,
-        KEYS.E ,
-        KEYS.R ,
-        KEYS.T ,
-        KEYS.Y ,
-        KEYS.U ,
-        KEYS.I ,
-        KEYS.O ,
-        KEYS.P ,
-        KEYS.SQUARE_BRACKETS_OPEN,
-        KEYS.SQUARE_BRACKETS_CLOSE, 
-        KEYS.BACKSLASH,
-        KEYS.NULL,
-        KEYS.TENKEY7 ,
-        KEYS.TENKEY8 ,
-        KEYS.TENKEY9 ,
-        KEYS.TENKEY_MINUS,
-        KEYS.NULL,
-        KEYS.A ,
-        KEYS.S ,
-        KEYS.D ,
-        KEYS.F ,
-        KEYS.G ,
-        KEYS.H ,
-    
-        KEYS.J ,
-        KEYS.K ,
-        KEYS.L ,
-        KEYS.SEMICOLON,
-        KEYS.APOSTROPHE, 
-        KEYS.ENTER_US,
-        KEYS.ENTER_US,
-        KEYS.ENTER_US,
-        KEYS.TENKEY4 ,
-        KEYS.TENKEY5 ,
-        KEYS.TENKEY6 ,
-        KEYS.TENKEY_PLUS,
 
-        KEYS.SHIFT ,
-        KEYS.Z ,
-        KEYS.X ,
-        KEYS.C ,
-        KEYS.V ,
-        KEYS.B ,
-        KEYS.N ,
-        KEYS.M ,
-        KEYS.COMMA,
-        KEYS.DOT,
-        KEYS.SLASH,
-        
-        KEYS.NULL,
-        KEYS.SHIFT,
-        KEYS.UP,
-        KEYS.NULL,
-        
-        KEYS.TENKEY1 ,
-        KEYS.TENKEY2 ,
-        KEYS.TENKEY3 ,
-        KEYS.NULL,
-        
-        KEYS.CTRL  ,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.SPACE,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.NULL,
-        KEYS.LEFT,
-        KEYS.DOWN,
-        KEYS.RIGHT,
-        KEYS.TENKEY0,
-        KEYS.TENKEY0,
-        KEYS.TENKEY_DOT,
-        KEYS.NULL,
-    ];
-    const layout =new Key_Layout("US",list);
-    layout.setEnterKey(KEYS.ENTER_US);
-    return Object.freeze( layout);
-})();
+
+
 
 /**
  * @returns {Readonly<InputDeviceBase>}
@@ -5462,6 +5611,13 @@ function getCurrentDevice(){
     }
     return KEY_LAYOUT_JIS;
 }
+class Window_KeyConfig_MA_V10 extends Window_InputConfigBase{
+
+}
+
+
+
+
 //TODO:カーソル移動に異常があるので修正する
 class Window_KeyConfig_MA extends Window_InputConfigBase {
 
@@ -5971,11 +6127,11 @@ if(Utils.RPGMAKER_NAME =="MV"){
 
     PluginManager.registerCommand(PLUGIN_NAME,"GamepadScene",function(){
         Mano_InputConfig.gotoGamepad();
-    })
+    });
 
     PluginManager.registerCommand(PLUGIN_NAME,"KeyboardScene",function(){
         Mano_InputConfig.gotoKey();
-    })
+    });
 
 
 }
