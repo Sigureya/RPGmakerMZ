@@ -137,6 +137,12 @@
  * @type struct<InputDefine>[]
  * @default []
  * 
+ * @param eventList
+ * @desc コモンイベントの呼び出し設定(簡単版)
+ * Registration of button events and additional input settings
+ * @text コモンイベント/CommonEvent
+ * @type struct<EventDefine>[]
+ * @default []
  * 
  * @param GamepadIsNotConnectedText
  * @text 未接続/GamepadIsNotConnected
@@ -326,6 +332,9 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 2022/06/10 ver 8.1.0
+ * コモンイベントの設定方法が複雑という意見があったので簡易版を作成。
+ * 
  * 
  * 2022/03/15 ver 8.0.1
  * ゲームパッドコンフィグをリニューアル。
@@ -564,6 +573,109 @@
  * @text 必須フラグ/mandatory
  * @type boolean
  * @default false
+ */
+/*~struct~EventDefine:
+ * 
+
+ * @param key
+ * @type select
+ * @option none/設定無し
+ * @value 
+ * @option A
+ * @option B
+ * @option C
+ * @option D
+ * @option E
+ * @option F
+ * @option G
+ * @option H
+ * @option I
+ * @option J
+ * @option K
+ * @option L
+ * @option M
+ * @option N
+ * @option O
+ * @option P
+ * @option Q
+ * @option R
+ * @option S
+ * @option T
+ * @option U
+ * @option V
+ * @option W
+ * @option X
+ * @option Y
+ * @option Z
+ * @default 
+ * 
+ * @param keyText
+ * @desc キーコンフィグの際に表示するテキスト
+ * @type struct<MultiLangString>
+ * @default {"jp":"","en":""}
+ * 
+ * 
+ * @param button
+ * @text パッドボタン/padButton
+ * @desc ボタン設定。配置と名前は任天堂のスタイルを想定。
+ * Button settings. The layout and name the style of Nintendo.
+ * @type select
+ * @default NaN
+ * @option none
+ * @value NaN
+ * @option 0(B/×)
+ * @value 0
+ * @option 1(A/○)
+ * @value 1
+ * @option 2(X/□)
+ * @value 2
+ * @option 3(Y/△)
+ * @value 3
+ * @option 4(L1)
+ * @value 4
+ * @option 5(R1)
+ * @value 5
+ * @option 6(L2)
+ * @value 6
+ * @option 7(R2)
+ * @value 7
+ * @option 8(select)
+ * @value 8
+ * @option 9(start)
+ * @value 9
+ * @option 10(L3)
+ * @value 10
+ * @option 11(R3)
+ * @value 11
+ * @option 16(center)
+ * @value 16
+ * 
+ * @param name
+ * @text 行動名/actionName
+ * @desc 言語別に行動の説明を入力します
+ * Enter a description of the action by language
+ * @type struct<MultiLangString>
+ * @default {"jp":"","en":""}
+ * 
+ * @param helpText
+ * @text 詳細/helpText
+ * @desc 画面上部に表示する説明文
+ * Description to be displayed at the top of the screen
+ * @type struct<MultiLangString>
+ * @default {"jp":"","en":""}
+ * 
+ * @param event
+ * @text イベント/event
+ * @desc ボタンを押した際にコモンイベントを実行します。
+ * Executes a common event when the button is pressed.
+ * @type struct<EventCaller>
+ * @default {"id":"0","inputType":"0"}
+ * 
+ * @param enabled
+ * @text 有効化
+ * @desc テスト用に一時的に無効化したい場合などで使います。
+ * @type boolean
+ * @default true
  */
 
 /*~struct~InputDefine:
@@ -1083,14 +1195,16 @@ class TouchButton{
 }
 class ButtonManager_T{
     constructor(){
-        this.setList([]);
+        /**
+         * @type {TouchButton[]}
+         */
+        this._list =[];
     }
     /**
-     * 
      * @param {TouchButton[]} list 
      */
-    setList(list){
-        this._list =list;
+    addItemList(list){
+        this._list.push(...list);
     }
     getList(){
         return this._list;
@@ -1111,6 +1225,12 @@ const ButtonManager = new ButtonManager_T();
 //todo
 //必須シンボル不足の際に、色で知らせたほうが良さそう
 class SymbolColorManager_T{
+    /**
+     * @param {string} normal 
+     * @param {string} mandatory 
+     * @param {string} move 
+     * @param {string} extendsSymbol 
+     */
     constructor(normal,mandatory,move,extendsSymbol){
         this._normal =(normal ||"#880000")
         this._mandatory=(mandatory||"#22e488");
@@ -1124,7 +1244,7 @@ class SymbolColorManager_T{
      */
     static create(objText){
         if(!objText){
-            return new SymbolColorManager_T(null,null,null);
+            return new SymbolColorManager_T(null,null,null,null);
         }
         const obj =JSON.parse(objText);
         const normal =(obj.normal||null);
@@ -1621,7 +1741,13 @@ class AdovancedSetting{
 }
 
 /**
+ * @typedef {object} ExtendsSymbolPair
+ * @property {ExtendsSymbol} exSymbol
+ * @property {TouchButton} button
+ */
+/**
  * @param {String} objText 
+ * @returns {ExtendsSymbolPair}
  */
 const createExtendsSymbol=function(objText){
     const obj = JSON.parse(objText);
@@ -1637,13 +1763,14 @@ const createExtendsSymbol=function(objText){
     const buttonId =Number(obj.button);
 
     const mtext = MultiLanguageText.create(obj.name);
-    const keys =String(obj.keys||"");
+    //keysは非推奨だったので、廃止　問題が無いことを確認したら消す
+    //const keys =String(obj.keys||"");
     //const keyText =String(obj.keyText||"");
     const helpText =MultiLanguageText.create(obj.helpText||"{}");
     const keySetting = KeySetting.create(obj.keySetting);
 
     const eventObj =EventCaller.create(obj.event);
-    const def = new ExtendsSymbol(adovanced,mtext, buttonId, keys,eventObj ,enabled,helpText,keySetting);
+    const def = new ExtendsSymbol(adovanced,mtext, buttonId,eventObj ,enabled,helpText,keySetting);
 
     /**
      * @type {String}
@@ -1665,17 +1792,16 @@ class ExtendsSymbol extends I_SymbolDefine{
      * @param {AdovancedSetting} adovanced
      * @param {MultiLanguageText} actionName 
      * @param {Number} buttonId 
-     * @param {String} keys 
      * @param {EventCaller} eventCaller
      * @param {Boolean} enabled
      * @param {MultiLanguageText} helpText
      * @param {KeySetting} keySetting
      */
-    constructor(adovanced,actionName,buttonId,keys ,eventCaller,enabled,helpText,keySetting){
+    constructor(adovanced,actionName,buttonId,eventCaller,enabled,helpText,keySetting){
         super();
         this._event = eventCaller;
         this._symbol =null;
-        this._keys = (keys ||"").toUpperCase();
+        //this._keys = (keys ||"").toUpperCase();
         this._buttonId =buttonId;
         this._actionName = actionName;
         //this._keyText=keyText;
@@ -1685,7 +1811,7 @@ class ExtendsSymbol extends I_SymbolDefine{
     }
 
     getKeys(){
-        return this._keys + this._keySetting.keys();
+        return  this._keySetting.keys();
     }
     overwriteType(){
         return this._advanced.overwriteType();
@@ -1979,7 +2105,10 @@ class SymbolManager_T {
          * @type {UnknowSymbol[]}
          */
         this._unknowList=[];
-        this.setExtendSymbols([]);
+        /**
+         * @type {ExtendsSymbol[]}
+         */
+        this._extendSymbols =[];
         this._basicSymbols = basicSymbols
         this._moveSymbols = moveSymbols
         this.addDictionaryItems(this._basicSymbols);
@@ -2006,6 +2135,14 @@ class SymbolManager_T {
     }
     
     /**
+     * @param {ExtendsSymbol[]} list 
+     */
+    addExtendsSymbols(list){
+         this._extendSymbols.push(...list);
+
+    }
+    /**
+     * @private
      * @param {ExtendsSymbol[]} list 
      */
     setExtendSymbols(list){
@@ -2192,20 +2329,22 @@ const symbolManager = new SymbolManager_T(
 );
 
 /**
+ * @param {string[]} textList
  * @param {SymbolManager_T} symbolManager 
  * @param {ButtonManager_T} buttonManager
+ * @param {(text:string)=>ExtendsSymbolPair} func
  */
-function setupExtendsSymbols(symbolManager,buttonManager){
-    const param = getParam();
-    /**
-     * @type {String[]}
-     */
-    const textList = JSON.parse(param.extendsMapper);
+function setupExtendsSymbols(textList,symbolManager,buttonManager,func){
+    //const param = getParam();
+    // /**
+    //  * @type {String[]}
+    //  */
+    // const textList = JSON.parse(param.extendsMapper);
 
     const buttons =[];
     const symbols=[];
     for (const iterator of textList) {
-        const item=createExtendsSymbol(iterator);
+        const item=func(iterator);
         if(item.exSymbol){
             symbols.push(item.exSymbol);
         }
@@ -2213,11 +2352,31 @@ function setupExtendsSymbols(symbolManager,buttonManager){
             buttons.push(item.button);
         }
     }
-    symbolManager.setExtendSymbols(symbols);
-    buttonManager.setList(buttons);
+    symbolManager.addExtendsSymbols(symbols);
+    buttonManager.addItemList(buttons);
 }
-setupExtendsSymbols(symbolManager,ButtonManager);
+setupExtendsSymbols(JSON.parse(getParam().extendsMapper ||"[]") ,  symbolManager,ButtonManager,function(arg){
+    return createExtendsSymbol(arg);
+});
+setupExtendsSymbols(JSON.parse(getParam().eventList ||"[]") ,  symbolManager,ButtonManager,function(arg){
 
+    const obj =JSON.parse(arg);
+    const actionName =MultiLanguageText.create (obj.name)
+    const helpText =MultiLanguageText.create(obj.helpText);
+    const adv = new AdovancedSetting(null,0,false);
+    const eventCaller = EventCaller.create(obj.event);
+    const enabled = (obj.enabled ==="true")
+    const buttonNumber =Number(obj.button);
+    const keyText = MultiLanguageText.create(obj.keyText);
+    const keySetting = new KeySetting(String(obj.key||""),null,keyText);
+
+    const e= new ExtendsSymbol(adv,actionName,buttonNumber,eventCaller,enabled,helpText,keySetting);
+
+    return {
+        exSymbol:e,
+        button:null,
+    }
+});
 
 if(ButtonManager.isTouchButtonEnabled()){
 
@@ -2717,8 +2876,6 @@ function createButtonNumberLayout(symbol,name){
 
 //ボタンの名前を入れておくクラス
 //また、編集可能なボタンを制御する際にも使う
-//TODO:ボタン名称を作り直す
-//何度も名前が違うと文句を言われるので、Xスタイル・Nスタイル・Pスタイルを用意
 class Gamepad extends InputDeviceBase{
     /**
      * @param {GamepadLayoutSelector} layout 
@@ -3021,7 +3178,7 @@ const setting = (function(){
     const xbox =createGamepadLayout("X","xbox","A","B","X","Y");
     const numberGamepad =createButtonNumberLayout("Number","ButtonNumber");
 
-    const gamepadLayoutSelector = new LayoutSelecter([numberGamepad,nintendo,playstation,xbox]);
+    const gamepadLayoutSelector = new LayoutSelecter([numberGamepad,nintendo,xbox,playstation]);
 
     const gamepad= new Gamepad(gamepadLayoutSelector);
     const result= {
@@ -3111,7 +3268,7 @@ class MV_Impriment extends I_MVMZ_Workaround{
         return new Window_Help(lines);
     }
     mainAreaHeigth(){
-        const helpAreaHeight = this.calcWindowHeight(this.helpWindowLines());
+        const helpAreaHeight = this.calcWindowHeight(this.helpWindowLines(),false);
         return Graphics.boxHeight -helpAreaHeight;
     }
     helpWindowLines(){
@@ -3183,6 +3340,7 @@ class InputConfigManager_T{
      * @returns 
      */
     createHelpWindow(rect){
+        //@ts-ignore
         return this._readonly.workaround().createHelpWindow(rect,3);
     }
 
@@ -3357,7 +3515,6 @@ class TemporaryMappperBase extends I_ReadonlyMapper{
  */
 //TODO:mapperのリセット用に保存してあるデータを何とかする
 //主にリセットで使うので、それに向いた構造に改造したい
-
 class TemporaryMappper extends TemporaryMappperBase{
     /**
      * @private
@@ -4821,7 +4978,6 @@ class Key_Command extends Key_Base{
         return "コマンドのヘルプ";
     }
 }
-//TODO:ゲームパッドのボタン配置切り換え…というか、ハードメーカー別の対応
 function createButtonLayoutChangeCommand(){
     const mText = new MultiLanguageText("Change button notation","ボタン表記変更");
     const command = new Key_Command("ButtonLayout",mText,3);
