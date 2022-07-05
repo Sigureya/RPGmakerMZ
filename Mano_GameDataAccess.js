@@ -94,6 +94,7 @@
  * @default 0
  * 
  * @command GetActorMaxTp
+ * @text 最大TPを取得/GetMaxTp
  * @arg actorVariable
  * @text アクターID
  * @type variable
@@ -767,9 +768,10 @@ PluginManager.registerCommand(PLUGIN_NAME,"GetMapGridSize",(arg)=>{
 PluginManager.registerCommand(PLUGIN_NAME,"GetMapScreenSize",(arg)=>{
     const widthVariable = Number(arg.width);
     const heightVariable =Number(arg.height)
-    const tileSize =48;
-    $gameVariables.setValue(widthVariable,$dataMap.width * tileSize);
-    $gameVariables.setValue(heightVariable,$dataMap.height* tileSize);
+    const tileWidth =$gameMap.tileWidth();
+    const tileHeight = $gameMap.tileHeight();
+    $gameVariables.setValue(widthVariable,$dataMap.width * tileWidth);
+    $gameVariables.setValue(heightVariable,$dataMap.height* tileHeight);
 });
 
 
