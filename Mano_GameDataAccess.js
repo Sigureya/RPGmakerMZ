@@ -7,7 +7,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 1.1.0 2022/05/17
+// ver 1.2.0 2022/07/05
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -18,6 +18,8 @@
  * @target MZ
  * 
  * @param elementNormal
+ * @text 通常攻撃/elementNormal
+ * @desc スキルの属性を表示する際に「通常攻撃」が設定されている場合の表示
  * @default 通常攻撃
  * 
  * @param textNone
@@ -91,6 +93,17 @@
  * @type variable
  * @default 0
  * 
+ * @command GetActorMaxTp
+ * @arg actorVariable
+ * @text アクターID
+ * @type variable
+ * @default 0
+ * 
+ * @arg maxtp
+ * @text 最大TP/MaxTp
+ * @type variable
+ * @default 0
+ * 
  * 
  * @command GetParams
  * @text パラメータの取得/GetParams
@@ -111,6 +124,55 @@
  * @option 防具(防具ID)
  * @value armor
  * @default actor
+ * 
+ * @arg mhp
+ * @text 最大HP/MaxHP
+ * @type variable
+ * @default 0
+ * 
+ * @arg mmp
+ * @text 最大MP/MaxMP
+ * @type variable
+ * @default 0
+ * 
+ * @arg atk
+ * @text 攻撃力/ATK
+ * @type variable
+ * @default 0
+ * 
+ * @arg def
+ * @text 防御力/DEF
+ * @type variable
+ * @default 0
+ * 
+ * @arg mat
+ * @text 魔法攻撃力/MAT
+ * @type variable
+ * @default 0
+ * 
+ * @arg mdf
+ * @text 魔法防御力/MDF
+ * @type variable
+ * @default 0
+ * 
+ * @arg agi
+ * @text 敏捷性/AGI
+ * @type variable
+ * @default 0
+ * 
+ * @arg luk
+ * @text 運/LUK
+ * @type variable
+ * @default 0
+ * 
+ * @command GetActorGrowing
+ * @text アクターの成長情報を取得
+ * @desc アイテムの効果「成長」によって加算された値を取得
+ * 
+ * @arg actorVariable
+ * @text アクターID
+ * @type variable
+ * @default 0
  * 
  * @arg mhp
  * @text 最大HP/MaxHP
@@ -246,114 +308,113 @@
  * @default 0
  * 
  * @arg includesEquip
- * @text 装備品を含む
+ * @text 装備を含む/includesEquip
  * @type boolean
  * @default false
  * 
  * @command GainItem
- * @text アイテムの入手
+ * @text アイテムの入手/GainItem
  * @desc アイテムを減らす結果になる場合、何もしません。
  * 
  * @arg item
- * @text 項目指定変数
+ * @text 項目指定変数/ItemId
  * @desc 変数の値をデータ選択に使います。
  * @type variable
  * @default 0
  * 
  * @arg dataType
- * @text データ種別
+ * @text データ種別/DataType
  * @desc カッコ内は「項目指定変数」の使い道です。
  * @type select 
- * @option アイテム(アイテムID)
+ * @option アイテムID/ItemId
  * @value item
- * @option 武器(武器ID)
+ * @option 武器ID/WeaponId
  * @value weapon
- * @option 防具(防具ID)
+ * @option 防具ID/ArmorId
  * @value armor
  * @default item
  * 
  * @arg amountVariable
- * @text 個数(変数指定)
+ * @text 個数(変数指定)/amount
  * @desc 数値がマイナスの場合何もしません。
  * @type variable
  * @default 0
  * 
  * @arg amount
- * @text 個数(直接指定)
+ * @text 個数(直接指定)/amount
  * @desc 変数指定との合計個数が加算されます。
  * @type number
  * @default 0
  * 
- * @command NumMembers
- * @text パーティの人数を取得
- * @arg variableId
- * @type variable
- * @default 0
+ * 
+ * 
  * 
  * @command GetActorClass
- * @text アクターの職業を取得
+ * @text アクターの職業を取得/GetActorClass
  * 
  * @arg actorVariable
- * @text アクターID
+ * @text アクターID/ActorId
  * @type variable
  * @default 0
  * 
  * @arg name
- * @text 職業名称
+ * @text 職業名称/ClassName
  * @type variable
  * @default 0
  * 
  * @arg classId
- * @text 職業番号
+ * @text 職業番号/ClassId
  * @type variable
  * @default 0
  * 
  * @command GetExp
- * @text 経験値情報の取得
+ * @text 経験値情報の取得/GetExpData
  * 
  * @arg actorVariable
- * @text アクターID
+ * @text アクターID/ActorId
  * @type variable
  * @default 0
  * 
  * @arg currentExp
- * @text 現在の経験値
+ * @text 現在の経験値/currentExp
  * @type variable
  * @default 0
  * 
  * @arg nextRequired
- * @text 次のレベルまでの経験値
+ * @text 次のLvまで/nextRequired
  * @type variable
  * @default 0
  * 
  * @arg nextLevel
- * @text 次のレベルに必要な経験値
+ * @text 次のLvに必要/nextLevel
  * @type variable
  * @default 0
  * 
  * @command GetMapGridSize
  * @text マップの大きさの取得(マス目)
  * @arg width
- * @text マップの幅
+ * @text マップの幅/width
  * @type variable
  * @default 0
  * 
  * @arg height
- * @text マップの高さ
+ * @text マップの高さ/height
  * @type variable
  * @default 0
  * 
  * @command GetMapScreenSize
  * @text マップの大きさの取得(画面上)
  * @arg width
- * @text マップの幅
+ * @text マップの幅/width
  * @type variable
  * @default 0
  * 
  * @arg height
- * @text マップの高さ
+ * @text マップの高さ/height
  * @type variable
  * @default 0
+ * 
+
  * 
  * @help
  * イベントコマンド「変数の操作」で取得できないデータを変数に入れることができます。
@@ -479,18 +540,87 @@ function getItemData(typename,itemVariable){
  */
 
 /**
+ * 
+ * @param {GetParamsArg} arg 
+ */
+function readParamsArg(arg){
+    const params =[arg.mhp,arg.mmp,arg.atk,arg.def,arg.mat,arg.mdf,arg.agi,arg.luk];
+    return params;
+
+}
+
+/**
  * @param {GetParamsArg} arg 
  * @param {(index:number)=>number} func
  */
 function writeParams(arg,func){
-
-    const params =[arg.mhp,arg.mmp,arg.atk,arg.def,arg.mat,arg.mdf,arg.agi,arg.luk];
+    const params = readParamsArg(arg);
+//    const params =[arg.mhp,arg.mmp,arg.atk,arg.def,arg.mat,arg.mdf,arg.agi,arg.luk];
     params.forEach((key,index)=>{
         const variableId =Number(key);
         const value = func(index);
         $gameVariables.setValue(variableId,value);
     });
 }
+
+/**
+ * 
+ * @param {number} actorVariable 
+ * @returns {Game_Actor}
+ */
+function getActor(actorVariable){
+    if(actorVariable > 0){
+        const actorId = $gameVariables.value(actorVariable);
+        const actor =$gameActors.actor(actorId);
+        return actor;
+    }
+
+    return null;
+
+}
+PluginManager.registerCommand(PLUGIN_NAME,"GetActorGrowing",(arg)=>{
+    const actor =getActor(Number(arg.actorVariable));
+    writeParams(arg,(index)=>{
+        if(!actor){ return 0;}
+        const grow = Game_Battler.prototype.paramPlus.call(actor,index);
+        return grow;
+    });
+});
+
+PluginManager.registerCommand(PLUGIN_NAME,"GetActorMaxTp",(arg)=>{
+    const actor =getActor(Number(arg.actorVariable));
+    const tpVariable =Number(arg.maxtp);
+
+    const maxtp = actor?.maxTp() ||0;
+    $gameVariables.setValue(tpVariable,maxtp);
+});
+
+PluginManager.registerCommand(PLUGIN_NAME,"GetActorClass",(arg)=>{
+    const actor =getActor(Number(arg.actorVariable))
+    const classVariable =Number(arg.classId)
+    const nameVariable =Number(arg.name)
+    if(actor){
+        const classObject =actor.currentClass();
+        if(classObject){
+            $gameVariables.setValue(classVariable, classObject.id );
+            $gameVariables.setValue(nameVariable, classObject.name );
+            return;
+        }
+    }
+    $gameVariables.setValue(classVariable, 0 );
+    $gameVariables.setValue(nameVariable, "" );
+});
+
+PluginManager.registerCommand(PLUGIN_NAME,"GetExp",(arg)=>{
+    const actor=getActor(Number(arg.actorVariable));
+    const currentExp =actor?.currentExp() || 0;
+    const nextExp= actor?.nextLevelExp() || 0;
+    const nextRequired = actor?.nextRequiredExp() ||0;
+    $gameVariables.setValue(Number(arg.currentExp),currentExp);
+    $gameVariables.setValue(Number(arg.nextLevel),nextExp);
+    $gameVariables.setValue(Number(arg.nextRequired),nextRequired);
+});
+
 PluginManager.registerCommand( PLUGIN_NAME,"GetParams",(arg)=>{
     const type =String(arg.dataType);
     const variableId =Number(arg.item);
@@ -510,7 +640,9 @@ PluginManager.registerCommand( PLUGIN_NAME,"GetParams",(arg)=>{
         const actorId = $gameVariables.value(variableId);
         const actor =$gameActors.actor(actorId);
         writeParams(arg,(index)=> actor? actor.param(index):0);
+        return;
     }
+    writeParams(arg ,(_index)=>0);
 });
 
 PluginManager.registerCommand( PLUGIN_NAME,"GetItemData",(arg)=>{
@@ -572,13 +704,13 @@ function armorTypeText(armor){
 }
 
 PluginManager.registerCommand(PLUGIN_NAME,"GetArmorType",(arg)=>{
-    const item = getData(Number(arg.item),$dataArmors);    
-    $gameVariables.setValue(Number(arg.typetext),armorTypeText(item));
+    const item = getData(Number(arg.item),$dataArmors); 
+    const text =   armorTypeText(item);
+    $gameVariables.setValue(Number(arg.typetext),text);
 });
 
 PluginManager.registerCommand(PLUGIN_NAME,"GetSkillData",(arg)=>{
     const skill= getData(Number(arg.item),$dataSkills);
-
     $gameVariables.setValue(Number(arg.mpcost),skill ? skill.mpCost :0);
     $gameVariables.setValue(Number(arg.tpcost),skill ? skill.tpCost :0);
     $gameVariables.setValue(Number(arg.elementid),skill ? skill.damage.elementId :0);
@@ -619,53 +751,10 @@ function skilltypeText(skill){
 PluginManager.registerCommand(PLUGIN_NAME,"GetSkillText",(arg)=>{
     const skill= getData(Number(arg.item),$dataSkills);
 
-    $gameVariables.setValue(Number(arg.name),skill ? skill.name :"");
-    $gameVariables.setValue(Number(arg.desc),skill ? skill.description :"");
+    $gameVariables.setValue(Number(arg.name), skill?.name ||"");
+    $gameVariables.setValue(Number(arg.desc), skill?.description ||"");
     $gameVariables.setValue(Number(arg.elementname),elementText(skill));
     $gameVariables.setValue(Number(arg.skilltypename),skilltypeText(skill));
-
-});
-
-PluginManager.registerCommand(PLUGIN_NAME,"NumMembers",(arg)=>{
-    const variableId =Number(arg.variableId);
-    if(variableId >0){
-        const value= $gameParty._actors.length;
-        $gameVariables.setValue(variableId,value);
-    }
-});
-
-PluginManager.registerCommand(PLUGIN_NAME,"GetActorClass",(arg)=>{
-    const actorVariable =Number(arg.actorVariable);
-    if(actorVariable > 0){
-        const actorId =$gameVariables.value(actorVariable);
-        const actor =$gameActors.actor(actorId);
-        if(!actor){
-            return;
-        }
-        const classObject =actor.currentClass();
-        if(classObject){
-            $gameVariables.setValue(Number(arg.classId), classObject.id );
-            $gameVariables.setValue(Number(arg.name), classObject.name );    
-        }
-    }
-});
-
-PluginManager.registerCommand(PLUGIN_NAME,"GetExp",(arg)=>{
-
-    const actorVariable = Number(arg.actorVariable);
-    if(actorVariable > 0){
-        const actorId = $gameVariables.value(actorVariable);
-        const actor =$gameActors.actor(actorId);
-        if(!actor){
-            return;
-        }
-        const currentExp =actor.currentExp();
-        const nextExp= actor.nextLevelExp();
-        const nextRequired = actor.nextRequiredExp();
-        $gameVariables.setValue(Number(arg.currentExp),currentExp);
-        $gameVariables.setValue(Number(arg.nextLevel),nextExp);
-        $gameVariables.setValue(Number(arg.nextRequired),nextRequired);
-    }
 });
 
 PluginManager.registerCommand(PLUGIN_NAME,"GetMapGridSize",(arg)=>{
