@@ -415,7 +415,19 @@
  * @type variable
  * @default 0
  * 
-
+ * @command GetTimer
+ * @text タイマーの残り時間を取得/GetTimer
+ * 
+ * @arg minutes
+ * @text 分/minutes
+ * @type variable
+ * @default 0
+ * 
+ * @arg seconds
+ * @text 秒/seconds
+ * @type variable
+ * @default 0
+ * 
  * 
  * @help
  * イベントコマンド「変数の操作」で取得できないデータを変数に入れることができます。
@@ -774,6 +786,19 @@ PluginManager.registerCommand(PLUGIN_NAME,"GetMapScreenSize",(arg)=>{
     $gameVariables.setValue(heightVariable,$dataMap.height* tileHeight);
 });
 
+PluginManager.registerCommand(PLUGIN_NAME,"GetTimer",(arg)=>{
+    const baseSeconds =$gameTimer.seconds();
+
+    const minutes = Math.floor(baseSeconds/60) % 60;
+    const seconds = baseSeconds % 60;
+
+    const secondsVariable =Number(arg.seconds);
+    const minutesVariable =Number(arg.minutes);
+
+    $gameVariables.setValue(minutesVariable,minutes);
+    $gameVariables.setValue(secondsVariable,seconds);
+
+});
 
 }());
 
