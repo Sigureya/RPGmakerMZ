@@ -6,7 +6,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// 1.1.0 2022/07/31 
+// 1.2.0 2022/08/08 
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -26,6 +26,10 @@
  * @desc partyMember rotateBackward
  * Ex:1,2,3,4→4,1,2,3,
  * 
+ * @param includingSubMember
+ * @type boolean
+ * @default false
+ * 
  * @help
  * パーティメンバーを並び替えて並び替えて回転させます。
  * 戦闘に参加していないキャラはそのままです。
@@ -44,22 +48,34 @@
 (function(){
 
     "use strict";
+    /**
+     * @type {String}
+     */
+    const  PLUGIN_NAME= ('Mano_PartyRotate');
+    function getParam(){ return PluginManager.parameters(PLUGIN_NAME);  }
+    
+    const setting = (function(){
+        const param =getParam();
+        const result ={
+            includeSubMember:(param.includingSubMember==="true"),
+        };
+        return result;
+    })();
 
-    const PLUGIN_NAME='Mano_PartyRotate';
     Game_Party.prototype.rotateForward =function(){
-        const battleMemberMax =this.maxBattleMembers();
+        const battleMemberMax = setting.includeSubMember ? this._actors.length :this.maxBattleMembers();
         const otherMember = this._actors.splice(battleMemberMax);
         const top = this._actors.shift();
         this._actors.push(top);
-        this._actors.concat(otherMember);
+        this._actors.push(...otherMember);
         $gamePlayer.refresh();
     };
     Game_Party.prototype.rotateBackward =function(){
-        const battleMemberMax =this.maxBattleMembers();
+        const battleMemberMax = setting.includeSubMember ? this._actors.length :this.maxBattleMembers();
         const otherMember = this._actors.splice(battleMemberMax);
         const top = this._actors.pop();
         this._actors.unshift(top);
-        this._actors.concat(otherMember);
+        this._actors.push(...otherMember);
         $gamePlayer.refresh();
     };
 if(PluginManager.registerCommand){
