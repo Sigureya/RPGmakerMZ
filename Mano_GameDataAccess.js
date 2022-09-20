@@ -1,4 +1,4 @@
-
+//@ts-check
 //=============================================================================
 // Mano_GameDataAccess.js
 // ----------------------------------------------------------------------------
@@ -347,8 +347,25 @@
  * @type number
  * @default 0
  * 
+ * @command CountStateAffectedActor
+ * @text ステートを受けているメンバーを数える
+ * @arg resultVariable
+ * @text 結果の書き込み先
+ * @type variable
+ * @default 0
  * 
+ * @arg stateList
+ * @type state[]
+ * @default []
  * 
+ * @arg joinType
+ * @text 複数指定時の連結方法
+ * @type select
+ * @option AND(全てを満たす)
+ * @value AND
+ * @option OR(いずれかを満たす)
+ * @value OR
+ * @default OR
  * 
  * @command GetActorClass
  * @text アクターの職業を取得/GetActorClass
@@ -431,7 +448,7 @@
  * 
  * @help
  * イベントコマンド「変数の操作」で取得できないデータを変数に入れることができます。
- * プラグインパラメータでは、書き込み先の変数を指定します。
+ * プラグインコマンドのパラメータで、書き込み先の変数を指定します。
  * 機能の詳細はプラグインパラメータで確認してください。
  */
 
@@ -491,6 +508,61 @@ const setting = (function(){
     return result;
 })();
 
+/**
+ * @template T
+ * @param {Iterable<T>} list 
+ * @param {(data:T)=>boolean} func 
+ */
+const CountIf =(list,func)=>{
+    let result =0;
+    for (const iterator of list) {
+        if(func(iterator)){
+            ++result;
+        }        
+    }
+    return result;
+
+};
+
+/**
+ * 
+ * @param {Game_Battler} battler 
+ * @param {ReadonlyArray<number>} stateNumbers 
+ */
+const StateOR =(battler,stateNumbers)=>{
+    return stateNumbers.some( stateId => battler.isStateAffected(stateId));
+};
+/**
+ * @param {Game_Battler} battler 
+ * @param {ReadonlyArray<number>} stateNumbers 
+ */
+ const StateAND =(battler,stateNumbers)=>{
+    return stateNumbers.every( stateId => battler.isStateAffected(stateId));
+};
+
+PluginManager.registerCommand(PLUGIN_NAME,"CountStateAffectedActor",(arg)=>{
+    /**
+     * @type {number[]}
+     */
+    const stateList =JSON.parse(arg.stateList||"[]",(key,value)=>{
+        if(key){
+            return Number(value);
+        }else{
+            return value;
+        }
+    });
+    if(stateList.length >0){
+        const members =$gameParty.members();
+        const variableId =Number(arg.resultVariable);
+        if(arg.joinType ==="AND"){
+            const value =CountIf(members,(b)=>StateAND(b,stateList)) ;
+            $gameVariables.setValue(variableId,value);
+        }else{
+            const value =CountIf(members,(b)=>StateOR(b,stateList)) ;
+            $gameVariables.setValue(variableId,value);
+        }
+    }
+});
 
 /**
  * 
@@ -515,7 +587,7 @@ function variableIdValid(variableId){
 /**
  * @template T
  * @param {number} variableId 
- * @param {T[]} src 
+ * @param {ReadonlyArray<T>} src 
  */
 function getData(variableId,src){
     const itemId =$gameVariables.value(variableId);
@@ -589,7 +661,6 @@ function getActor(actorVariable){
     }
 
     return null;
-
 }
 PluginManager.registerCommand(PLUGIN_NAME,"GetActorGrowing",(arg)=>{
     const actor =getActor(Number(arg.actorVariable));
@@ -799,6 +870,8 @@ PluginManager.registerCommand(PLUGIN_NAME,"GetTimer",(arg)=>{
     $gameVariables.setValue(secondsVariable,seconds);
 
 });
+
+
 
 }());
 
