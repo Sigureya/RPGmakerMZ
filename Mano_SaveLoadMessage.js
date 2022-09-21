@@ -1,4 +1,4 @@
-//@ts-check
+
 //=============================================================================
 // Mano_PartyRotate.js
 // ----------------------------------------------------------------------------
@@ -115,79 +115,50 @@ DataManager.extractSaveContents =function(contents){
     DataManager_extractSaveContents.call(this,contents);
     $gameVariables.setValue(setting.saveStateVariable,ON_SAVEDATA_LOAD);
 };
-const SAVE_WITH_STATE_CHECK ="SaveWithStateCheck";
 /**
- * 
- * @param {string} msg1 
- * @param {string} msg2 
- * @param {string} msg3 
- * @param {ShotTextParamator101} showTextParam101 
- * @returns {EventCommand[]}
+ * @typedef {object} MSG_BRANCH_ARG
+ * @property {string} msg1
+ * @property {string} msg2
+ * @property {string} msg3
  */
-function createSaveMessageCode(msg1,msg2,msg3,showTextParam101){
-    const variableId =setting.saveStateVariable;
+
+const MSG_BRANCH ="MSG_BRANCH";
+const SAVE_WITH_STATE_CHECK ="SaveWithStateCheck";
+PluginManager.registerCommand(PLUGIN_NAME,MSG_BRANCH,(/** @type {MSG_BRANCH_ARG}} */ arg)=>{
+    $gameMessage.clear();
+    const value =$gameVariables.value(setting.saveStateVariable);
+    switch (value) {
+        case ON_SAVEDATA_LOAD:
+            $gameMessage.add(arg.msg1);            
+            break;
+        case ON_SAVEDATA_SAVE:
+            $gameMessage.add(arg.msg2);
+            break;
+        case ON_SAVEDATA_DIDNOT_SAVE:
+            $gameMessage.add(arg.msg3);
+            break;    
+        default:
+            return;
+    }
+});
+/**
+ * @returns {EventCommand[]}
+ * @param {MSG_BRANCH_ARG} arg 
+ */
+function createSaveMessageCodeV2(arg){
     return [
         {
             //セーブ画面を開く、プラグインコマンドを呼び出し
             code:357,
             indent:0,
-            parameters:[PLUGIN_NAME,SAVE_WITH_STATE_CHECK,{}],
+            parameters:[PLUGIN_NAME,SAVE_WITH_STATE_CHECK,"内部から呼び出し",{}],
         },
         {
-            //読み込みの場合
-            code:111,
+            //セーブ状態を確認して文章を表示するプラグインコマンドを呼び出し
+            code:357,
             indent:0,
-            parameters:[1,variableId,0,ON_SAVEDATA_LOAD,0],
-        },
-        {
-            code:101,
-            indent:1,
-            parameters:showTextParam101,
-        },
-        {
-            code:401,
-            indent:1,
-            parameters:[msg1],
-        },
-        {
-            //中断
-            code:115,
-            indent:1,
-            parameters:[],
-        },
-        {
-            //書き込みの場合
-            code:111,
-            indent:0,
-            parameters:[1,variableId,0,ON_SAVEDATA_SAVE,0],
-        },
-        {
-            code:101,
-            indent:1,
-            parameters:showTextParam101,
-        },
-        {
-            code:401,
-            indent:1,
-            parameters:[msg2],
-        },
-        {
-            //中断
-            code:115,
-            indent:1,
-            parameters:[],
-        },
-        {
-            code:101,
-            indent:0,
-            parameters:showTextParam101,
-        },
-        {
-            code:401,
-            indent:0,
-            parameters:[msg3],
-        },
-
+            parameters:[PLUGIN_NAME,MSG_BRANCH,"内部から呼び出し",arg],
+        }
     ];
 }
 
@@ -204,7 +175,6 @@ function createSaveStateCode(){
             indent:0,
             parameters:[],
         },
-        //TODO:書き込み完了までロック
         {
             //セーブデータが読み込まれた場合
             code:111,
@@ -279,22 +249,20 @@ PluginManager.registerCommand(PLUGIN_NAME,SAVE_WITH_STATE_CHECK,function(){
     this.setupChild(code,0);
 });
 PluginManager.registerCommand(PLUGIN_NAME,"SaveWithMessage",function(){
-    const code = createSaveMessageCode(
-        setting.messageWhenLoad,
-        setting.messageWhenSave,
-        setting.messageWhenDidNotSave,
-        ["",0,0,2,""]
-        );
+    const code = createSaveMessageCodeV2({
+        msg1:setting.messageWhenLoad,
+        msg2:setting.messageWhenSave,
+        msg3:setting.messageWhenDidNotSave,
+    });
     this.setupChild(code,0);
 
 });
 PluginManager.registerCommand(PLUGIN_NAME,"SaveWithCustomMessage",function(arg){
-    const code = createSaveMessageCode(
-        arg.messageWhenLoad || setting.messageWhenLoad,
-        arg.messageWhenSave || setting.messageWhenSave,
-        arg.messageWhenDidNotSave || setting.messageWhenDidNotSave,
-        ["",0,0,2,""]
-        );
+    const code = createSaveMessageCodeV2({
+        msg1:arg.messageWhenLoad || setting.messageWhenLoad,
+        msg2:arg.messageWhenSave || setting.messageWhenSave,
+        msg3:arg.messageWhenDidNotSave || setting.messageWhenDidNotSave,
+    });
     this.setupChild(code,0);
 });
 
