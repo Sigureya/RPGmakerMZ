@@ -1991,39 +1991,39 @@ class ExtendsSymbol extends I_SymbolDefine{
         return this._symbol;
     }
     /**
-     * @param {(symbol:string)=>Boolean} isBasicSymbol
+     * @param {BasicSymbolJudge} judge
      * @returns {String}
      */
-    readManualySymbol(isBasicSymbol){
+    readManualySymbol(judge){
         const symbol = this._advanced.symbol();
-        if(isBasicSymbol(symbol)){
+        if(judge.isBasicSymbol(symbol)){
             return null;
         }
         return symbol;
     }
     /**
-     * @param {(symbol:string)=>Boolean} isBasicSymbol
+     * @param {BasicSymbolJudge} judge
      * @returns {String}
      */
-    padSymbol(isBasicSymbol){
+    padSymbol(judge){
         const symbol =Input.gamepadMapper[this._buttonId];
-        if(!isBasicSymbol(symbol)){
+        if(judge.isBasicSymbol(symbol)){
             return symbol;
         }
         return null;
     }
     /**
-     * @param {(symbol:string)=>Boolean} isBasicSymbol
+     * @param {BasicSymbolJudge} judge
      * @returns {String}
      */
-    firstKeySymbol(isBasicSymbol){
+    firstKeySymbol(judge){
         const keys = this.getKeys();
         const charLen =keys.length;
         for(let i =0; i <charLen; ++i){
            const char_=  keys.charCodeAt(i);
            const symbol = Input.keyMapper[char_];
            if(symbol){
-                if(!isBasicSymbol(symbol)){
+                if(judge.isBasicSymbol(symbol)){
                     return symbol;
                 }
            }
@@ -2041,41 +2041,41 @@ class ExtendsSymbol extends I_SymbolDefine{
     }
 
     /**
-     * @param {(symbol:String)=>Boolean} isBasicSymbol 
+     * @param {BasicSymbolJudge} judge 
      * @returns {String}
      * @description 優先シンボルの読み込み
      */
-    readPreferredSymbol(isBasicSymbol){
-        const manualSymbol=this.readManualySymbol(isBasicSymbol);
+    readPreferredSymbol(judge){
+        const manualSymbol=this.readManualySymbol(judge);
         if(manualSymbol){
             return manualSymbol;
         }
         switch (this._advanced.overwriteType()) {
             case 1:
-                return this.padSymbol(isBasicSymbol);
+                return this.padSymbol(judge);
             case 2:
-                return this.firstKeySymbol(isBasicSymbol);
+                return this.firstKeySymbol(judge);
             case 3:
                 return this.evantCallSymbol()
         }
         return "";
     }
     /**
-     * @param {(symbol:String)=>Boolean} isBasicSymbol 
+     * @param {BasicSymbolJudge} judge 
      * @returns {String}
      */
-    readMySymbol(isBasicSymbol){
+    readMySymbol(judge){
         //上書き用の優先されるシンボルを取り出す
-        const xxxx=this.readPreferredSymbol(isBasicSymbol);
+        const xxxx=this.readPreferredSymbol(judge);
         if(xxxx){
             return xxxx;
         }
         //無かったら、この順番で適当に読み込む
-        const pad = this.padSymbol(isBasicSymbol);
+        const pad = this.padSymbol(judge);
         if(pad){
             return pad;
         }
-        const key =this.firstKeySymbol(isBasicSymbol)
+        const key =this.firstKeySymbol(judge)
         if(key){
             return key; 
         }
@@ -2086,7 +2086,7 @@ class ExtendsSymbol extends I_SymbolDefine{
         return "";
     }
     /**
-     * @param {(symbol:String)=>boolean} mapper 
+     * @param {BasicSymbolJudge} mapper 
      */
     loadSymbol(mapper){
         if(!this._symbol){
@@ -2097,22 +2097,6 @@ class ExtendsSymbol extends I_SymbolDefine{
             this._advanced.setMandatory(false);
         }
     }
-    readMySymbolV2(){
-
-    }
-    // /**
-    //  * @param {{isBasicSymbol:(symbol:string)=>boolan}} mapper 
-    //  */
-    // loadSymbolV2(mapper){
-        //TODO
-    //     if(!this._symbol){
-    //         const symbol =this.readMySymbol(mapper);
-    //         this._symbol = symbol;
-    //     }
-    //     if(this.isEmpty()){
-    //         this._advanced.setMandatory(false);
-    //     }
-    // }
     /**
      * 
      * @param {Record<number,string>} mapper 
@@ -2265,6 +2249,7 @@ class SymbolManager_T {
         this._event=null;
     }
     /**
+     * @this {Readonly<SymbolManager_T>}
      * @param {String} symbolString 
     */
     isBasicSymbol(symbolString){
@@ -2312,12 +2297,12 @@ class SymbolManager_T {
     }
     loadExtendsSymbols(){
         const selfObject =this;
-        const isBasicSymbol = function(symbol){
-            return selfObject.isBasicSymbol(symbol);
-        };
+        // const isBasicSymbol = function(symbol){
+        //     return selfObject.isBasicSymbol(symbol);
+        // };
         const numExSymbols=this._extendSymbols.length;
         for (const iterator of this._extendSymbols) {
-            iterator.loadSymbol(isBasicSymbol);
+            iterator.loadSymbol(this);
         }
         if(numExSymbols!==this._extendSymbols.length){
             throw new Error("要素数を書き換えてはいけません")
