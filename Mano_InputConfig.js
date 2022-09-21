@@ -1010,7 +1010,7 @@ class Scene_MenuBaseMVMZ extends Scene_MenuBase{
         if(Utils.RPGMAKER_NAME ==="MV"){
             return this._helpWindow.y + this._helpWindow.height;
         }
-        return super.mainAreaTop();
+        return Math.max(super.mainAreaTop(),this.helpAreaHeight());
     }
     isBottomButtonMode(){
         return false;
@@ -1028,7 +1028,7 @@ class Scene_MenuBaseMVMZ extends Scene_MenuBase{
      * @param {Number} numLines
      * @param {Boolean} selectable
      */
-     calcWindowHeight(numLines,selectable){
+    calcWindowHeight(numLines,selectable){
         if(selectable){
             return Window_Selectable.prototype.fittingHeight(( numLines))
         }
@@ -1070,7 +1070,6 @@ const isRussian = function() {
 };
 class MultiLanguageText{
     /**
-     * 
      * @param {String} en 
      * @param {String} jp 
      */
@@ -1218,21 +1217,26 @@ class TouchButton{
 class ButtonManager_T{
     constructor(){
         /**
-         * @type {TouchButton[]}
+         * @type {Array<TouchButton>}
          */
         this._list =[];
     }
     /**
-     * @param {TouchButton[]} list 
+     * @param {ReadonlyArray<TouchButton>} list 
      */
-    addItemList(list){
+    addButtonList(list){
         this._list.push(...list);
     }
+    /**
+     * 
+     * @returns {ReadonlyArray<TouchButton>}
+     */
     getList(){
         return this._list;
     }
 
     /**
+     * @private
      * @param {TouchButton} button 
      */
     addButton(button){
@@ -1349,12 +1353,6 @@ class I_SymbolDefine{
     symbolBackColor(){
         return this.backColor();
     }
-    // /**
-    //  * @desc keyconfigで使う背景色
-    //  */
-    // keyBackColor(){
-    //     return "#ffd530" ;
-    // }
     customBackColor(){
         return "";
     }
@@ -1389,6 +1387,21 @@ class I_SymbolDefine{
     symbol(){
         return "";
     }
+    /**
+     * @private
+     * @returns 
+     */
+    isEscapeCompatible(){
+        return Input._isEscapeCompatible(this.symbol());
+    }
+    /**
+     * @param {*} set 
+     */
+    isSatisfyRequiredSymbols(set){
+
+
+    }
+
     isMandatory(){
         return false;
     }
@@ -1436,6 +1449,7 @@ class I_SymbolDefine{
     isTriggered(){
         return Input.isTriggered(this.symbol());
     }
+
 }
 
 
@@ -1503,8 +1517,12 @@ class EscapeSymbol extends I_SymbolDefine{
         this._name =name;
         this._helpText =xxxxMtext(helpText);
         this._keyText = xxxxMtext(keyText);
-
     }
+    /**
+     * 
+     * @param {string} objText 
+     * @returns 
+     */
     static create(objText){
         if(!objText){
             const name = new MultiLanguageText("menu/cancel","メニュー/キャンセル");
@@ -1542,41 +1560,69 @@ function xxxxMtext(mText){
 }
 class BasicSymbol extends I_SymbolDefine{
     /**
+     * @private
      * @param {String} symbol 
      * @param {MultiLanguageText} name 
      * @param {MultiLanguageText} keyText
      * @param {MultiLanguageText} helpText
-     * @param {String} exKeys
-     * @param {Number} exButton
+     * @param {boolean} mandatory
      */
-    constructor(symbol,name,keyText,helpText,exKeys ,exButton){
+    constructor(symbol,name,keyText,helpText ,mandatory){
         super();
+        /**
+         * @readonly
+         */
         this._symbol = symbol;
         //名前が未設定の場合、シンボルで初期化してしまう
-        this._name =name ? name : new MultiLanguageText(symbol,symbol);
+        /**
+         * @readonly
+         */
+         this._name =name ? name : new MultiLanguageText(symbol,symbol);
         //テキストが空っぽならnullにして、基底クラスの処理に任せる
-        this._keyText = xxxxMtext( keyText);
-        this._helpText=xxxxMtext(helpText);
-        this._exKeys=exKeys;
-        this._buttonId =exButton;
+        /**
+         * @readonly
+         */
+         this._keyText = xxxxMtext( keyText);
+        /**
+         * @readonly
+         */
+         this._helpText=xxxxMtext(helpText);
+        /**
+         * @readonly
+         */
+         this._mandatory=mandatory;
+         //↓多分この二つはfillSymbol対応用の何か
+        //this._exKeys=exKeys;
+        //this._buttonId =exButton;
     }
-    static create(symbol,objText){
+    /**
+     * 
+     * @param {string} symbol 
+     * @param {string} objText 
+     * @param {boolean} mandatory
+     * @returns 
+     */
+    static create(symbol,objText,mandatory){
         if(!objText){
-            return new BasicSymbol(symbol,null,null,null,null,null);
+            return new BasicSymbol(symbol,null,null,null,mandatory);
         }
         const obj = JSON.parse(objText);
         const name =MultiLanguageText.create(obj.name);
         const keyText =MultiLanguageText.create(obj.keyText);
         const helpText =MultiLanguageText.create(obj.helpText);
-        const exKeys =String(obj.exKeys||"");
-        const exButton =Number(obj.exButton );
-        return new BasicSymbol(symbol,name,keyText,helpText,exKeys,exButton);
+        //const exKeys =String(obj.exKeys||"");
+        //const exButton =Number(obj.exButton );
+        return new BasicSymbol(symbol,name,keyText,helpText,mandatory);
     }
     isMandatory(){
-        return true;
+        return this._mandatory;
     }
     helpText(){
-        return super.helpText();
+        const text= super.helpText();
+        if(text){
+            return text;
+        }
+        return this.name();
     }
     name(){
         return this._name.currentName();
@@ -1591,16 +1637,76 @@ class BasicSymbol extends I_SymbolDefine{
         return super.displayKeyName();
     }
 }
+/**
+ * 
+ * @returns {ReadonlyArray<I_SymbolDefine>}
+ */
 function createBasicSymbols(){
-    const param    = getParam();
-    const ok       = BasicSymbol.create("ok",param.basicOk);
-    const cancel   = BasicSymbol.create("cancel",param.basicCancel);
-    const shift    = BasicSymbol.create("shift",param.basicShift);
-    const menu     = BasicSymbol.create("menu",param.basicMenu);
-    const pageup   = BasicSymbol.create("pageup",param.basicPageup);
-    const pagedown = BasicSymbol.create("pagedown",param.basicPagedown);
+    /**
+     * @typedef {object} BasicSymbolTuple
+     * @property {string} symbol
+     * @property {string} paramText
+     */
+     const param    = getParam();
+     /**
+     * @type {readonly BasicSymbolTuple[]}
+     */
+    const list =[
+        {
+            symbol:"ok",
+            paramText:param.basicOk
+        },
+        {
+            symbol:"cancel",
+            paramText:param.basicCancel,
+        },
+        {
+            symbol:"shift",
+            paramText:param.basicShift
+        },
+        {
+            symbol:"menu",
+            paramText:param.basicMenu,
+        },
+        {
+            symbol:"pageup",
+            paramText:param.basicPageup,
+        },
+        {
+            symbol:"pagedown",
+            paramText:param.basicPagedown,
+        }
+    ];
+    const keySymbols =new Set(Object.values(Input.keyMapper));
+    const gamepadSymnols =new Set(Object.values(Input.gamepadMapper));
+
+    const result=[];
+
+    for (const iterator of list) {
+        const includedPad =gamepadSymnols.has(iterator.symbol);
+        const includedKey =keySymbols.has(iterator.symbol);
+        if(includedKey || includedPad){
+            const symbolObject =BasicSymbol.create(
+                iterator.symbol,
+                iterator.paramText,
+                includedKey && includedPad //両方にある場合のみ必須扱い
+            );
+            result.push(symbolObject);
+        }
+    }
+
     const esacape  = EscapeSymbol.create(param.basicEscape);
-    return [ok,cancel,shift,menu,pageup,pagedown,esacape];
+    result.push(esacape);
+    return result;
+
+
+    // const ok       = BasicSymbol.create("ok",param.basicOk);
+    // const cancel   = BasicSymbol.create("cancel",param.basicCancel);
+    // const shift    = BasicSymbol.create("shift",param.basicShift);
+    // const menu     = BasicSymbol.create("menu",param.basicMenu);
+    // const pageup   = BasicSymbol.create("pageup",param.basicPageup);
+    // const pagedown = BasicSymbol.create("pagedown",param.basicPagedown);
+    // return [ok,cancel,shift,menu,pageup,pagedown,esacape];
 }
 
 class EventCaller{
@@ -1710,6 +1816,7 @@ class KeySetting{
 
 
 }
+
 class AdovancedSetting{
     /**
      * 
@@ -1761,7 +1868,10 @@ class AdovancedSetting{
     }
 
 }
-
+/**
+ * @typedef {object} BasicSymbolJudge
+ * @property {(symbol:string)=>boolean} isBasicSymbol
+ */
 /**
  * @typedef {object} ExtendsSymbolPair
  * @property {ExtendsSymbol} exSymbol
@@ -1976,7 +2086,7 @@ class ExtendsSymbol extends I_SymbolDefine{
         return "";
     }
     /**
-     * @param {(symbol:String)=>Boolean} mapper 
+     * @param {(symbol:String)=>boolean} mapper 
      */
     loadSymbol(mapper){
         if(!this._symbol){
@@ -1987,6 +2097,28 @@ class ExtendsSymbol extends I_SymbolDefine{
             this._advanced.setMandatory(false);
         }
     }
+    readMySymbolV2(){
+
+    }
+    // /**
+    //  * @param {{isBasicSymbol:(symbol:string)=>boolan}} mapper 
+    //  */
+    // loadSymbolV2(mapper){
+        //TODO
+    //     if(!this._symbol){
+    //         const symbol =this.readMySymbol(mapper);
+    //         this._symbol = symbol;
+    //     }
+    //     if(this.isEmpty()){
+    //         this._advanced.setMandatory(false);
+    //     }
+    // }
+    /**
+     * 
+     * @param {Record<number,string>} mapper 
+     * @param {number} targetKey 
+     * @returns 
+     */
     mapperWrite(mapper,targetKey){
         //上書きが許可されてない場合
         if(!this.isOverwriteEnabled()){
@@ -2105,30 +2237,24 @@ class UnknowSymbol extends I_SymbolDefine{
         return setting.errorText.unknowSymbol.currentName()+"\n" + this.debugInfo();
     }
 }
-class BasicSymbolList{
 
-    constructor(ok,cancel,shift,pageup,pagedown,menu,shift_){
-
-
-    }
-}
 
 class SymbolManager_T {
     /**
-     * @param {I_SymbolDefine[]} basicSymbols 
-     * @param {MoveSymbol[]} moveSymbols 
+     * @param {ReadonlyArray<I_SymbolDefine>} basicSymbols 
+     * @param {ReadonlyArray<MoveSymbol>} moveSymbols 
      */
     constructor(basicSymbols,moveSymbols){
         /**
-         * @type {Map<String,I_SymbolDefine>}
+         * @type {Map<string,I_SymbolDefine>}
          */
         this._symbolDictionary = new Map();
         /**
-         * @type {UnknowSymbol[]}
+         * @type {Array<UnknowSymbol>}
          */
         this._unknowList=[];
         /**
-         * @type {ExtendsSymbol[]}
+         * @type {Array<ExtendsSymbol>}
          */
         this._extendSymbols =[];
         this._basicSymbols = basicSymbols
@@ -2157,7 +2283,7 @@ class SymbolManager_T {
     }
     
     /**
-     * @param {ExtendsSymbol[]} list 
+     * @param {ReadonlyArray<ExtendsSymbol>} list 
      */
     addExtendsSymbols(list){
          this._extendSymbols.push(...list);
@@ -2205,20 +2331,20 @@ class SymbolManager_T {
     }
     loadUnknowSymbols(){
         /**
-         * @type {String[]}
+         * @type {Iterable<String>}
          */
         const padSymbols = Object.values(Input.gamepadMapper);
-        /**
-         * @type {String[]}
-         */
-        const keySymbols =Object.values(Input.keyMapper)
+        // /**
+        //  * @type {String[]}
+        //  */
+        //  const keySymbols =Object.values(Input.keyMapper)
         //mapperにある全てのシンボルを列挙する
-        const set = new Set(keySymbols);
+        const set = new Set(Object.values(Input.keyMapper));
         for (const iterator of padSymbols) {
             set.add(iterator);
         }
         //Managerにあるシンボルを列挙した中から消す
-        for (const iterator of this.getSymbolList()) {
+        for (const iterator of this.iterateSymbolList()) {
             const symbol = iterator.symbol();
             if (symbol) {
                 set.delete(symbol);
@@ -2235,14 +2361,17 @@ class SymbolManager_T {
         for (const iterator of this.systemSymbols()) {
             set.delete(iterator);
         }
-        //ラムダ式が使えないので、この方法でthisを捕まえておく
-        const seleObject=this;
-
-        set.forEach(function(symbol){
-            const obj =new UnknowSymbol(symbol)
-            seleObject._unknowList.push( obj);
-//            seleObject._symbolDictionary.set(symbol,obj);
-        });
+        for (const symbol of set) {
+            const obj =new UnknowSymbol(symbol);
+            this._unknowList.push(obj);
+        }
+//         //ラムダ式が使えないので、この方法でthisを捕まえておく
+//         const seleObject=this;
+//         set.forEach(function(symbol){
+//             const obj =new UnknowSymbol(symbol)
+//             seleObject._unknowList.push( obj);
+// //            seleObject._symbolDictionary.set(symbol,obj);
+//         });
         this.addDictionaryItems(this._unknowList)
     }
 
@@ -2258,7 +2387,7 @@ class SymbolManager_T {
         }
     }
     /**
-     * @param {I_SymbolDefine[]} list 
+     * @param {Iterable<I_SymbolDefine>} list 
      */
     addDictionaryItems(list){
         for (const iterator of list) {
@@ -2269,8 +2398,22 @@ class SymbolManager_T {
         }
     }
 
+    *iterateSymbolList(){
+        for (const iterator of this._basicSymbols) {
+            yield iterator;
+        }
+        for (const iterator of this._basicSymbols) {
+            yield iterator;
+        }
+        for (const iterator of this._unknowList) {
+            yield iterator;
+        }
+        for (const iterator of this._moveSymbols) {
+            yield iterator;
+        }
+    }
     /**
-     * @returns {I_SymbolDefine[]}
+     * @returns {Array<I_SymbolDefine>}
      */
     getSymbolList(){
         return this._basicSymbols.concat(
@@ -2318,27 +2461,29 @@ class SymbolManager_T {
         return false;
     }
     /**
-     * @returns {I_SymbolDefine[]}
+     * @returns {Iterable<I_SymbolDefine>}
      */
     allMandatorySymbols(){
         return this.getSymbolList().filter( function(def){ return def.isMandatory()});
     }
 
     /**
-     * @param {Set<String>} set 
+     * @param {ReadonlySet<string>} set 
      * @returns 
      */
-    isValidMapper_v3(set){
-        const m=this.allMandatorySymbols()
+    isValidMapper_V3(set){
+        const m=this.allMandatorySymbols();
         for (const iterator of m) {
-            const symbol = iterator.symbol();
-            if(Input._isEscapeCompatible(symbol)){
-                if(set.has("escape")){
-                    continue;
+            if(iterator.isMandatory()){
+                const symbol = iterator.symbol();
+                if(Input._isEscapeCompatible(symbol)){
+                    if(set.has("escape")){
+                        continue;
+                    }
                 }
-            }
-            if(!set.has(symbol)){
-                return false;
+                if(!set.has(symbol)){
+                    return false;
+                }
             }
         }
         return true;
@@ -2351,17 +2496,12 @@ const symbolManager = new SymbolManager_T(
 );
 
 /**
- * @param {string[]} textList
+ * @param {Iterable<string>} textList
  * @param {SymbolManager_T} symbolManager 
  * @param {ButtonManager_T} buttonManager
  * @param {(text:string)=>ExtendsSymbolPair} func
  */
 function setupExtendsSymbols(textList,symbolManager,buttonManager,func){
-    //const param = getParam();
-    // /**
-    //  * @type {String[]}
-    //  */
-    // const textList = JSON.parse(param.extendsMapper);
 
     const buttons =[];
     const symbols=[];
@@ -2375,7 +2515,7 @@ function setupExtendsSymbols(textList,symbolManager,buttonManager,func){
         }
     }
     symbolManager.addExtendsSymbols(symbols);
-    buttonManager.addItemList(buttons);
+    buttonManager.addButtonList(buttons);
 }
 setupExtendsSymbols(JSON.parse(getParam().extendsMapper ||"[]") ,  symbolManager,ButtonManager,function(arg){
     return createExtendsSymbol(arg);
@@ -2529,6 +2669,169 @@ class I_InputButton{
         return NaN;
     }
 }
+
+/**
+ * @template {I_InputButton} T_Button
+ */
+class I_DeviceLayout{
+    deviceSymbol(){
+        return "";
+    }
+    name(){
+        return "";
+    }
+    /**
+     * @param {Number} index 
+     * @returns {T_Button}
+     */
+    button(index){
+        return null;
+    }
+    numButtons(){
+        return 0;
+    }
+}
+/**
+ * @template {I_InputButton} T_Button
+ * @extends {I_DeviceLayout<T_Button>}
+ */
+class DeviceLayout extends I_DeviceLayout{
+    /**
+     * @param {ReadonlyArray<T_Button>} list 
+     * @param {String} name 
+     * @param {String} symbol 
+     */
+    constructor(list,name,symbol){
+        super();
+        this._name=name;
+        this._list=list;
+        /**
+         * @private
+         */
+        this._symbol=symbol;
+    }
+    /**
+     * @returns {ReadonlyArray<T_Button>}
+     */
+    buttons(){
+        return this._list;
+    }
+    name(){
+        return this._name;
+    }
+    deviceSymbol(){
+        return this._symbol;
+    }
+    numButtons(){
+        return this._list.length;
+    }
+    /**
+     * @param {Number} index 
+     */
+    button(index){
+        return this._list[index];
+    }
+    /**
+     * @param {Number} code 
+     */
+    getButtonByCode(code){
+        for (const iterator of this._list) {
+            if(iterator.mapperId()===code){
+                return iterator;
+            }
+        }
+        return null;
+    }
+}
+/**
+ * @template {I_InputButton} T_Button
+ */
+ class LayoutSelecter{
+    /**
+     * @param {ReadonlyArray<DeviceLayout<T_Button>>} list 
+     */
+    constructor(list){
+        this._list=list;
+        this._index=0;
+    }
+    /**
+     * 
+     * @param {String} symbolText 
+     */
+    selectOfSymbol(symbolText){
+        for (let index = 0; index < this._list.length; index++) {
+            const element = this._list[index];
+            if(element && element.deviceSymbol()===symbolText){
+                this._index =index;
+                return;
+            }
+        }
+        this._index=-1;
+    }
+    changeNext(){
+        this._index+=1;
+        if(this._index >= this._list.length){
+            this._index=0;
+        }
+
+    }
+    /**
+     * @param {Number} code 
+     * @returns 
+     */
+    getButtonByCode(code){
+        const d =this.currentLayout();
+        if(d){
+            return d.getButtonByCode(code);
+        }
+        return null;
+    }
+    /**
+     * @returns {DeviceLayout<T_Button> }
+     */
+    currentLayout(){
+        return this._list[this._index];
+    }
+    currentDeviceSymbol(){
+        const device=this.currentLayout();
+        if(device){
+            return device.deviceSymbol();
+        }
+        return "";
+    }
+    /**
+     * @param {number} index 
+     * @returns 
+     */
+    buttonAt(index) {
+        const device =this.currentLayout();
+        if(device){
+            return device.button(index);
+        }
+        return null;
+    }
+    numButtons(){
+        const device=this.currentLayout();
+        if(device){
+            return device.numButtons();
+        }
+        return 0;
+    }
+    /**
+     * @private
+     * @param {Number} index 
+     * @returns 
+     */
+    buttonName(index) {
+        const device=this.currentLayout();
+        if(device){
+            //TODO:
+            //return device.button(index)
+        }
+        return "";
+    }
+}
+
 /**
  * @typedef {Object} SymbolCodePair
  * @property {Number} code
@@ -2556,8 +2859,8 @@ class I_ReadonlyMapper{
         return null;
     }
     /**
-     * @param {String} symbol 
-     * @param {I_InputButton[]} buttonList
+     * @param {string} symbol 
+     * @param {Iterable<I_InputButton>} buttonList
      * @returns 
      */
     buttonFromSymbol_XX(symbol,buttonList){
@@ -2574,7 +2877,7 @@ class I_ReadonlyMapper{
     }
     /**
      * @description Map<>を生成するための補助関数
-     * @returns {Map<Number,String>}
+     * @returns {ReadonlyMap<Number,String>}
      * @param {InputMapperType} mapper 
      */
     createMapSupport(mapper){
@@ -2686,13 +2989,13 @@ class InputDeviceBase extends I_ReadonlyMapper{
 
     /**
      * @desc ABC順に並んだリスト
-     * @returns {I_InputButton[]}
+     * @returns {ReadonlyArray<I_InputButton>}
      */
     indexList(){
         return [];
     }
     /**
-     * @returns {I_InputButton[]}
+     * @returns {ReadonlyArray<I_InputButton>}
      */
     buttonList(){
         return []
@@ -2783,82 +3086,431 @@ class GamepadButtonObj extends I_InputButton{
 }
 
 
-//ハードメーカーの違いに対応するためのやつ
 
-
-
-/**
- * @template {I_InputButton} T_Button
- */
-class I_DeviceLayout{
-    deviceSymbol(){
-        return "";
+//キーボードのキーを表現するクラス
+class Key_Base extends I_InputButton{
+    isLocked(){
+        return !this.isEnter();
     }
-    name(){
+    keycord(){
+        return 0;
+    }
+    /**
+     * @returns {string}
+     */
+    char_(){
         return "";
     }
     /**
+     * @param {KeyConfigWindowConcept} keyWindow 
      * @param {Number} index 
-     * @returns {T_Button}
      */
-    button(index){
-        return null;
+    drawBasicChar(keyWindow,index){
+        const s = keyWindow.symbolObjectFromKeyNumber(this.keycord());
+        const rect = keyWindow.itemRect(index);
+        keyWindow.drawInputDefine(this,s,rect);
     }
-    numButtons(){
+    isEnter(){
+        return this.keycord()===13;
+    }
+    isNull(){
+        return this.keycord()===0;
+    }
+}
+class Key_Command {
+    /**
+     * @param {String} handlerName 
+     * @param {MultiLanguageText} mtext 
+     * @param {Number} width 
+     */
+    constructor(handlerName,mtext,width){
+        this._callBackHandle =handlerName;
+        this._widthEx =width;
+        this._mtext = mtext;
+    }
+    /**
+     * 
+     * @param {string} objText 
+     * @param {string} handler 
+     * @returns 
+     */
+    static create(objText,handler){
+        const obj = JSON.parse(objText);
+        return new Key_Command(
+            handler,
+            MultiLanguageText.create(obj.text),
+            Number(obj.width)
+        );
+    }
+    get char(){
+        return this._mtext.currentName();
+    }
+    text(){
+        return this.char;
+    }
+
+    name(){
+        return this._mtext.currentName();
+    }
+
+    get isLink(){
+        return this._widthEx >1;
+    }
+    get locked(){
+        return false;
+    }
+    keycord(){
         return 0;
+    }
+    get isCommand(){
+        return true;
+    }
+    get handle(){
+        return this._callBackHandle;
+    }
+    /**
+     * @param {Window_Selectable} keyConfigWindow 
+     */
+    onOk(keyConfigWindow){
+        keyConfigWindow.callHandler(this._callBackHandle);
+    }
+    /**
+     * @param {Number} index 
+     */
+    setIndex(index){
+        if(isNaN(this._index)){
+            this._index = index;
+        }
+    }
+
+    /**
+     * @param {KeyConfigWindowConcept} keyWindow 
+     * @param {Number} index
+     */
+    rect(keyWindow,index){
+        const rect = keyWindow.baseRect(this._index);
+        rect.width *=this._widthEx;
+        return rect;
+    }
+    /**
+     * @param {KeyConfigWindowConcept} keyWindow 
+     * @param {Number} index
+     */
+    draw(keyWindow,index){
+      if(index ===this._index){
+        const rect = this.rect(keyWindow,index);
+        keyWindow.drawCommandXX(this.char,rect);
+      }
+    }
+    helpText(){
+        return "コマンドのヘルプ";
+    }
+}
+
+class Key_Char extends Key_Base{
+    /**
+     * @param {string} char_ 
+     * @param {number} code 
+     */
+    constructor(char_,code){
+        super();
+        this._char = char_;
+        this._code = code;
+    }
+    char_(){
+        return this._char;
+    }
+    name(){
+        return this._char;
+    }
+    keycord(){
+        return this._code;
+    }
+    numLines(){
+        return 2;
+    }
+    isBig(){
+        return this._code ===96  //tenkey0
+            || this._code===13   //enter
+            || this._code===32   //space
     }
 }
 /**
- * @template {I_InputButton} T_Button
- * @extends {I_DeviceLayout<T_Button>}
+ * @param {string} char 
+ * @returns 
  */
-class DeviceLayout extends I_DeviceLayout{
+function keychar(char){
+    const code =char.charCodeAt(0);
+    return new Key_Char(char,code);
+}
+/**
+ * @param {string} char 
+ * @param {number} code 
+ * @returns 
+ */
+function keyinfo(char,code){
+    return new Key_Char(char,code)
+}
+
+/**
+ * 
+ * @param {string} char 
+ * @param {number} code 
+ */
+function keylocked(char,code){
+    return new Key_Char(char,code);
+}
+
+const KEYS={
+    NULL:keyinfo("",0),
+    ENTER:keyinfo("Enter",13),
+    ENTER_JIS:keyinfo("Enter",13),
+    ENTER_NULL:keyinfo("",13),
+    SPACE:keyinfo("Space",32),
+    SHIFT:keylocked('Shift',16),
+    CTRL:keylocked('CTRL',17),
+    UP:keylocked("↑",38),
+    DOWN:keylocked("↓",40),
+    LEFT:keylocked("←",37),
+    RIGHT:keylocked("→",39),
+    TENKEY0:keyinfo("0",96),        
+    TENKEY1:keyinfo('1',97),
+    TENKEY2:keyinfo('2',98),
+    TENKEY3:keyinfo('3',99),
+    TENKEY4:keyinfo('4',100),
+    TENKEY5:keyinfo('5',101),
+    TENKEY6:keyinfo('6',102),
+    TENKEY7:keyinfo('7',103),
+    TENKEY8:keyinfo('8',104),
+    TENKEY9:keyinfo('9',105),
+    TENKEY_DOT:keyinfo('.',110),
+    _0:keychar("0",),
+    _1:keychar("1",),
+    _2:keychar("2",),
+    _3:keychar("3",),
+    _4:keychar("4",),
+    _5:keychar("5",),
+    _6:keychar("6",),
+    _7:keychar("7",),
+    _8:keychar("8",),
+    _9:keychar("9",),
+    A:keychar("A"),
+    B:keychar("B"),
+    C:keychar("C"),
+    D:keychar("D"),
+    E:keychar("E"),
+    F:keychar("F"),
+    G:keychar("G"),
+    H:keychar("H"),
+    I:keychar("H"),
+    J:keychar("J"),
+    K:keychar("K"),
+    L:keychar("L"), 
+    M:keychar("M"),
+    N:keychar("N"),
+    O:keychar("O"),
+    P:keychar("P"),
+    Q:keychar("Q"), 
+    R:keychar("R"),
+    S:keychar("S") ,
+    T:keychar("T"), 
+    U:keychar("U"),
+    V:keychar("V"),
+    W:keychar("W"),
+    X:keychar("X"),
+    Y:keychar("Y"),
+    Z:keychar("Z"),
+    TAB:keyinfo("TAB",9),
+    INSERT:keyinfo('Ins',45),
+    BACK:keyinfo('Back',8),
+    HOME:keyinfo('Home',36),
+    END:keyinfo('End',35),
+    PAGEUP:keyinfo('PgUp',33),
+    PAGEDOWN:keyinfo('PgDn',34),
+    ESC:keyinfo('esc',27),
+
+    ATMARK:keyinfo("@", 192),
+
+    TENKEY_MINUS :keyinfo('-',109),
+    TENKEY_PLUS :keyinfo('+',107),
+    MINUS :keyinfo('-',189),
+    COMMA :keyinfo(',',188),
+    SEMICOLON:keyinfo(';',186),
+
+    SLASH:keyinfo('/',191),
+    BACKSLASH:keyinfo('\\',226),
+    DOT :keyinfo('.',190),
+    
+    COLON:keyinfo(':',58),
+    CARET:keyinfo('^',222),
+    APOSTROPHE:keyinfo("'",222), 
+
+    EQUAL_JIS:keyinfo('=',189),
+    
+    SQUARE_BRACKETS_OPEN :keyinfo('[',219),
+    SQUARE_BRACKETS_CLOSE :keyinfo(']',221),
+};
+/**
+ * @type {ReadonlyArray<Key_Base>}
+ */
+const KEY_LAYOUT_JIS =[
+    KEYS.ESC,
+    KEYS._1 ,
+    KEYS._2 ,
+    KEYS._3 ,
+    KEYS._4, 
+    KEYS._5, 
+    KEYS._6, 
+    KEYS._7, 
+    KEYS._8, 
+    KEYS._9, 
+    KEYS._0, 
+    KEYS.MINUS,
+    KEYS.CARET,
+    KEYS.INSERT ,
+    KEYS.BACK ,
+    KEYS.HOME ,
+    KEYS.END ,
+    KEYS.PAGEUP ,
+    KEYS.PAGEDOWN ,
+
+    KEYS.TAB,
+
+    KEYS.Q ,
+    KEYS.W ,
+    KEYS.E ,
+    KEYS.R ,
+    KEYS.T ,
+    KEYS.Y ,
+    KEYS.U ,
+    KEYS.I ,
+    KEYS.O ,
+    KEYS.P ,
+    KEYS.ATMARK,
+    KEYS.SQUARE_BRACKETS_OPEN,
+    KEYS.ENTER_JIS,
+    KEYS.ENTER_JIS,
+    KEYS.TENKEY7 ,
+    KEYS.TENKEY8 ,
+    KEYS.TENKEY9 ,
+    KEYS.TENKEY_MINUS,
+    KEYS.NULL,
+    KEYS.A ,
+    KEYS.S ,
+    KEYS.D ,
+    KEYS.F ,
+    KEYS.G ,
+    KEYS.H ,
+    KEYS.J ,
+    KEYS.K ,
+    KEYS.L ,
+    KEYS.SEMICOLON,
+    KEYS.COLON,
+    KEYS.SQUARE_BRACKETS_CLOSE, 
+    KEYS.ENTER_JIS,
+    KEYS.ENTER_JIS,
+    KEYS.TENKEY4 ,
+    KEYS.TENKEY5 ,
+    KEYS.TENKEY6 ,
+    KEYS.TENKEY_PLUS,
+
+    KEYS.SHIFT ,
+    KEYS.Z ,
+    KEYS.X ,
+    KEYS.C ,
+    KEYS.V ,
+    KEYS.B ,
+    KEYS.N ,
+    KEYS.M ,
+    KEYS.COMMA,
+    KEYS.DOT,
+    KEYS.SLASH,
+    
+    KEYS.BACKSLASH,
+    KEYS.SHIFT,
+    KEYS.UP,
+    KEYS.NULL,
+    
+    KEYS.TENKEY1 ,
+    KEYS.TENKEY2 ,
+    KEYS.TENKEY3 ,
+    KEYS.NULL,
+
+    KEYS.CTRL  ,
+    KEYS.NULL,
+    KEYS.NULL,
+    KEYS.NULL,
+    KEYS.SPACE,
+    KEYS.SPACE,
+    KEYS.SPACE,
+    KEYS.SPACE,
+    KEYS.NULL,
+    KEYS.NULL,
+    KEYS.NULL,
+    KEYS.NULL,
+    KEYS.LEFT,
+    KEYS.DOWN,
+    KEYS.RIGHT,
+    KEYS.TENKEY0,
+    KEYS.TENKEY0,
+    KEYS.TENKEY_DOT,
+    KEYS.NULL,
+
+    //ここからコマンドを並べる
+];
+
+/**
+ * @extends {DeviceLayout<Key_Base>}
+ */
+class KeyboardLayout extends DeviceLayout{}
+
+/**
+ * 
+ * @param {ReadonlyArray<Key_Base>} keylist 
+ * @param {string} name 
+ * @param {string} symbol 
+ */
+function createKeyboardLayout(keylist,name,symbol){
+
+    const layout = new KeyboardLayout(keylist,name,symbol);
+    return layout;
+
+}
+
+//ハードメーカーの違いに対応するためのやつ
+
+class KeyboardObject extends InputDeviceBase{
     /**
-     * @param {T_Button[]} list 
-     * @param {String} name 
-     * @param {String} symbol 
+     * 
+     * @param {LayoutSelecter<Key_Base>} layout 
      */
-    constructor(list,name,symbol){
+    constructor(layout){
         super();
-        this._name=name;
-        this._list=list;
-        /**
-         * @private
-         */
-        this._symbol=symbol;
-    }
-    /**
-     * @returns {T_Button[]}
-     */
-    buttons(){
-        return this._list;
-    }
-    name(){
-        return this._name;
-    }
-    deviceSymbol(){
-        return this._symbol;
+        this._selector=layout;
     }
     numButtons(){
-        return this._list.length;
+        return this._selector.numButtons();
     }
     /**
-     * @param {Number} index 
+     * @param {number} index 
+     * @returns 
      */
-    button(index){
-        return this._list[index];
+    buttonAt(index){
+        return this._selector.buttonAt(index);
     }
-    /**
-     * @param {Number} code 
-     */
-    getButtonByCode(code){
-        for (const iterator of this._list) {
-            if(iterator.mapperId()===code){
-                return iterator;
-            }
-        }
-        return null;
-    }
+
+
+
+}
+
+function createKeyboard(){
+    const US =createKeyboardLayout([],"US","en-US");
+    const JIS =createKeyboardLayout(  KEY_LAYOUT_JIS,"JIS","ja_JP");
+    const AZERTY=createKeyboardLayout([],"AZERTY","fr_FR");
+
+    const select = new LayoutSelecter([JIS,US,AZERTY]);
+
+    return new KeyboardObject(select);
 }
 
 
@@ -2901,94 +3553,6 @@ function createButtonNumberLayout(symbol,name){
         return new GamepadButtonObj(number,buttonName);
     });
     return new DeviceLayout(buttons,name,symbol);
-}
-/**
- * @template {I_InputButton} T_Button
- */
- class LayoutSelecter{
-    /**
-     * @param {DeviceLayout<T_Button>[]} list 
-     */
-    constructor(list){
-        this._list=list;
-        this._index=0;
-    }
-    /**
-     * 
-     * @param {String} symbolText 
-     */
-    selectOfSymbol(symbolText){
-        for (let index = 0; index < this._list.length; index++) {
-            const element = this._list[index];
-            if(element && element.deviceSymbol()===symbolText){
-                this._index =index;
-                return;
-            }
-        }
-        this._index=-1;
-    }
-    changeNext(){
-        this._index+=1;
-        if(this._index >= this._list.length){
-            this._index=0;
-        }
-
-    }
-    /**
-     * @param {Number} code 
-     * @returns 
-     */
-    getButtonByCode(code){
-        const d =this.currentLayout();
-        if(d){
-            return d.getButtonByCode(code);
-        }
-        return null;
-    }
-    /**
-     * @returns {DeviceLayout<T_Button> }
-     */
-    currentLayout(){
-        return this._list[this._index];
-    }
-    currentDeviceSymbol(){
-        const device=this.currentLayout();
-        if(device){
-            return device.deviceSymbol();
-        }
-        return "";
-    }
-    /**
-     * @param {number} index 
-     * @returns 
-     */
-    buttonAt(index) {
-        const device =this.currentLayout();
-        if(device){
-            return device.button(index);
-        }
-        return null;
-    }
-    numButtons(){
-        const device=this.currentLayout();
-        if(device){
-            return device.numButtons();
-        }
-        return 0;
-    }
-    /**
-     * @private
-     * @param {Number} index 
-     * @returns 
-     */
-    buttonName(index) {
-        const device=this.currentLayout();
-        if(device){
-            //TODO:
-            //return device.button(index)
-        }
-        return "";
-    }
 }
 
 /**
@@ -3082,12 +3646,18 @@ class GamepadObject extends InputDeviceBase{
     numButtons(){
         return this._selector.numButtons();
     }
+    currentLayout(){
+        return this._selector.currentLayout();
+    }
+    layoutSelector(){
+        return this._selector;
+    }
 }
 
 
 
 /**
- * @return {string[]}
+ * @return {ReadonlyArray<string>}
  */
 function createMandatorySymbols(params){
     return ["ok","cancel","menu"];
@@ -3159,6 +3729,10 @@ function createErrorTexts(){
 
 }
 class InputDevice_Readonly{
+    /**
+     * 
+     * @param {Record<number,string>} mapper 
+     */
     constructor(mapper){
         this._mapper=mapper;
     }
@@ -3167,8 +3741,6 @@ class InputDevice_Readonly{
     }
 
 }
-
-(function(){})
 
 
 
@@ -3180,14 +3752,6 @@ class DeviceXXX{
         this._defaultGamepadMapper=null;
         //this.setKeyLayout(null,null);
     }
-    // /**
-    // * @param {Key_Layout} jis 
-    //  * @param {Key_Layout} us 
-    //  */
-    // setKeyLayout(jis,us){
-    //     this._keyLayoutJIS=jis;
-    //     this._keyLayoutUS =us;
-    // }
     onBoot(){
         this.setupDefaultMapper()
     }
@@ -3201,6 +3765,115 @@ class DeviceXXX{
     gamepadMapper(){
         return this._defaultGamepadMapper;
     }
+}
+function createGamepad(){
+    const nintendo=createGamepadLayout("N","nintendo","B","A","Y","X");
+    const playstation=createGamepadLayout("P","playstation","×","○","□","△");
+    const xbox =createGamepadLayout("X","xbox","A","B","X","Y");
+    const numberGamepad =createButtonNumberLayout("Number","ButtonNumber");
+    const gamepadLayoutSelector = new LayoutSelecter([numberGamepad,nintendo,xbox,playstation]);
+    const gamepad= new GamepadObject(gamepadLayoutSelector);
+    return gamepad;
+}
+
+class Key_CommandManager_T{
+    /**
+     * 
+     * @param {Key_Command} apply 
+     * @param {Key_Command} wasd 
+     * @param {Key_Command} exit 
+     * @param {Key_Command} reset 
+     * @param {Key_Command} changeLayout 
+     */
+    constructor(apply,wasd,exit,reset,changeLayout){
+        const params = getParam();
+        this._apply =apply;
+        this._wasd=wasd;
+        this._exit=exit;
+        this._reset=reset;
+        //this._alt = Key_Command.create(params.style,"ALT");
+        this._changeButtonLayout =changeLayout;
+        this._changeLayout=Key_Command.create(params.changeLayout,"keylayout");
+
+    }
+    buttonLayout(){
+        return this._changeButtonLayout;
+    }
+    keylayout(){
+        return this._changeLayout;
+    }
+    getKeylayoutText(){
+        return this._changeLayout.text();
+    }
+    wasd(){
+        return this._wasd;
+    }
+    getWasdText(){
+        return this._wasd.text();
+    }
+    reset(){
+        return this._reset;
+    }
+    getResetText(){
+        return this._reset.text();
+    }
+    apply(){
+        return this._apply
+    }
+    getApplyText(){
+        return this._apply.text();
+    }
+    // alt(){
+    //     return this._alt;
+    // }
+    exit(){
+        return this._exit;
+    }
+    getExitText(){
+        return this._exit.text();
+    }
+    createCommandList_ForKeyLayout(){
+        const commandList =[
+            this._reset,
+            this._apply,
+            this._wasd,
+            this._changeLayout,
+            this._exit
+        ];
+        const result =[];
+        for (const iterator of commandList) {
+            for(var i=0; i <iterator._widthEx;++i){
+                result.push(iterator);
+            }
+        }
+        return result;
+    }
+    createCommandList_ForGamepad(){
+        const layout = this.buttonLayout();
+        const exit =this.exit();
+        const reset =this.reset()
+        //const alt = this.alt();
+        const apply = this.apply();
+        return [
+            apply,
+            reset,
+            layout,
+            exit
+        ];
+    }
+}
+function createCommandManager(){
+    const params = getParam();
+    const apply =Key_Command.create(params.apply,"apply");
+    const wasd=Key_Command.create(params.WASD,"WASD");
+    const exit=Key_Command.create(params.exit,"exit");
+    const reset=Key_Command.create(params.reset,"reset");
+    const changeLayout = createButtonLayoutChangeCommand();
+    const cm = new Key_CommandManager_T(
+        apply,wasd,exit,reset,changeLayout
+    );
+
+    return cm;
 }
 
 
@@ -3217,20 +3890,15 @@ const setting = (function(){
     buttonUsedForALT.setNameJP("このボタンには%1が割り当て済みです");
     buttonUsedForALT.setNameEN("%1 has been assigned to this button");
 
-    const nintendo=createGamepadLayout("N","nintendo","B","A","Y","X");
-    const playstation=createGamepadLayout("P","playstation","×","○","□","△");
-    const xbox =createGamepadLayout("X","xbox","A","B","X","Y");
-    const numberGamepad =createButtonNumberLayout("Number","ButtonNumber");
-
-    const gamepadLayoutSelector = new LayoutSelecter([numberGamepad,nintendo,xbox,playstation]);
     //const keyboardLayoutSelector = new LayoutSelecter([KEY_LAYOUT_US,KEY_LAYOUT_JIS])
 
     //const keyboardV10 = new Keyboard_V10(keyboardLayoutSelector);
-    const gamepad= new GamepadObject(gamepadLayoutSelector);
     const result= {
-        gamepadSelector:gamepadLayoutSelector,
+        command:createCommandManager(),
+        //gamepadSelector:gamepadLayoutSelector,
         //keyboard:keyboardV10,
-        gamepad :gamepad,
+        gamepad :createGamepad(),
+        Keyboard:createKeyboard(),
         device:new DeviceXXX(),
         errorText:createErrorTexts(),
         text:createText(params),
@@ -3240,6 +3908,7 @@ const setting = (function(){
         emptySymbolText:String(params.textEmpty),
         mandatorySymbols:createMandatorySymbols(params),
         windowSymbolListWidht:Number(params.windowSymbolListWidth),
+        //なんか異常が起きているので、そのうち対処
         gamepadBackground:String(params.gamepadBackground),
         keyBackground:String(params.keyBackground),
         //needButtonDetouch:MultiLanguageText.create(params.needButtonDetouchText),
@@ -3464,18 +4133,12 @@ function readGamePadConfig( config ){
 }
 function readKeyboardConfig(config){
     const value =config[MA_KEYBOARD_CONFIG];
-    if(value){
-        return value;
-    }
+    //todo:リセット壊れているので無効化
+    // if(value){
+    //     return value;
+    // }
     return null;
 }
-/**
- * @param {String} value 
- */
-//@ts-ignore
-ConfigManager.setInputConfigStyle =function(value){
-    this[MA_INPUTCONFIG_STYLE]=value;
-};
 //@ts-ignore
 ConfigManager.setKeyLayoutMA =function(layout){
     //@ts-ignore
@@ -3512,8 +4175,6 @@ ConfigManager.applyData =function(config){
     if(keyMapper){
         Input.keyMapper =keyMapper;
     }
-    //@ts-ignore
-    ConfigManager.setInputConfigStyle( config[MA_INPUTCONFIG_STYLE]);
     //@ts-ignore
     ConfigManager.setKeyLayoutMA(config[MA_KEYBOARD_LAYOUT]||'JIS');
     Input.clear();
@@ -3565,6 +4226,7 @@ class TemporaryMappperBase extends I_ReadonlyMapper{
 class TemporaryMappper extends TemporaryMappperBase{
     /**
      * @private
+     * @returns {Map<number,string>}
      * @param {InputMapperType} mapper 
      */
     static createMap(mapper){
@@ -3740,7 +4402,7 @@ class TemporaryMappper extends TemporaryMappperBase{
         return false;
     }
     isValidMapper(){
-        return symbolManager.isValidMapper_v3(this.createSymbolsSet());
+        return symbolManager.isValidMapper_V3(this.createSymbolsSet());
     }
 }
 
@@ -3834,7 +4496,7 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
     }
 
     /**
-     * @returns {CommandConcept[]}
+     * @returns {ReadonlyArray<CommandConcept>}
      */
     commandList(){
         return [];
@@ -4183,7 +4845,6 @@ class V8Item_Button extends V8_Item{
 
 class V8Item_Command extends V8_Item{
     /**
-     * 
      * @param {CommandConcept} command 
      */
     constructor(command){
@@ -4247,14 +4908,15 @@ class Window_GamepadConfig_V8 extends Window_Selectable_InputConfigVer{
      * @param {Rectangle} rect 
      */
     initialize(rect){
+        const CommandManager =setting.command;
         this._tmpMapper= new TemporaryMappper(Input.gamepadMapper);
-        this._layoutCommand = new V8_Itemn_LayoutCommand(CommandManager.buttonLayout());
+        this._layoutCommand = new V8_Itemn_LayoutCommand(setting.command.buttonLayout());
         this._exitCommand = new V8Item_Command(CommandManager.exit());
         this._resetCommand = new V8Item_Command(CommandManager.reset());
         this._applyCommand = new V8_Item_ApplyCommand(CommandManager.apply(),this._tmpMapper);
-        const layout= setting.gamepadSelector.currentLayout();
+        const layout= setting.gamepad.currentLayout();
         /**
-         * @type {V8_Item[]}
+         * @type {Array<V8_Item>}
          */
         this._v8List=[];
         super.initialize(rect);
@@ -4411,9 +5073,9 @@ class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
         ww.setHandler("button",this.onGamepadButton.bind(this));
         ww.setHandler("cancel",this.onGamepadCancel.bind(this));
         ww.setHandler("exit",this.onGamepadCancel.bind(this));
-        ww.setHandler(CommandManager.apply().handle,this.onApply.bind(this));
-        ww.setHandler(CommandManager.reset().handle,this.onReset.bind(this));
-        ww.setHandler(CommandManager.buttonLayout().handle,this.onChangeLayoutOk.bind(this));
+        ww.setHandler(setting.command.apply().handle,this.onApply.bind(this));
+        ww.setHandler(setting.command.reset().handle,this.onReset.bind(this));
+        ww.setHandler(setting.command.buttonLayout().handle,this.onChangeLayoutOk.bind(this));
         this.addWindow(ww);
         this._gamepadWindow=ww;
     }
@@ -4532,11 +5194,14 @@ class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
 
     }
     onChangeLayoutOk(){
-        this.xx().changeNext();
-        this._gamepadWindow.setLayout(this.xx().currentLayout() );
+        const selector = setting.gamepad.layoutSelector();
+        selector.changeNext();
+        this._gamepadWindow.setLayout(selector.currentLayout() );
         this._gamepadWindow.activate();
     }
 }
+
+
 
 class Scene_InputConfigBase_MA extends Scene_MenuBaseMVMZ{
     constructor(){
@@ -4544,22 +5209,12 @@ class Scene_InputConfigBase_MA extends Scene_MenuBaseMVMZ{
         //popSceneModeとapplyOnExitは別
         //前者はシーン切り替え検知で、後者は一度設定が変更されたことの検知
         //混ぜてはいけない
+        /**
+         * @private
+         */
         this._popSceneMode=false;
-    }
-    isALTmode(){
-        return false;
-    }
-    /**
-     * @param {String} value 
-     */
-    setAltMode(value){
-        //@ts-ignore
-        ConfigManager.setInputConfigStyle(value);
-    }
-    start(){
-        const mode = this.isALTmode() ? "ALT":"normal";
-        this.setAltMode(mode);
-        super.start();
+        this._symbolListWindow=null;
+        this._helpWindow=null;
     }
     /**
      * @param {String} text 
@@ -4782,101 +5437,9 @@ class Scene_InputConfigBase_MA extends Scene_MenuBaseMVMZ{
     terminate(){
         super.terminate();
         if(this._applyOnExit){
-            this.saveMapper();
+            //this.saveMapper();
             ConfigManager.save();
         }
-    }
-    saveMapper(){
-        //override
-    }
-}
-class Key_Command {
-    /**
-     * @param {String} handlerName 
-     * @param {MultiLanguageText} mtext 
-     * @param {Number} width 
-     */
-    constructor(handlerName,mtext,width){
-        this._callBackHandle =handlerName;
-        this._widthEx =width;
-        this._mtext = mtext;
-    }
-    /**
-     * 
-     * @param {string} objText 
-     * @param {string} handler 
-     * @returns 
-     */
-    static create(objText,handler){
-        const obj = JSON.parse(objText);
-        return new Key_Command(
-            handler,
-            MultiLanguageText.create(obj.text),
-            Number(obj.width)
-        );
-    }
-    get char(){
-        return this._mtext.currentName();
-    }
-    text(){
-        return this.char;
-    }
-
-    name(){
-        return this._mtext.currentName();
-    }
-
-    get isLink(){
-        return this._widthEx >1;
-    }
-    get locked(){
-        return false;
-    }
-    get keycord(){
-        return 0;
-    }
-    get isCommand(){
-        return true;
-    }
-    get handle(){
-        return this._callBackHandle;
-    }
-    /**
-     * @param {Window_Selectable} keyConfigWindow 
-     */
-    onOk(keyConfigWindow){
-        keyConfigWindow.callHandler(this._callBackHandle);
-    }
-    /**
-     * @param {Number} index 
-     */
-    setIndex(index){
-        if(isNaN(this._index)){
-            this._index = index;
-        }
-    }
-
-    /**
-     * @param {KeyConfigWindowConcept} keyWindow 
-     * @param {Number} index
-     */
-    rect(keyWindow,index){
-        const rect = keyWindow.baseRect(this._index);
-        rect.width *=this._widthEx;
-        return rect;
-    }
-    /**
-     * @param {KeyConfigWindowConcept} keyWindow 
-     * @param {Number} index
-     */
-    draw(keyWindow,index){
-      if(index ===this._index){
-        const rect = this.rect(keyWindow,index);
-        keyWindow.drawCommandXX(this.char,rect);
-      }
-    }
-    helpText(){
-        return "コマンドのヘルプ";
     }
 }
 
@@ -4885,92 +5448,6 @@ function createButtonLayoutChangeCommand(){
     const command = new Key_Command("ButtonLayout",mText,3);
     return command;
 }
-
-class Key_CommandManager_T{
-    constructor(){
-        const params = getParam();
-        this._apply =Key_Command.create(params.apply,"apply");
-        this._wasd=Key_Command.create(params.WASD,"WASD");
-        this._exit=Key_Command.create(params.exit,"exit");
-        this._reset=Key_Command.create(params.reset,"reset");
-        //this._alt = Key_Command.create(params.style,"ALT");
-        this._changeButtonLayout =createButtonLayoutChangeCommand();
-        this._changeLayout=Key_Command.create(params.changeLayout,"keylayout");
-
-    }
-    buttonLayout(){
-        return this._changeButtonLayout;
-    }
-    keylayout(){
-        return this._changeLayout;
-    }
-    getKeylayoutText(){
-        return this._changeLayout.text();
-    }
-    wasd(){
-        return this._wasd;
-    }
-    getWasdText(){
-        return this._wasd.text();
-    }
-    reset(){
-        return this._reset;
-    }
-    getResetText(){
-        return this._reset.text();
-    }
-    apply(){
-        return this._apply
-    }
-    getApplyText(){
-        return this._apply.text();
-    }
-    // alt(){
-    //     return this._alt;
-    // }
-    exit(){
-        return this._exit;
-    }
-    getExitText(){
-        return this._exit.text();
-    }
-    createCommandList_ForKeyLayout(){
-        const commandList =[
-            this._reset,
-            this._apply,
-            this._wasd,
-            this._changeLayout,
-            this._exit
-        ];
-        const result =[];
-        for (const iterator of commandList) {
-            for(var i=0; i <iterator._widthEx;++i){
-                result.push(iterator);
-            }
-        }
-        return result;
-    }
-    createCommandList_ForGamepad(){
-        const layout = this.buttonLayout();
-        const exit =this.exit();
-        const reset =this.reset()
-        //const alt = this.alt();
-        const apply = this.apply();
-        return [
-            apply,
-            reset,
-            layout,
-            exit
-        ];
-
-    }
-}
-const CommandManager =(function(){
-
-    return new Key_CommandManager_T();
-})()
-
-
 const WASD_KEYMAP={
     81:"pageup",    //Q
     69:"pagedown",  //E
@@ -4994,11 +5471,249 @@ function getCurrentDevice(){
     }
     return setting.keyboard;
 }
-class Window_KeyConfig_MA_V10 extends Window_InputConfigBase{
+class Window_KeyConfig_MA_V10 extends Window_Selectable_InputConfigVer{
 
+    /**
+     * @param {Rectangle} rect 
+     */
+    initialize(rect){
+        this._mapper = setting.Keyboard.createTemporaryMapper();
+        super.initialize(rect);
+    }
+    isValidMapper(){
+        return this._mapper.isValidMapper();
+    }
+    maxItems(){
+        return setting.Keyboard.numButtons();
+    }
+    /**
+     * @param {boolean} wrap 
+     */
+    cursorDown(wrap){
+        const index =this.index();
+        super.cursorDown(wrap);
+        if(index===this.index()){
+            this.callHandler("cursorout")
+        }
+    }
+    /**
+     * @param {()=>void} func 
+     */
+    setCursorOutHandler(func){
+        this.setHandler("cursorout",func);
+    }
+    itemRectEX(){
+
+    }
+    /**
+     * @param {number} index 
+     * @returns 
+     */
+    itemAt(index){
+        return setting.Keyboard.buttonAt(index);
+    }
+    /**
+     * @param {number} index 
+     * @returns 
+     */
+    drawItem(index){
+
+        const item = this.itemAt(index);
+        if(!item){ return;}
+        const preItem = setting.Keyboard.buttonAt(index-1);
+        if(preItem ===item){return;}
+        
+        const rect = this.itemRect(index);
+        this.drawText(item.name(),rect.x,rect.y,rect.width,"center");
+    }
+    itemWidth(){
+        return 40;
+    }
+    colSpacing(){
+        return 0;
+    }
+    rowSpacing(){
+        return 0;
+    }
+    maxCols(){
+        return 19;
+    }
+    keyboard(){
+        return setting.Keyboard;
+    }
+
+    /**
+     * @param {Key_Base} item 
+     */
+    drawBasicKey(item){
+
+    }
+
+    /**
+     * @param {number} index 
+     * @returns 
+     */
+    baseRect(index){
+        return super.itemRect(index);
+    }
+    /**
+     * @param {number} index 
+     * @returns 
+     */
+    keyRect(index){
+        const item = this.itemAt(index);
+        const rect = this.baseRect(index);
+        if(!item){
+            return rect;
+        }
+        if(item ===KEYS.ENTER_JIS){
+            rect.height *=2;
+        }
+        let right =rect.width;
+        const left = rect.x;
+        const itemWidth = this.itemWidth();
+        const maxItems = this.maxItems();
+        for( let i = index + 1; i < maxItems; ++i){
+            const nextItem = this.itemAt(i);
+            if(item !==nextItem){
+                break;
+            }
+            const nextRect =this.baseRect(i);            
+            //rectを拡張する
+            right = nextRect.x + nextRect.width;
+        }
+        rect.width =Math.abs(right -left);
+        return rect;
+
+    }
+    
+
+
+    drawAllItems(){
+        const maxItems = this.keyboard().numButtons();
+        const ENTER_JIS =KEYS.ENTER_JIS;
+        for (let i = 0; i < maxItems; i++) {
+
+            const rect = this.itemRect(i);
+            //TODO
+            const item = this.itemAt(i);
+            const nextItem =this.itemAt(i+1);
+            if(item ===ENTER_JIS){
+                
+
+            }
+
+            for(let aaaa =0 ; aaaa <0 ;++aaaa){
+
+            }
+            this.drawItem(i);
+        }
+    }
 }
 
+class Window_KeyCommand extends Window_Command{
+    initialize(rect){
+        window_initializeMVMZ(this,rect,super.initialize);
+    }
+    makeCommandList(){
+    }
+    /**
+     * @param {Key_Command} command 
+     */
+    addCommandEx(command){
+        this.addCommand(command.name(),command.handle,true);
+    }
+    testKeyMapper(b){
+        this.clearCommandList();
 
+
+        this.addCommandEx(setting.command.wasd());
+        this.addCommandEx(setting.command.reset());
+
+    }
+}
+class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
+    constructor(){
+        super();
+        this._symbolListWindow =null;
+        this._keyConfigWindow=null;
+    }
+    create(){
+        super.create();
+        this.createAllWindows();
+    }
+    createAllWindows(){
+        this.createHelpWindow();
+        this.createKeyboardWindow();
+
+        this.linkWindow();
+    }
+    linkWindow(){
+        this._keyConfigWindow.setHelpWindow(this._helpWindow);
+        this._keyConfigWindow.activate();
+    }
+
+    symbolListHeight(){
+        const mainAreaHeight=InputConfigManager.getWorkaround().mainAreaHeigth(this);
+        return mainAreaHeight- this.mainWindowHeight();
+    }
+    createSymbolListRect(){
+        const width =Graphics.boxWidth;
+        const height = this.symbolListHeight();
+        const x =0;
+        const y = Graphics.boxHeight -height;
+
+        return new Rectangle(x,y,width,height);
+    }
+    createSymbolListWindow(){
+        const rect = this.createSymbolListRect();
+        const sw = new Window_InputSymbolList(rect);
+        sw.setHandler("ok",this.onSymbolOk.bind(this));
+        this._symbolListWindow=sw;
+        this.addWindow(sw);
+    }
+    onSymbolOk(){
+
+    }
+
+    mainWindowRect(){
+        const x = 0;
+        const y= this.mainAreaTop();
+        const width = Graphics.boxWidth;
+        const height =this.mainWindowHeight()
+        return new Rectangle(x,y,width,height);
+    }
+    mainWindowHeight(){
+        return this.calcWindowHeight(6,true);
+    }
+
+    createKeyboardWindow(){
+        const rect = this.mainWindowRect();
+        const kw = new Window_KeyConfig_MA_V10(rect);
+        kw.setHandler("cancel",this.onKeyboardCancel.bind(this));
+        kw.refresh();
+        this._keyConfigWindow=kw;        
+        this.addWindow(kw);
+    }
+    onKeyboardCancel(){
+        this.popScene();
+    }
+    commandWindowRect(){
+        const height =this.calcWindowHeight(1,true);
+        const y = this.mainAreaTop() + this.mainWindowHeight();
+        return new Rectangle(0,y,Graphics.boxWidth,height);
+    }
+    createCommandWindow(){
+        const rect =this.commandWindowRect();
+        const cw = new Window_KeyCommand(rect);
+
+    }
+    onApply(){
+        if(this._keyConfigWindow.isValidMapper()){
+        }
+    }
+
+}
 
 
 
@@ -5138,13 +5853,13 @@ if(Utils.RPGMAKER_NAME =="MV"){
     PluginManager.registerCommand( PLUGIN_NAME,"IsGamepadValid",function(arg){
         const sid = (arg.switchId);
         const set = new Set( Object.values(Input.gamepadMapper))
-        const value = symbolManager.isValidMapper_v3(set);
+        const value = symbolManager.isValidMapper_V3(set);
         $gameSwitches.setValue(sid,value);
     });
     PluginManager.registerCommand( PLUGIN_NAME,"IsKeyboardValid",function(arg){
         const sid = (arg.switchId);
         const set = new Set( Object.values(Input.keyMapper))
-        const value = symbolManager.isValidMapper_v3(set);
+        const value = symbolManager.isValidMapper_V3(set);
         $gameSwitches.setValue(sid,value);
     });
     PluginManager.registerCommand( PLUGIN_NAME,"GetButtonName",GetButtonName);
@@ -5164,8 +5879,8 @@ if(Utils.RPGMAKER_NAME =="MV"){
 const exportClass ={
     //MV用・ヘルプへの記載予定なし
     GetButtonNameMV:GetButtonNameMV,
-    Scene_ConfigBase:Scene_InputConfigBase_MA,
-    //Scene_KeyConfig:Scene_KeyConfig_MA,
+    //Scene_ConfigBase:Scene_InputConfigBase_MA,
+    Scene_KeyConfig:Scene_KeyConfig_V10,
     Scene_GamepadConfig: Scene_GamepadConfig_V8,
     //Scene_GamepadConfig_ALT:Scene_GamepadConfig_ALT,
     // Window_InputSymbolList:Window_InputSymbolList,
@@ -5174,7 +5889,7 @@ const exportClass ={
     defaultKeyMapper:{},
     defaultGamepadMapper:{},
     gotoKey:function(){
-        //SceneManager.push(Mano_InputConfig.Scene_KeyConfig );
+        SceneManager.push(Mano_InputConfig.Scene_KeyConfig );
     },
     gotoGamepad:function(){
         SceneManager.push(Scene_GamepadConfig_V8 );
