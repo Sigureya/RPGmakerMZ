@@ -14,7 +14,7 @@
 /*:
  * @plugindesc セーブデータの読み書き時にメッセージを表示します。
  * @author しぐれん
- * 
+ * @url https://github.com/Sigureya/RPGmakerMZ/blob/master/Mano_SaveLoadMessage.js
  * @target MZ
  * 
  * @command SaveWithMessage
@@ -97,7 +97,7 @@ const setting = (function(){
     const param =getParam();
     const result ={
         saveStateVariable:Number(param.saveStateVariable),
-        whenLoadMessage:String(param.whenLoadMessage),
+        messageWhenLoad:String(param.whenLoadMessage),
         messageWhenSave:String(param.whenSaveMessage),
         messageWhenDidNotSave:String(param.whenDidNotSaveMessage),
     };
@@ -277,9 +277,19 @@ PluginManager.registerCommand(PLUGIN_NAME,SAVE_WITH_STATE_CHECK,function(){
 });
 PluginManager.registerCommand(PLUGIN_NAME,"SaveWithMessage",function(){
     const code = createSaveMessageCode(
-        setting.whenLoadMessage,
+        setting.messageWhenLoad,
         setting.messageWhenSave,
         setting.messageWhenDidNotSave,
+        ["",0,0,2,""]
+        );
+    this.setupChild(code,0);
+
+});
+PluginManager.registerCommand(PLUGIN_NAME,"SaveWithCustomMessage",function(arg){
+    const code = createSaveMessageCode(
+        arg.messageWhenLoad || setting.messageWhenLoad,
+        arg.messageWhenSave || setting.messageWhenSave,
+        arg.messageWhenDidNotSave || setting.messageWhenDidNotSave,
         ["",0,0,2,""]
         );
     this.setupChild(code,0);
