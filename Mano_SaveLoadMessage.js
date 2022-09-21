@@ -1,3 +1,4 @@
+//@ts-check
 //=============================================================================
 // Mano_PartyRotate.js
 // ----------------------------------------------------------------------------
@@ -104,7 +105,7 @@ const setting = (function(){
     return result;
 })();
 
-const SAVEDATALOADED_MAGIC_NUMBER =-5861;
+//const SAVEDATALOADED_MAGIC_NUMBER =-5861;
 const ON_SAVEDATA_LOAD=1;
 const ON_SAVEDATA_SAVE =2;
 const ON_SAVEDATA_DIDNOT_SAVE =3;
@@ -112,7 +113,7 @@ const ON_SAVEDATA_DIDNOT_SAVE =3;
 const DataManager_extractSaveContents =DataManager.extractSaveContents;
 DataManager.extractSaveContents =function(contents){
     DataManager_extractSaveContents.call(this,contents);
-    $gameVariables.setValue(setting.saveStateVariable,SAVEDATALOADED_MAGIC_NUMBER);
+    $gameVariables.setValue(setting.saveStateVariable,ON_SAVEDATA_LOAD);
 };
 const SAVE_WITH_STATE_CHECK ="SaveWithStateCheck";
 /**
@@ -203,11 +204,12 @@ function createSaveStateCode(){
             indent:0,
             parameters:[],
         },
+        //TODO:書き込み完了までロック
         {
             //セーブデータが読み込まれた場合
             code:111,
             indent:0,
-            parameters:[1,variableId,0,SAVEDATALOADED_MAGIC_NUMBER,0],
+            parameters:[1,variableId,0,ON_SAVEDATA_LOAD,0],
         },
         {
             //分岐モードを「読み込み」に
@@ -272,6 +274,7 @@ function createSaveStateCode(){
 }
 
 PluginManager.registerCommand(PLUGIN_NAME,SAVE_WITH_STATE_CHECK,function(){
+    $gameVariables.setValue(setting.saveStateVariable,0);
     const code =createSaveStateCode();
     this.setupChild(code,0);
 });
@@ -293,7 +296,6 @@ PluginManager.registerCommand(PLUGIN_NAME,"SaveWithCustomMessage",function(arg){
         ["",0,0,2,""]
         );
     this.setupChild(code,0);
-
 });
 
 }())
