@@ -3091,6 +3091,7 @@ class GamepadButtonObj extends I_InputButton{
  * @property {()=>number} keycord
  * @property {()=>number} mapperId
  * @property {()=>boolean} isCommand
+ * @property {()=>boolean} isBig
  * @property {()=>string} helpText
  */
 
@@ -3155,6 +3156,9 @@ class Key_Command {
     width(){
         return this._widthEx;
     }
+    isBig(){
+        return this.width() >1;
+    }
     get char(){
         return this._mtext.currentName();
     }
@@ -3177,7 +3181,6 @@ class Key_Command {
     }
     mapperId(){
         return NaN;
-//        return this.keycord();
     }
     isCommand(){
         return true;
@@ -3185,12 +3188,12 @@ class Key_Command {
     get handle(){
         return this._callBackHandle;
     }
-    /**
-     * @param {Window_Selectable} keyConfigWindow 
-     */
-    onOk(keyConfigWindow){
-        keyConfigWindow.callHandler(this._callBackHandle);
-    }
+    // /**
+    //  * @param {Window_Selectable} keyConfigWindow 
+    //  */
+    // onOk(keyConfigWindow){
+    //     keyConfigWindow.callHandler(this._callBackHandle);
+    // }
     /**
      * @param {Number} index 
      */
@@ -3200,25 +3203,25 @@ class Key_Command {
         }
     }
 
-    /**
-     * @param {KeyConfigWindowConcept} keyWindow 
-     * @param {Number} index
-     */
-    rect(keyWindow,index){
-        const rect = keyWindow.baseRect(this._index);
-        rect.width *=this._widthEx;
-        return rect;
-    }
-    /**
-     * @param {KeyConfigWindowConcept} keyWindow 
-     * @param {Number} index
-     */
-    draw(keyWindow,index){
-      if(index ===this._index){
-        const rect = this.rect(keyWindow,index);
-        keyWindow.drawCommandXX(this.char,rect);
-      }
-    }
+    // /**
+    //  * @param {KeyConfigWindowConcept} keyWindow 
+    //  * @param {Number} index
+    //  */
+    // rect(keyWindow,index){
+    //     const rect = keyWindow.baseRect(this._index);
+    //     rect.width *=this._widthEx;
+    //     return rect;
+    // }
+    // /**
+    //  * @param {KeyConfigWindowConcept} keyWindow 
+    //  * @param {Number} index
+    //  */
+    // draw(keyWindow,index){
+    //   if(index ===this._index){
+    //     const rect = this.rect(keyWindow,index);
+    //     keyWindow.drawCommandXX(this.char,rect);
+    //   }
+    // }
     helpText(){
         return "コマンドのヘルプ";
     }
@@ -5616,25 +5619,22 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
     maxItems(){
         return setting.Keyboard.numButtons();
     }
-    /**
-     * @param {boolean} wrap 
-     */
-    cursorDown(wrap){
-        const index =this.index();
-        super.cursorDown(wrap);
-        if(index===this.index()){
-            this.callHandler("cursorout")
-        }
-    }
-    /**
-     * @param {()=>void} func 
-     */
-    setCursorOutHandler(func){
-        this.setHandler("cursorout",func);
-    }
-    itemRectEX(){
-
-    }
+    // /**
+    //  * @param {boolean} wrap 
+    //  */
+    // cursorDown(wrap){
+    //     const index =this.index();
+    //     super.cursorDown(wrap);
+    //     if(index===this.index()){
+    //         this.callHandler("cursorout")
+    //     }
+    // }
+    // /**
+    //  * @param {()=>void} func 
+    //  */
+    // setCursorOutHandler(func){
+    //     this.setHandler("cursorout",func);
+    // }
     /**
      * @param {number} index 
      * @returns 
@@ -5655,8 +5655,6 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
         const symbol = this.symbolObject(item);
         
         const rect = this.itemRectWithPadding(index);
-        //TODO:
-        //rect.y -=4;
         const keyName = item.name();
         this.contents.fontSize =this.keyNameFontSize();
         this.drawText(keyName,rect.x,rect.y,rect.width,"center");
@@ -5681,33 +5679,21 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
         return 24;
     }
     itemHeight(){
-        return this.keyNameFontSize()+this.symbolNameFontSize()+4;
+        return this.keyNameFontSize()+this.symbolNameFontSize()+this.rowSpacing() +2;
     }
-    // itemWidth(){
-    //     return 40;
-    // }
     itemPadding(){
         return 2;
     }
     colSpacing(){
-        return 0;
+        return 2;
     }
     rowSpacing(){
-        return 0;
+        return 2;
     }
     maxCols(){
         return 19;
     }
-    keyboard(){
-        return setting.Keyboard;
-    }
 
-    /**
-     * @param {Key_Base} item 
-     */
-    drawBasicKey(item){
-
-    }
 
     /**
      * 
@@ -5720,6 +5706,9 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
         rect.x += padding;
         rect.width -= padding * 2;
         return rect;            
+    }
+    redrawApplyCommand(){
+        this.redrawItem(95);
     }
     
     /**
@@ -5750,26 +5739,26 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
     }
 
 
-    drawAllItems(){
-        const maxItems = this.keyboard().numButtons();
-        const ENTER_JIS =KEYS.ENTER_JIS;
-        for (let i = 0; i < maxItems; i++) {
+    // drawAllItems(){
+    //     const maxItems = this.keyboard().numButtons();
+    //     const ENTER_JIS =KEYS.ENTER_JIS;
+    //     for (let i = 0; i < maxItems; i++) {
 
-            const rect = this.itemRect(i);
-            //TODO
-            const item = this.itemAt(i);
-            const nextItem =this.itemAt(i+1);
-            if(item ===ENTER_JIS){
+    //         const rect = this.itemRect(i);
+    //         //TODO
+    //         const item = this.itemAt(i);
+    //         const nextItem =this.itemAt(i+1);
+    //         if(item ===ENTER_JIS){
                 
 
-            }
+    //         }
 
-            for(let aaaa =0 ; aaaa <0 ;++aaaa){
+    //         for(let aaaa =0 ; aaaa <0 ;++aaaa){
 
-            }
-            this.drawItem(i);
-        }
-    }
+    //         }
+    //         this.drawItem(i);
+    //     }
+    // }
 }
 
 class Window_KeyCommand extends Window_Command{
