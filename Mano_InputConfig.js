@@ -934,8 +934,7 @@ const Mano_InputConfig=( function(){
 /**
  * 
  * @typedef {object} CommandConcept
- * @property {()=>string} text
- * @property {string} handle
+ * @property {()=>string} handle
  * @property {()=>string} name
  * 
  */
@@ -3159,11 +3158,11 @@ class Key_Command {
     isBig(){
         return this.width() >1;
     }
-    get char(){
-        return this._mtext.currentName();
-    }
+    // get char(){
+    //     return this._mtext.currentName();
+    // }
     text(){
-        return this.char;
+        return this.name();
     }
 
     name(){
@@ -3185,7 +3184,7 @@ class Key_Command {
     isCommand(){
         return true;
     }
-    get handle(){
+    handle(){
         return this._callBackHandle;
     }
     // /**
@@ -4595,17 +4594,17 @@ class Window_InputConfigBase extends Window_Selectable_InputConfigVer{
         if(command){
             this.changePaintOpacity(true);
             const rect = this.itemRectWithPadding(index);
-            const text =command.text();
+            const text =command.name();
             this.drawText(text,rect.x,rect.y,rect.width);
         }
     }
     processCommandOk(){
         const command = this.command(this.index());
         if(command ){
-            if(this.isHandled(command.handle)){
+            if(this.isHandled(command.handle())){
                 this.updateInputData();
                 this.deactivate();
-                this.callHandler(command.handle);    
+                this.callHandler(command.handle());    
             }
         }else{
             this.playBuzzerSound();
@@ -4903,7 +4902,7 @@ class V8Item_Command extends V8_Item{
      * @param {CommandConcept} command 
      */
     constructor(command){
-        super(command.handle);
+        super(command.handle());
         this._command=command;
         
     }
@@ -4911,7 +4910,7 @@ class V8Item_Command extends V8_Item{
         return this._command.name();
     }
     handlerSymbol(){
-        return this._command.handle;
+        return this._command.handle();
     }
 }
 class V8_Itemn_LayoutCommand extends V8Item_Command{
@@ -5128,9 +5127,9 @@ class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
         ww.setHandler("button",this.onGamepadButton.bind(this));
         ww.setHandler("cancel",this.onGamepadCancel.bind(this));
         ww.setHandler("exit",this.onGamepadCancel.bind(this));
-        ww.setHandler(setting.command.apply().handle,this.onApply.bind(this));
-        ww.setHandler(setting.command.reset().handle,this.onReset.bind(this));
-        ww.setHandler(setting.command.buttonLayout().handle,this.onChangeLayoutOk.bind(this));
+        ww.setHandler(setting.command.apply().handle(),this.onApply.bind(this));
+        ww.setHandler(setting.command.reset().handle(),this.onReset.bind(this));
+        ww.setHandler(setting.command.buttonLayout().handle(),this.onChangeLayoutOk.bind(this));
         this.addWindow(ww);
         this._gamepadWindow=ww;
     }
@@ -5771,7 +5770,7 @@ class Window_KeyCommand extends Window_Command{
      * @param {Key_Command} command 
      */
     addCommandEx(command){
-        this.addCommand(command.name(),command.handle,true);
+        this.addCommand(command.name(),command.handle(),true);
     }
     testKeyMapper(b){
         this.clearCommandList();
