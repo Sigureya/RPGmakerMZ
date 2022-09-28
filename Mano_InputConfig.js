@@ -176,6 +176,15 @@
  * @param WASD
  * @type struct<KeyconfigCommand>
  * @default {"width":"3","text":"{\"jp\":\"WASD\",\"en\":\"WASD\"}"}
+
+
+ * @param WASDwidth
+ * @type number
+ * @default 3
+
+ * @param styleWidth
+ * @type number
+ * @default 3
  * 
  * @param style
  * @type struct<KeyconfigCommand>
@@ -4970,7 +4979,7 @@ class Window_GamepadConfig_V8 extends Window_Selectable_InputConfigVer{
         this._applyCommand = new V8_Item_ApplyCommand(CommandManager.apply(),this._tmpMapper);
         const layout= setting.gamepad.currentLayout();
         /**
-         * @type {Array<V8_Item>}
+         * @type {ReadonlyArray<V8_Item>}
          */
         this._v8List=[];
         super.initialize(rect);
@@ -5008,6 +5017,9 @@ class Window_GamepadConfig_V8 extends Window_Selectable_InputConfigVer{
             return result;
         });
         baseList.push(this._applyCommand,this._resetCommand,this._layoutCommand,this._exitCommand);
+        /**
+         * @type {ReadonlyArray<V8_Item>}
+         */
         this._v8List=baseList;
     }
 
@@ -5531,7 +5543,25 @@ function getCurrentDevice(){
 class Window_WideButton_Selectable extends Window_Selectable_InputConfigVer{
 
     /**
-     * 
+     * @param {Rectangle} rect 
+     */
+    constructor(rect){
+        super(rect);
+        this._lastBackground =-1;
+
+    }
+
+    /**
+     * @param {number} index 
+     */
+    drawItemBackground(index){
+        if(this._lastBackground !==index){
+            super.drawItemBackground(index);
+            this._lastBackground =index;
+        }
+
+    }
+    /**
      * @param {number} index 
      * @returns {T}
      */
@@ -5572,7 +5602,7 @@ class Window_WideButton_Selectable extends Window_Selectable_InputConfigVer{
      * @param {number} index 
      * @returns 
      */
-     itemRect(index){
+    itemRect(index){
         const item = this.itemAt(index);
         if(!item){
             return super.itemRect(index);
@@ -5649,11 +5679,11 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
 
         const item = this.itemAt(index);
         if(!item){ return;}
-        const preItem = setting.Keyboard.buttonAt(index-1);
+        const preItem = this.itemAt(index-1);
         if(preItem ===item){return;}
         const symbol = this.symbolObject(item);
         
-        const rect = this.itemRectWithPadding(index);
+        const rect = item.isCommand() ? this.itemLineRect(index)  :  this.itemRectWithPadding(index);
         const keyName = item.name();
         this.contents.fontSize =this.keyNameFontSize();
         this.drawText(keyName,rect.x,rect.y,rect.width,"center");
