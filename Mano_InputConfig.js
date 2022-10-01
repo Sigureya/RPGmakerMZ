@@ -163,6 +163,25 @@
  * @type struct<KeyconfigCommand>
  * @default {"width":"4","text":"{\"jp\":\"設定を保存\",\"en\":\"save settings\"}"}
  * 
+ * @param saveCommand
+ * @text 設定の保存/SaveSetting
+ * @type struct<MultiLangString>
+ * @default {"en":"seve setting","jp":"設定を保存"}
+ * 
+ * @param saveCommandWidth
+ * @text 幅/width
+ * @type number
+ * @default 4
+ * @parent saveCommand
+ * 
+ * @param saveDescription
+ * @text 説明文/Description
+ * @type struct<MultiLangString>
+ * @default {"en":"seve setting","jp":"設定を保存"}
+ * @parent saveCommand
+ * 
+ * 
+ * 
  * @param rollback
  * @text 変更を破棄/rollback
  * @type struct<KeyconfigCommand>
@@ -172,6 +191,10 @@
  * @text 初期設定に戻す/reset
  * @type struct<KeyconfigCommand>
  * @default {"width":"4","text":"{\"jp\":\"初期設定に戻す\",\"en\":\"reset\"}"}
+ * 
+ * @param restWidth
+ * @type number
+ * @default 4
  * 
  * @param WASD
  * @type struct<KeyconfigCommand>
@@ -908,25 +931,8 @@ if(Imported.Mano_InputConfig){
     throw new Error("Mano_InputConfig is Duplicate")
 }
 Imported.Mano_InputConfig = true;
-/**
- *  @typedef {Object} RM_SceneClassPrototype
-    @property {()=>void} create
-    @property {()=>void} start
-    @property {()=>void} update
-    @property {()=>boolean} isReady
-    @property {()=>boolean} isBusy
-    @property {()=>void} stop
-    @property {()=>void} terminate
- */
 
-/**
- * @type {{
- *     gotoKey:()=>void,
- *     gotoGamepad:()=>void,
- *     Scene_KeyConfig:{  prototype:RM_SceneClassPrototype},
- *     Scene_GamepadConfig:{  prototype:RM_SceneClassPrototype}
- * }}
- */
+
 const Mano_InputConfig=( function(){
     'use strict'
 
@@ -993,7 +999,7 @@ const Mano_InputConfig=( function(){
         throw new Error(message);
     }
     TestFileNameValid(PLUGIN_NAME);
-    //@ts-ignore
+    
     const IS_Atsumaru = location.hostname==="html5.nicogame.jp";
 
     function getParam(){
@@ -3454,24 +3460,132 @@ function pushCommad(cmd,keys){
     ppp(cmd.wasd(),keys);
 
     ppp(cmd.reset(),keys);
-
-
-
- 
-
-
+    ppp(cmd.buttonLayout(),keys);
+    ppp(cmd.exit(),keys);
 }
 
 /**
  * 
  * @param {Key_CommandManager_T} command 
- * @returns 
+ * @returns {ReadonlyArray<keylayoutItem>}
  */
-function createKeyboard(command){
+ function createUS_Keyboard(command){
+    const list =[
+        KEYS.ESC,
+        KEYS._1 ,
+        KEYS._2 ,
+        KEYS._3 ,
+        KEYS._4, 
+        KEYS._5, 
+        KEYS._6, 
+        KEYS._7, 
+        KEYS._8, 
+        KEYS._9, 
+        KEYS._0, 
+        KEYS.MINUS,
+        KEYS.EQUAL_JIS,
+        KEYS.INSERT ,
+        KEYS.BACK ,
+        KEYS.HOME ,
+        KEYS.END ,
+        KEYS.PAGEUP ,
+        KEYS.PAGEDOWN ,
+    
+        KEYS.TAB,
+        KEYS.Q ,
+        KEYS.W ,
+        KEYS.E ,
+        KEYS.R ,
+        KEYS.T ,
+        KEYS.Y ,
+        KEYS.U ,
+        KEYS.I ,
+        KEYS.O ,
+        KEYS.P ,
+        KEYS.SQUARE_BRACKETS_OPEN,
+        KEYS.SQUARE_BRACKETS_CLOSE, 
+        KEYS.BACKSLASH,
+        KEYS.NULL,
+        KEYS.TENKEY7 ,
+        KEYS.TENKEY8 ,
+        KEYS.TENKEY9 ,
+        KEYS.TENKEY_MINUS,
+        KEYS.NULL,
+        KEYS.A ,
+        KEYS.S ,
+        KEYS.D ,
+        KEYS.F ,
+        KEYS.G ,
+        KEYS.H ,
+    
+        KEYS.J ,
+        KEYS.K ,
+        KEYS.L ,
+        KEYS.SEMICOLON,
+        KEYS.APOSTROPHE, 
+        KEYS.ENTER_US,
+        KEYS.ENTER_US,
+        KEYS.ENTER_US,
+        KEYS.TENKEY4 ,
+        KEYS.TENKEY5 ,
+        KEYS.TENKEY6 ,
+        KEYS.TENKEY_PLUS,
+
+        KEYS.SHIFT ,
+        KEYS.Z ,
+        KEYS.X ,
+        KEYS.C ,
+        KEYS.V ,
+        KEYS.B ,
+        KEYS.N ,
+        KEYS.M ,
+        KEYS.COMMA,
+        KEYS.DOT,
+        KEYS.SLASH,
+        
+        KEYS.NULL,
+        KEYS.SHIFT,
+        KEYS.UP,
+        KEYS.NULL,
+        
+        KEYS.TENKEY1 ,
+        KEYS.TENKEY2 ,
+        KEYS.TENKEY3 ,
+        KEYS.NULL,
+        
+        KEYS.CTRL  ,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.LEFT,
+        KEYS.DOWN,
+        KEYS.RIGHT,
+        KEYS.TENKEY0,
+        KEYS.TENKEY0,
+        KEYS.TENKEY_DOT,
+        KEYS.NULL,
+    ];
+    pushCommad(command,list);
+    return list;
+}
+/**
+ * 
+ * @param {Key_CommandManager_T} command 
+ * @returns {ReadonlyArray<keylayoutItem>}
+ */
+function createJIS_Keyboard(command){
     /**
      * @type {Array<keylayoutItem>}
      */
-    const KEY_LAYOUT_JIS =[
+     const KEY_LAYOUT_JIS =[
         KEYS.ESC,
         KEYS._1 ,
         KEYS._2 ,
@@ -3576,11 +3690,23 @@ function createKeyboard(command){
     ];
     pushCommad(command,KEY_LAYOUT_JIS);
 
-    const US =createKeyboardLayout([],"US","en-US");
-    const JIS =createKeyboardLayout(  KEY_LAYOUT_JIS,"JIS","ja_JP");
+    return KEY_LAYOUT_JIS;
+}
+
+/**
+ * 
+ * @param {Key_CommandManager_T} command 
+ * @returns 
+ */
+function createKeyboard(command){
+    const jisKey = createJIS_Keyboard(command);
+    const uskey = createUS_Keyboard(command);
+
+    const US =createKeyboardLayout(uskey,"US","en-US");
+    const JIS =createKeyboardLayout(  jisKey,"JIS","ja_JP");
     const AZERTY=createKeyboardLayout([],"AZERTY","fr_FR");
 
-    const select = new LayoutSelecter([JIS,US,AZERTY]);
+    const select = new LayoutSelecter([JIS,US]);
 
     return new KeyboardObject(select);
 }
@@ -5559,7 +5685,6 @@ class Window_WideButton_Selectable extends Window_Selectable_InputConfigVer{
             super.drawItemBackground(index);
             this._lastBackground =index;
         }
-
     }
     /**
      * @param {number} index 
@@ -5567,6 +5692,12 @@ class Window_WideButton_Selectable extends Window_Selectable_InputConfigVer{
      */
     itemAt(index){
         return null;
+    }
+    /**
+     * @returns {T}
+     */
+    currentItem(){
+        return this.itemAt(this.index());
     }
     /**
      * @param {number} index 
@@ -5758,7 +5889,6 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
             }
         }
         return "";
-
     }
     
     updateHelp(){
@@ -5768,6 +5898,19 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
     }
 
 
+    processOk(){
+        if (this.isCurrentItemEnabled()) {
+            this.playOkSound();
+            this.updateInputData();
+            this.deactivate();
+            this.callOkHandler();
+        } else {
+            this.playBuzzerSound();
+        }    
+    }
+    callOkHandler(){
+
+    }
     // drawAllItems(){
     //     const maxItems = this.keyboard().numButtons();
     //     const ENTER_JIS =KEYS.ENTER_JIS;
@@ -6056,18 +6199,29 @@ if(Utils.RPGMAKER_NAME =="MV"){
 
 }
 
-class Mano_InputConfigExport{
-    gotoKey(){
-        SceneManager.push(Mano_InputConfig.Scene_KeyConfig );
-    }
-    /**
-     * 
-     * @param {string} symbol 
-     */
-    GetButtonNameMV(symbol){
-        return GetButtonNameMV(symbol);
-    }
-}
+// class Mano_InputConfigExport{
+//     get Scene_KeyConfig(){
+//         return Scene_KeyConfig_V10;
+//     }
+//     get Scene_GamepadConfig(){
+//         return Scene_GamepadConfig_V8;
+//     }
+//     gotoKey(){
+//         SceneManager.push(Mano_InputConfig.Scene_KeyConfig );
+//     }
+//     gotoGamepad(){
+//         SceneManager.push(Mano_InputConfig.Scene_GamepadConfig );
+//     }
+//     /**
+//      * 
+//      * @param {string} symbol 
+//      */
+//     GetButtonNameMV(symbol){
+//         return GetButtonNameMV(symbol);
+//     }
+// }
+
+// return new Mano_InputConfigExport();
 
 const exportClass ={
     //MV用・ヘルプへの記載予定なし
@@ -6085,9 +6239,7 @@ const exportClass ={
         SceneManager.push(Mano_InputConfig.Scene_KeyConfig );
     },
     gotoGamepad:function(){
-        SceneManager.push(Scene_GamepadConfig_V8 );
-
-        //SceneManager.push(Mano_InputConfig.Scene_GamepadConfig );
+        SceneManager.push(Mano_InputConfig.Scene_GamepadConfig );
     },
 };
 
