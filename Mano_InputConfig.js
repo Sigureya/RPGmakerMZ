@@ -2802,6 +2802,13 @@ class DeviceLayout extends I_DeviceLayout{
     currentLayout(){
         return this._list[this._index];
     }
+    currentLayoutName(){
+        const layout = this.currentLayout();
+        if(layout){
+            return layout.name();
+        }
+        return "";
+    }
     currentDeviceSymbol(){
         const device=this.currentLayout();
         if(device){
@@ -3102,11 +3109,12 @@ class GamepadButtonObj extends I_InputButton{
 /**
  * @typedef {Object} keylayoutItem
  * @property {()=>string} name
- * @property {()=>number} keycord
- * @property {()=>number} mapperId
+ * @property {()=>number} mapperId keycordと同じ
  * @property {()=>boolean} isCommand
  * @property {()=>boolean} isBig
  * @property {()=>string} helpText
+ * @property {()=>boolean} isEnabled
+ * @property {()=>string} handle
  */
 
 //キーボードのキーを表現するクラス
@@ -3166,6 +3174,9 @@ class Key_Command {
             MultiLanguageText.create(obj.text),
             Number(obj.width)
         );
+    }
+    isEnabled(){
+        return true;
     }
     width(){
         return this._widthEx;
@@ -3241,15 +3252,25 @@ class Key_Command {
     }
 }
 
-class Key_Char extends Key_Base{
+
+class Key_Char{
     /**
      * @param {string} char_ 
      * @param {number} code 
      */
     constructor(char_,code){
-        super();
+        //super();
         this._char = char_;
         this._code = code;
+    }
+    mapperId(){
+        return this._code;
+    }
+    isCommand(){
+        return false;
+    }
+    handle(){
+        return "key";
     }
     char_(){
         return this._char;
@@ -3270,6 +3291,10 @@ class Key_Char extends Key_Base{
     }
     helpText(){
         return "";
+    }
+    isEnabled(){
+        //Enter,上下左右以外
+        return  (this._code < 37 || 40 < this._code) && this._code !==13 ;
     }
 }
 /**
@@ -3432,9 +3457,22 @@ class KeyboardObject extends InputDeviceBase{
     currentMapper(){
         return Input.keyMapper;
     }
+    currentLayoutName(){
+        return this._selector.currentLayoutName()
+    }
 
 
 
+
+}
+
+class KeyboardTemporay{
+    isValidMapper(){
+        return true;
+    }
+    layoutName(){
+        return "";
+    }
 
 }
 
@@ -5833,7 +5871,7 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
      * @param {keylayoutItem} item 
      */
     symbolObject(item){
-        return this._mapper.findObjectByCode(item.keycord());
+        return this._mapper.findObjectByCode(item.mapperId());
     }
     lineHeight(){
         return 24;
@@ -5870,7 +5908,11 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
     redrawApplyCommand(){
         this.redrawItem(95);
     }
-    
+    layoutHelpText(){
+        return "キー配列の名前";
+
+//        return setting.Keyboard.
+    }
     /**
      * @this {Readonly<Window_KeyConfig_MA_V10>}
      * @param {number} index 
@@ -5878,15 +5920,19 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
      */
     getHelpText(index){
         const item = this.itemAt(index);
-        if(item){
-            if(item.isCommand()){
-                return item.helpText();
-            }
+        if(!item){
+            return ""
+        }
+        if(item ===setting.command.keylayout()){
+            return this.layoutHelpText();
+        }
+        if(item.isCommand()){
+            return item.helpText();
+        }
 
-            const obj= this.symbolObject(item);
-            if(obj){
-                return obj.helpText();
-            }
+        const obj= this.symbolObject(item);
+        if(obj){
+            return obj.helpText();
         }
         return "";
     }
@@ -5896,20 +5942,35 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
 
         this._helpWindow.setText(text);
     }
+    isOkEnabled(){
+        return true;
+    }
 
+    isCurrentItemEnabled(){
+        const item = this.currentItem();
+        if(!item){
+            return false;
+        }
+        //保存
+
+        //キー
+
+
+        return item.isEnabled();
+    }
 
     processOk(){
         if (this.isCurrentItemEnabled()) {
-            this.playOkSound();
+            //this.playOkSound();
             this.updateInputData();
             this.deactivate();
-            this.callOkHandler();
+            const item = this.currentItem();
+            if(item){
+                this.callHandler(item.handle());
+            }
         } else {
             this.playBuzzerSound();
         }    
-    }
-    callOkHandler(){
-
     }
     // drawAllItems(){
     //     const maxItems = this.keyboard().numButtons();
@@ -5967,6 +6028,7 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
     createAllWindows(){
         this.createHelpWindow();
         this.createKeyboardWindow();
+        this.createSymbolListWindow();
 
         this.linkWindow();
     }
@@ -5979,7 +6041,7 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         const mainAreaHeight=InputConfigManager.getWorkaround().mainAreaHeigth(this);
         return mainAreaHeight- this.mainWindowHeight();
     }
-    createSymbolListRect(){
+    symbolListRect(){
         const width =Graphics.boxWidth;
         const height = this.symbolListHeight();
         const x =0;
@@ -5988,7 +6050,7 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         return new Rectangle(x,y,width,height);
     }
     createSymbolListWindow(){
-        const rect = this.createSymbolListRect();
+        const rect = this.symbolListRect();
         const sw = new Window_InputSymbolList(rect);
         sw.setHandler("ok",this.onSymbolOk.bind(this));
         this._symbolListWindow=sw;
@@ -6006,7 +6068,7 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         return new Rectangle(x,y,width,height);
     }
     mainWindowHeight(){
-        return 290;
+        return 288;
         //return this.calcWindowHeight(8,true);
     }
 
@@ -6015,7 +6077,7 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         const kw = new Window_KeyConfig_MA_V10(rect);
         kw.setHandler("cancel",this.onKeyboardCancel.bind(this));
         kw.refresh();
-        this._keyConfigWindow=kw;        
+        this._keyConfigWindow=kw;
         this.addWindow(kw);
     }
     onKeyboardCancel(){
@@ -6029,6 +6091,12 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
     createCommandWindow(){
         const rect =this.commandWindowRect();
         const cw = new Window_KeyCommand(rect);
+
+    }
+    onKey(){
+        const item = this._keyConfigWindow.currentItem();
+
+
 
     }
     onApply(){
