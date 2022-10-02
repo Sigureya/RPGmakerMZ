@@ -3294,7 +3294,7 @@ class Key_Char{
     }
     isEnabled(){
         //Enter,上下左右以外
-        return  (this._code < 37 || 40 < this._code) && this._code !==13 ;
+        return  (this._code < 37 || 40 < this._code) && this._code !==13 && this._code !==0 ;
     }
 }
 /**
@@ -5952,8 +5952,10 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
             return false;
         }
         //保存
+        if(item ===setting.command.apply()){
+            return this._mapper.isValidMapper();
+        }
 
-        //キー
 
 
         return item.isEnabled();
@@ -5961,7 +5963,7 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
 
     processOk(){
         if (this.isCurrentItemEnabled()) {
-            //this.playOkSound();
+            this.playOkSound();
             this.updateInputData();
             this.deactivate();
             const item = this.currentItem();
@@ -6035,6 +6037,7 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
     linkWindow(){
         this._keyConfigWindow.setHelpWindow(this._helpWindow);
         this._keyConfigWindow.activate();
+        this._symbolListWindow.setHelpWindow(this._helpWindow);
     }
 
     symbolListHeight(){
@@ -6053,11 +6056,16 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         const rect = this.symbolListRect();
         const sw = new Window_InputSymbolList(rect);
         sw.setHandler("ok",this.onSymbolOk.bind(this));
+        sw.setHandler("cancel",this.onSymbolCancel.bind(this));
         this._symbolListWindow=sw;
         this.addWindow(sw);
     }
     onSymbolOk(){
 
+    }
+    onSymbolCancel(){
+        this._symbolListWindow.deselect();
+        this._keyConfigWindow.activate();
     }
 
     mainWindowRect(){
@@ -6076,6 +6084,7 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         const rect = this.mainWindowRect();
         const kw = new Window_KeyConfig_MA_V10(rect);
         kw.setHandler("cancel",this.onKeyboardCancel.bind(this));
+        kw.setHandler("key",this.onKey.bind(this));
         kw.refresh();
         this._keyConfigWindow=kw;
         this.addWindow(kw);
@@ -6095,9 +6104,15 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
     }
     onKey(){
         const item = this._keyConfigWindow.currentItem();
-
-
-
+        this._symbolListWindow.activate();
+        if(item){
+            const symbol= this._keyConfigWindow.symbolObject(item);
+            if(symbol){
+                this._symbolListWindow.selectSymbol(symbol.symbol());
+                return;
+            }
+        }
+        this._symbolListWindow.select(0);            
     }
     onApply(){
         if(this._keyConfigWindow.isValidMapper()){
