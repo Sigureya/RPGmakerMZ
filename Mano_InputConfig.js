@@ -1066,7 +1066,6 @@ class Scene_MenuBaseMVMZ extends Scene_MenuBase{
 }
 
 /**
- * 
  * @param {InputMapperType} obj 
  */
 function objectClone(obj){
@@ -1744,8 +1743,14 @@ class EventCaller{
      * @param {Number} triggereType 
      */
     constructor(eventId,triggereType){
+        /**
+         * @readonly
+         */
         this._eventId = eventId;
-        this._inputType = triggereType;
+        /**
+         * @readonly
+         */
+         this._inputType = triggereType;
     }
     /**
      * @param {String} objText 
@@ -2973,16 +2978,17 @@ class MainGamepadMapper extends MainMapperBase{
     }
 }
 
-class DefaultMapper extends I_ReadonlyMapper{
+class DefaultMapper {
     /**
      * 
      * @param {InputMapperType} obj 
      */
     constructor(obj){
-        super();
+        //super();
         this._mapper= ( objectClone(obj));
     }
     mapper(){
+        
         return this._mapper;
     }
     cloneMapper(){
@@ -3479,17 +3485,6 @@ class KeyboardTemporay{
 
 }
 
-/**
- * 
- * @param {Key_Command} cmd 
- * @param {Array<keylayoutItem>} keys 
- */
-function ppp(cmd,keys){
-    const length = cmd.width();
-    for(let i=0; i < length; ++i){
-        keys.push(cmd)
-    }
-}
 
 /**
  * @param {Key_CommandManager_T} cmd 
@@ -3497,12 +3492,13 @@ function ppp(cmd,keys){
  */
 function pushCommad(cmd,keys){
 
-    ppp(cmd.apply(),keys);
-    ppp(cmd.wasd(),keys);
-
-    ppp(cmd.reset(),keys);
-    ppp(cmd.buttonLayout(),keys);
-    ppp(cmd.exit(),keys);
+    const list= [cmd.apply(),cmd.wasd(),cmd.reset(),cmd.keylayout(),cmd.exit()];
+    for (const iterator of list) {
+        const length =iterator.width();
+        for(let i=0; i < length; ++i){
+            keys.push(iterator);
+        }
+    }
 }
 
 /**
@@ -4270,15 +4266,20 @@ class InputConfigManager_T{
          */
         this._saveData=null;
         this._defaultGamepad =null;
+        this._defaultKeyborad =null;
     }
     getWorkaround(){
         return this._readonly.workaround();
     }
     makeDefaultMapper(){
+        this._defaultKeyborad =new DefaultMapper(Input.keyMapper);
         this._defaultGamepad= new DefaultMapper(Input.gamepadMapper);
     }
     defaultGamepadMapper(){
         return this._defaultGamepad;
+    }
+    defaultKeyMapper(){
+        return this._defaultKeyborad;
     }
 
     /**
@@ -4974,6 +4975,10 @@ class Window_InputSymbolListBase extends Window_Selectable_InputConfigVer{
     isCurrentItemEnabled(){
         return this.isItemEnabled(this._index);
     }
+    /**
+     * @private
+     * @returns 
+     */
     currentItemIsDeleter(){
         const item = this.symbolObject(this.index());
         if(item){
@@ -5698,14 +5703,6 @@ function createButtonLayoutChangeCommand(){
     const command = new Key_Command("ButtonLayout",mText,3);
     return command;
 }
-const WASD_KEYMAP={
-    81:"pageup",    //Q
-    69:"pagedown",  //E
-    87:"up",        //W
-    65:"left",      //A
-    83:"down",      //S
-    68:"right",     //D
-};
 
 
 
@@ -5828,19 +5825,61 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
      */
     initialize(rect){
         this._commandWindow=null;
-        this.setMapper( setting.Keyboard.createTemporaryMapper());
+        this._mapper=( setting.Keyboard.createTemporaryMapper());
         super.initialize(rect);
     }
     isValidMapper(){
         return this._mapper.isValidMapper();
     }
     /**
-     * 
-     * @param {TemporaryMappper} mapper 
+     * @param {DefaultMapper} value 
      */
-    setMapper(mapper){
-        this._mapper=mapper;
-
+    resetMapper(value){
+        this._mapper.reset_V2(value);
+        this.refresh();
+    }
+    setupWASD(){
+        /**
+         * @type {Array<{code:number,symbol:string}>}
+         */
+        const WASD= [
+            {code:81,symbol:"pageup"},
+            {code:69,symbol:"pagedown"},
+            {code:87,symbol:"up"},
+            {code:65,symbol:"left"},
+            {code:83,symbol:"down"},
+            {code:68,symbol:"right"}
+        ];
+        for (const iterator of WASD) {
+            this._mapper.executeChangeSymbol(iterator.code,iterator.symbol);
+        }
+        this.refresh();
+    }
+    /**
+     * @param {boolean} wrap 
+     */
+    cursorRight(wrap){
+        const index = this.index();
+        const maxItems = this.maxItems();
+        const maxCols = this.maxCols();
+        const horizontal = this.isHorizontal();
+        const teli =this.itemTallIndex(index);
+        if (maxCols >= 2 && (teli < maxItems - 1 || (wrap && horizontal))) {
+            this.smoothSelect((teli + 1) % maxItems);
+        }    
+    }
+    /**
+     * @param {boolean} wrap 
+     */
+    cursorLeft(wrap){
+        const index = Math.max(0, this.index());
+        const maxItems = this.maxItems();
+        const maxCols = this.maxCols();
+        const horizontal = this.isHorizontal();
+        const head = this.itemHeadIndex((index));
+        if (maxCols >= 2 && (head > 0 || (wrap && horizontal))) {
+            this.smoothSelect((head - 1 + maxItems) % maxItems);
+        }
     }
     maxItems(){
         return setting.Keyboard.numButtons();
@@ -5978,7 +6017,7 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
 
     processOk(){
         if (this.isCurrentItemEnabled()) {
-            this.playOkSound();
+            //this.playOkSound();
             this.updateInputData();
             this.deactivate();
             const item = this.currentItem();
@@ -6067,10 +6106,11 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         this.addWindow(sw);
     }
     onSymbolOk(){
-
-
-
-
+        const symbol =this._symbolWindow.currentSymbolObject();
+        if(symbol){
+            this._keyConfigWindow.changeSymbol(symbol);
+        }
+        SoundManager.playEquip();
         this._symbolWindow.deselect();
         this._keyConfigWindow.activate();
 
@@ -6097,9 +6137,25 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         const kw = new Window_KeyConfig_MA_V10(rect);
         kw.setHandler("cancel",this.onKeyboardCancel.bind(this));
         kw.setHandler("key",this.onKey.bind(this));
+        kw.setHandler("reset",this.onKeyboardReset.bind(this));
+        kw.setHandler(setting.command.keylayout().handle(),this.onKeyLayout.bind(this));
+        kw.setHandler(setting.command.wasd().handle(),this.onKeyWASD.bind(this));
         kw.refresh();
         this._keyConfigWindow=kw;
         this.addWindow(kw);
+    }
+    onKeyWASD(){
+        SoundManager.playEquip();
+        this._keyConfigWindow.setupWASD();
+        this._keyConfigWindow.activate();
+    }
+    onKeyboardReset(){
+        SoundManager.playEquip();
+        this._keyConfigWindow.resetMapper(InputConfigManager.defaultKeyMapper());
+        this._keyConfigWindow.activate();
+
+
+
     }
     onKeyboardCancel(){
         this.popScene();
@@ -6109,12 +6165,8 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         const y = this.mainAreaTop() + this.mainWindowHeight();
         return new Rectangle(0,y,Graphics.boxWidth,height);
     }
-    createCommandWindow(){
-        const rect =this.commandWindowRect();
-        const cw = new Window_KeyCommand(rect);
-
-    }
     onKey(){
+        this._keyConfigWindow.playOkSound();
         const item = this._keyConfigWindow.currentItem();
         this._symbolWindow.activate();
         if(item){
@@ -6125,6 +6177,9 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
             }
         }
         this._symbolWindow.select(0);            
+    }
+    onKeyLayout(){
+
     }
     onApply(){
         if(this._keyConfigWindow.isValidMapper()){
@@ -6195,8 +6250,6 @@ function setupDefaultMapper(){
     //MVでの挙動が怪しい予感はする
     symbolManager.onBoot();
     //TODO:これの型を変更する 変数の保存場所も変更する
-    //Mano_InputConfig.defaultGamepadMapper =Object.freeze( objectClone(Input.gamepadMapper));
-    //Mano_InputConfig.defaultKeyMapper= Object.freeze(objectClone(Input.keyMapper));
     InputConfigManager.makeDefaultMapper();
 }
 const DataManager_loadDatabase=DataManager.loadDatabase;
