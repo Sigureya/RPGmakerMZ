@@ -3294,7 +3294,10 @@ class Key_Char{
     }
     isEnabled(){
         //Enter,上下左右以外
-        return  (this._code < 37 || 40 < this._code) && this._code !==13 && this._code !==0 ;
+        return  (this._code < 37 || 40 < this._code) && this._code > 17;
+            // this._code !==17 &&
+            // this._code !==13 && 
+            // this._code !==0 ;
     }
 }
 /**
@@ -4432,7 +4435,7 @@ class TemporaryMappperBase extends I_ReadonlyMapper{
      * @param {Number} code 
      * @param {String} symbol 
      */
-    change(code,symbol){
+    executeChangeSymbol(code,symbol){
 
     }
     /**
@@ -4504,16 +4507,32 @@ class TemporaryMappper extends TemporaryMappperBase{
      * @param {Number} code 
      * @param {String} symbol 
      */
-    change(code,symbol){
+    executeChangeSymbol(code,symbol){
         this._map.set( Number(code),symbol);
     }
+
     /**
      * 
+     * @param {I_InputButton} button 
+     * @param {I_SymbolDefine} symbol 
+     */
+    needsRirite(button,symbol){
+        const obj= this._map.get(button.mapperId());
+        return obj !==symbol.symbol();
+    }
+    /**
+     * @returns {boolean} 内部の更新を行ったかどうか
      * @param {I_InputButton} botton 
      * @param {I_SymbolDefine} symbolObject 
      */
-    change_V8(botton,symbolObject){
-        this.change(botton.mapperId(),symbolObject.symbol());
+    change(botton,symbolObject){
+        if(this.needsRirite(botton,symbolObject)){
+            this.executeChangeSymbol(botton.mapperId(),symbolObject.symbol());
+            return true;
+        }
+        return false;
+
+
     }
     createNormalizedMapper(){
         /**
@@ -5385,9 +5404,10 @@ class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
         if(button && symbol){
             SoundManager.playEquip();
             //書き換えを行う
-            mapper.change_V8(button,symbol);
-            //gamepadWindowを再描画
-            this._gamepadWindow.refresh();
+            if(mapper.change(button,symbol)){
+                //gamepadWindowを再描画
+                this._gamepadWindow.refresh();
+            }
         }
         //制御を移す
         this._sybmolWindow.deselect();
@@ -5635,7 +5655,7 @@ class Scene_InputConfigBase_MA extends Scene_MenuBaseMVMZ{
 
         const symbolString = symbol.symbol();
         if(mapper.canSymbolChange(symbolString,code)){
-            mapper.change(code,symbolString);
+            mapper.executeChangeSymbol(code,symbolString);
             this.redrawXXX();
         }
     }
@@ -5808,37 +5828,32 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
      */
     initialize(rect){
         this._commandWindow=null;
-        this._mapper = setting.Keyboard.createTemporaryMapper();
+        this.setMapper( setting.Keyboard.createTemporaryMapper());
         super.initialize(rect);
     }
     isValidMapper(){
         return this._mapper.isValidMapper();
     }
+    /**
+     * 
+     * @param {TemporaryMappper} mapper 
+     */
+    setMapper(mapper){
+        this._mapper=mapper;
+
+    }
     maxItems(){
         return setting.Keyboard.numButtons();
     }
-    // /**
-    //  * @param {boolean} wrap 
-    //  */
-    // cursorDown(wrap){
-    //     const index =this.index();
-    //     super.cursorDown(wrap);
-    //     if(index===this.index()){
-    //         this.callHandler("cursorout")
-    //     }
-    // }
-    // /**
-    //  * @param {()=>void} func 
-    //  */
-    // setCursorOutHandler(func){
-    //     this.setHandler("cursorout",func);
-    // }
+    keyboard(){
+        return setting.Keyboard;
+    }
     /**
      * @param {number} index 
      * @returns 
      */
     itemAt(index){
-        return setting.Keyboard.buttonAt(index);
+        return this.keyboard().buttonAt(index);
     }
     /**
      * @param {number} index 
@@ -5974,26 +5989,17 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
             this.playBuzzerSound();
         }    
     }
-    // drawAllItems(){
-    //     const maxItems = this.keyboard().numButtons();
-    //     const ENTER_JIS =KEYS.ENTER_JIS;
-    //     for (let i = 0; i < maxItems; i++) {
-
-    //         const rect = this.itemRect(i);
-    //         //TODO
-    //         const item = this.itemAt(i);
-    //         const nextItem =this.itemAt(i+1);
-    //         if(item ===ENTER_JIS){
-                
-
-    //         }
-
-    //         for(let aaaa =0 ; aaaa <0 ;++aaaa){
-
-    //         }
-    //         this.drawItem(i);
-    //     }
-    // }
+    /**
+     * @param {I_SymbolDefine} newSymbol 
+     */
+    changeSymbol(newSymbol){
+        const key = this.currentItem();
+        if(!key.isCommand()){
+            if(this._mapper.change(key,newSymbol)){
+                this.refresh();
+            }
+        }
+    }
 }
 
 class Window_KeyCommand extends Window_Command{
@@ -6020,7 +6026,7 @@ class Window_KeyCommand extends Window_Command{
 class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
     constructor(){
         super();
-        this._symbolListWindow =null;
+        this._symbolWindow =null;
         this._keyConfigWindow=null;
     }
     create(){
@@ -6037,7 +6043,7 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
     linkWindow(){
         this._keyConfigWindow.setHelpWindow(this._helpWindow);
         this._keyConfigWindow.activate();
-        this._symbolListWindow.setHelpWindow(this._helpWindow);
+        this._symbolWindow.setHelpWindow(this._helpWindow);
     }
 
     symbolListHeight(){
@@ -6057,14 +6063,20 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         const sw = new Window_InputSymbolList(rect);
         sw.setHandler("ok",this.onSymbolOk.bind(this));
         sw.setHandler("cancel",this.onSymbolCancel.bind(this));
-        this._symbolListWindow=sw;
+        this._symbolWindow=sw;
         this.addWindow(sw);
     }
     onSymbolOk(){
 
+
+
+
+        this._symbolWindow.deselect();
+        this._keyConfigWindow.activate();
+
     }
     onSymbolCancel(){
-        this._symbolListWindow.deselect();
+        this._symbolWindow.deselect();
         this._keyConfigWindow.activate();
     }
 
@@ -6104,15 +6116,15 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
     }
     onKey(){
         const item = this._keyConfigWindow.currentItem();
-        this._symbolListWindow.activate();
+        this._symbolWindow.activate();
         if(item){
             const symbol= this._keyConfigWindow.symbolObject(item);
             if(symbol){
-                this._symbolListWindow.selectSymbol(symbol.symbol());
+                this._symbolWindow.selectSymbol(symbol.symbol());
                 return;
             }
         }
-        this._symbolListWindow.select(0);            
+        this._symbolWindow.select(0);            
     }
     onApply(){
         if(this._keyConfigWindow.isValidMapper()){
