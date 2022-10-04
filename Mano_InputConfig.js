@@ -3331,12 +3331,12 @@ function keyinfo(char,code){
 function keylocked(char,code){
     return new Key_Char(char,code);
 }
-
 const KEYS={
     NULL:keyinfo("",0),
     ENTER:keyinfo("Enter",13),
     ENTER_JIS:keyinfo("Enter",13),
     ENTER_NULL:keyinfo("",13),
+    ENTER_US:keyinfo("Enter",13),
     SPACE:keyinfo("Space",32),
     SHIFT:keylocked('Shift',16),
     CTRL:keylocked('CTRL',17),
@@ -3469,6 +3469,12 @@ class KeyboardObject extends InputDeviceBase{
     currentLayoutName(){
         return this._selector.currentLayoutName()
     }
+    currentLayout(){
+        return this._selector.currentLayout();
+    }
+    layoutSelector(){
+        return this._selector;
+    }
 
 
 
@@ -3580,7 +3586,7 @@ function pushCommad(cmd,keys){
         KEYS.DOT,
         KEYS.SLASH,
         
-        KEYS.NULL,
+        KEYS.SHIFT,
         KEYS.SHIFT,
         KEYS.UP,
         KEYS.NULL,
@@ -3730,6 +3736,118 @@ function createJIS_Keyboard(command){
     return KEY_LAYOUT_JIS;
 }
 
+function createFR_Keyboard(command){
+    /**
+     * @type {Array<keylayoutItem>}
+     */
+     const KEY_LAYOUT_AZERTY =[
+        KEYS.ESC,
+        KEYS._1 ,
+        KEYS._2 ,
+        KEYS._3 ,
+        KEYS._4, 
+        KEYS._5, 
+        KEYS._6, 
+        KEYS._7, 
+        KEYS._8, 
+        KEYS._9, 
+        KEYS._0, 
+        KEYS.MINUS,
+        KEYS.CARET,
+        KEYS.INSERT ,
+        KEYS.BACK ,
+        KEYS.HOME ,
+        KEYS.END ,
+        KEYS.PAGEUP ,
+        KEYS.PAGEDOWN ,
+
+        KEYS.TAB,
+
+        KEYS.A ,
+        KEYS.Z ,
+        KEYS.E ,
+        KEYS.R ,
+        KEYS.T ,
+        KEYS.Y ,
+        KEYS.U ,
+        KEYS.I ,
+        KEYS.O ,
+        KEYS.P ,
+        KEYS.ATMARK,
+        KEYS.SQUARE_BRACKETS_OPEN,
+        KEYS.ENTER_JIS,
+        KEYS.ENTER_JIS,
+        KEYS.TENKEY7 ,
+        KEYS.TENKEY8 ,
+        KEYS.TENKEY9 ,
+        KEYS.TENKEY_MINUS,
+        KEYS.NULL,
+        KEYS.Q ,
+        KEYS.S ,
+        KEYS.D ,
+        KEYS.F ,
+        KEYS.G ,
+        KEYS.H ,
+        KEYS.J ,
+        KEYS.K ,
+        KEYS.L ,
+        KEYS.M,
+        KEYS.COLON,
+        KEYS.SQUARE_BRACKETS_CLOSE, 
+        KEYS.ENTER_JIS,
+        KEYS.ENTER_JIS,
+        KEYS.TENKEY4 ,
+        KEYS.TENKEY5 ,
+        KEYS.TENKEY6 ,
+        KEYS.TENKEY_PLUS,
+
+        KEYS.SHIFT ,
+        KEYS.W ,
+        KEYS.X ,
+        KEYS.C ,
+        KEYS.V ,
+        KEYS.B ,
+        KEYS.N ,
+        KEYS.NULL ,
+        KEYS.COMMA,
+        KEYS.DOT,
+        KEYS.SLASH,
+        
+        KEYS.BACKSLASH,
+        KEYS.SHIFT,
+        KEYS.UP,
+        KEYS.NULL,
+        
+        KEYS.TENKEY1 ,
+        KEYS.TENKEY2 ,
+        KEYS.TENKEY3 ,
+        KEYS.NULL,
+
+        KEYS.CTRL  ,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.SPACE,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.NULL,
+        KEYS.LEFT,
+        KEYS.DOWN,
+        KEYS.RIGHT,
+        KEYS.TENKEY0,
+        KEYS.TENKEY0,
+        KEYS.TENKEY_DOT,
+        KEYS.NULL,
+    ];
+    pushCommad(command,KEY_LAYOUT_AZERTY);
+
+    return KEY_LAYOUT_AZERTY;
+}
+
 /**
  * 
  * @param {Key_CommandManager_T} command 
@@ -3738,12 +3856,13 @@ function createJIS_Keyboard(command){
 function createKeyboard(command){
     const jisKey = createJIS_Keyboard(command);
     const uskey = createUS_Keyboard(command);
+    const frKey =createFR_Keyboard(command);
 
     const US =createKeyboardLayout(uskey,"US","en-US");
     const JIS =createKeyboardLayout(  jisKey,"JIS","ja_JP");
-    const AZERTY=createKeyboardLayout([],"AZERTY","fr_FR");
+    const AZERTY=createKeyboardLayout(frKey,"AZERTY","fr_FR");
 
-    const select = new LayoutSelecter([JIS,US]);
+    const select = new LayoutSelecter([JIS,US,AZERTY]);
 
     return new KeyboardObject(select);
 }
@@ -5399,9 +5518,22 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
      * @param {Rectangle} rect 
      */
     initialize(rect){
-        this._commandWindow=null;
+        //this._commandWindow=null;
         this._mapper=( setting.Keyboard.createTemporaryMapper());
+        this._layout = setting.Keyboard.currentLayout();
         super.initialize(rect);
+    }
+    /**
+     * @param {DeviceLayout<keylayoutItem>} layout 
+     */
+    setLayout(layout){
+        this._layout=layout;
+        this.refresh();
+    }
+    changeNextLayout(){
+        const selector = setting.Keyboard.layoutSelector();
+        selector.changeNext();
+        this.setLayout(selector.currentLayout())
     }
     isValidMapper(){
         return this._mapper.isValidMapper();
@@ -5411,6 +5543,14 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
      */
     resetMapper(value){
         this._mapper.reset_V2(value);
+        this.refresh();
+    }
+    /**
+     * 
+     * @param {DeviceLayout<keylayoutItem>} layout 
+     */
+    setKeyLayout(layout){
+
         this.refresh();
     }
     setupWASD(){
@@ -5457,17 +5597,14 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
         }
     }
     maxItems(){
-        return setting.Keyboard.numButtons();
-    }
-    keyboard(){
-        return setting.Keyboard;
+        return this._layout.numButtons();
     }
     /**
      * @param {number} index 
      * @returns 
      */
     itemAt(index){
-        return this.keyboard().buttonAt(index);
+        return this._layout.button(index);
     }
     /**
      * @param {number} index 
@@ -5754,6 +5891,10 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         this._symbolWindow.select(0);            
     }
     onKeyLayout(){
+        SoundManager.playEquip();
+        this._keyConfigWindow.changeNextLayout();
+        this._keyConfigWindow.activate();
+
 
     }
     onApply(){
