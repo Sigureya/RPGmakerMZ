@@ -158,10 +158,6 @@
  * @type struct<MultiLangNote>
  * @default {"jp":"\"コンフィグを終了するために、\\nボタンから手を放してください。\"","en":"\"Release the button to exit the config.\""}
  * 
- * @param apply
- * @text 設定の保存/apply
- * @type struct<KeyconfigCommand>
- * @default {"width":"4","text":"{\"jp\":\"設定を保存\",\"en\":\"save settings\"}"}
  * 
  * 
  * @param saveCommand
@@ -201,16 +197,6 @@
  * @type struct<MultiLangString>
  * @default {"en":"reset","jp":"初期設定に戻す"}
  * @parent resetCommand
- * 
- * @param reset
- * @text 初期設定に戻す/reset
- * @type struct<KeyconfigCommand>
- * @default {"width":"4","text":"{\"jp\":\"初期設定に戻す\",\"en\":\"reset\"}"}
- * 
- * 
- * @param WASD
- * @type struct<KeyconfigCommand>
- * @default {"width":"3","text":"{\"jp\":\"WASD\",\"en\":\"WASD\"}"}
  * 
  * 
  * @param WASDCommand
@@ -4260,7 +4246,7 @@ function createCommandV2(handlerName,name_mText,width,helpText_mText){
 function createCommandManager(){
     const params = getParam();
     const save =createCommandV2("apply",params.saveCommand,params.saveCommandWidth,params.saveDescription);
-    const apply =Key_Command.create(params.apply,"apply");
+    //const apply =Key_Command.create(params.apply,"apply");
     const wasd= createCommandV2("WASD",params.WASDCommand,(params.WASDwidth),params.WASDhelp)
     const exit=Key_Command.create(params.exit,"exit");
     const resetV2 =createCommandV2("reset",params.resetCommand,params.resetWidth,params.resetDescription);
