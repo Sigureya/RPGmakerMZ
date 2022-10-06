@@ -163,6 +163,7 @@
  * @type struct<KeyconfigCommand>
  * @default {"width":"4","text":"{\"jp\":\"設定を保存\",\"en\":\"save settings\"}"}
  * 
+ * 
  * @param saveCommand
  * @text 設定の保存/SaveSetting
  * @type struct<MultiLangString>
@@ -187,24 +188,46 @@
  * @type struct<KeyconfigCommand>
  * @default {"width":"4","text":"{\"jp\":\"変更前に戻す\",\"en\":\"rollback\"}"}
  * 
+ * @param resetCommand
+ * @type struct<MultiLangString>
+ * @default {"en":"reset","jp":"初期設定に戻す"}
+ * 
+ * @param resetWidth
+ * @type number
+ * @default 4
+ * @parent resetCommand
+ * 
+ * @param resetDescription
+ * @type struct<MultiLangString>
+ * @default {"en":"reset","jp":"初期設定に戻す"}
+ * @parent resetCommand
+ * 
  * @param reset
  * @text 初期設定に戻す/reset
  * @type struct<KeyconfigCommand>
  * @default {"width":"4","text":"{\"jp\":\"初期設定に戻す\",\"en\":\"reset\"}"}
  * 
- * @param restWidth
- * @type number
- * @default 4
  * 
  * @param WASD
  * @type struct<KeyconfigCommand>
  * @default {"width":"3","text":"{\"jp\":\"WASD\",\"en\":\"WASD\"}"}
-
+ * 
+ * 
+ * @param WASDCommand
+ * @type struct<MultiLangString>
+ * @default {"en":"WASD","jp":"WASD"}
 
  * @param WASDwidth
+ * @text WASD Command Width
  * @type number
  * @default 3
-
+ * @parent WASDCommand
+ * 
+ * @param WASDhelp
+ * @type struct<MultiLangString>
+ * @default {"en":"seve setting","jp":"設定を保存"}
+ * @parent WASDCommand
+ * 
  * @param styleWidth
  * @type number
  * @default 3
@@ -212,6 +235,21 @@
  * @param style
  * @type struct<KeyconfigCommand>
  * @default {"width":"3","text":"{\"jp\":\"設定方法変更\",\"en\":\"Change setting style\"}"}
+ * 
+ * @param changeKeyLayoutCommand
+ * @text キー配置/KeyLayout
+ * @type struct<MultiLangString>
+ * @default {"jp":"キー配置","en":"Key Layout"}
+ * 
+ * @param changeKeyLayoutCommandWidth
+ * @type number
+ * @default 3
+ * @parent changeKeyLayoutCommand
+ * 
+ * @param changeKeyLayoutDescription
+ * @type struct<MultiLangString>
+ * @default {"en":"seve setting","jp":"設定を保存"}
+ * 
  * 
  * @param changeLayout
  * @text JIS/US
@@ -3117,7 +3155,6 @@ class GamepadButtonObj extends I_InputButton{
  * @property {()=>string} name
  * @property {()=>number} mapperId keycordと同じ
  * @property {()=>boolean} isCommand
- * @property {()=>boolean} isBig
  * @property {()=>string} helpText
  * @property {()=>boolean} isEnabled
  * @property {()=>string} handle
@@ -3161,11 +3198,13 @@ class Key_Command {
      * @param {String} handlerName 
      * @param {MultiLanguageText} mtext 
      * @param {Number} width 
+     * @param {MultiLanguageText} helpText
      */
-    constructor(handlerName,mtext,width){
+    constructor(handlerName,mtext,width,helpText){
         this._callBackHandle =handlerName;
         this._widthEx =width;
         this._mtext = mtext;
+        this._helpText =helpText;
     }
     /**
      * 
@@ -3178,7 +3217,8 @@ class Key_Command {
         return new Key_Command(
             handler,
             MultiLanguageText.create(obj.text),
-            Number(obj.width)
+            Number(obj.width),
+            null
         );
     }
     isEnabled(){
@@ -3187,11 +3227,8 @@ class Key_Command {
     width(){
         return this._widthEx;
     }
-    isBig(){
-        return this.width() >1;
-    }
-    // get char(){
-    //     return this._mtext.currentName();
+    // isBig(){
+    //     return this.width() >1;
     // }
     text(){
         return this.name();
@@ -3201,12 +3238,6 @@ class Key_Command {
         return this._mtext.currentName();
     }
 
-    get isLink(){
-        return this._widthEx >1;
-    }
-    get locked(){
-        return false;
-    }
     keycord(){
         return 0;
     }
@@ -3290,6 +3321,11 @@ class Key_Char{
     numLines(){
         return 2;
     }
+    //TODO:使うかわからない
+    /**
+     * @private
+     * @returns 
+     */
     isBig(){
         return this._code ===96  //tenkey0
             || this._code===13   //enter
@@ -4127,18 +4163,18 @@ class Key_CommandManager_T{
      * @param {Key_Command} wasd 
      * @param {Key_Command} exit 
      * @param {Key_Command} reset 
-     * @param {Key_Command} changeLayout 
+     * @param {Key_Command} changeButtonLayout 
+     * @param {Key_Command} changeKeyLayout
      */
-    constructor(apply,wasd,exit,reset,changeLayout){
-        const params = getParam();
+    constructor(apply,wasd,exit,reset,changeButtonLayout,changeKeyLayout){
+        //const params = getParam();
         this._apply =apply;
         this._wasd=wasd;
         this._exit=exit;
         this._reset=reset;
         //this._alt = Key_Command.create(params.style,"ALT");
-        this._changeButtonLayout =changeLayout;
-        this._changeLayout=Key_Command.create(params.changeLayout,"keylayout");
-
+        this._changeButtonLayout =changeButtonLayout;
+        this._changeLayout=changeKeyLayout;
     }
     buttonLayout(){
         return this._changeButtonLayout;
@@ -4206,15 +4242,33 @@ class Key_CommandManager_T{
         ];
     }
 }
+/**
+ * 
+ * @param {string} handlerName 
+ * @param {string} name_mText 
+ * @param {number} width 
+ * @param {string} helpText_mText 
+ */
+function createCommandV2(handlerName,name_mText,width,helpText_mText){
+    const name =MultiLanguageText.create(name_mText);
+    const help =MultiLanguageText.create(helpText_mText);
+    return new Key_Command(handlerName,name,Number(width),help);
+
+
+}
+
 function createCommandManager(){
     const params = getParam();
+    const save =createCommandV2("apply",params.saveCommand,params.saveCommandWidth,params.saveDescription);
     const apply =Key_Command.create(params.apply,"apply");
-    const wasd=Key_Command.create(params.WASD,"WASD");
+    const wasd= createCommandV2("WASD",params.WASDCommand,(params.WASDwidth),params.WASDhelp)
     const exit=Key_Command.create(params.exit,"exit");
-    const reset=Key_Command.create(params.reset,"reset");
+    const resetV2 =createCommandV2("reset",params.resetCommand,params.resetWidth,params.resetDescription);
+//    const reset=Key_Command.create(params.reset,"reset");
     const changeLayout = createButtonLayoutChangeCommand();
+    const changeKeyLayout = createCommandV2("KeyLayout",params.changeKeyLayoutCommand,params.changeKeyLayoutCommandWidth,params.changeKeyLayoutDescription);
     const cm = new Key_CommandManager_T(
-        apply,wasd,exit,reset,changeLayout
+        save,wasd,exit,resetV2,changeLayout,changeKeyLayout
     );
 
     return cm;
@@ -5394,7 +5448,7 @@ class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
 
 function createButtonLayoutChangeCommand(){
     const mText = new MultiLanguageText("Change button notation","ボタン表記変更");
-    const command = new Key_Command("ButtonLayout",mText,3);
+    const command = new Key_Command("ButtonLayout",mText,3,null);
     return command;
 }
 
@@ -5721,9 +5775,6 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
         if(item ===setting.command.apply()){
             return this._mapper.isValidMapper();
         }
-
-
-
         return item.isEnabled();
     }
 
