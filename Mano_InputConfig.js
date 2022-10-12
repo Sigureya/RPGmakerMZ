@@ -178,12 +178,6 @@
  * @parent saveCommand
  * 
  * 
- * 
- * @param rollback
- * @text 変更を破棄/rollback
- * @type struct<KeyconfigCommand>
- * @default {"width":"4","text":"{\"jp\":\"変更前に戻す\",\"en\":\"rollback\"}"}
- * 
  * @param resetCommand
  * @type struct<MultiLangString>
  * @default {"en":"reset","jp":"初期設定に戻す"}
@@ -213,15 +207,7 @@
  * @type struct<MultiLangString>
  * @default {"en":"seve setting","jp":"設定を保存"}
  * @parent WASDCommand
- * 
- * @param styleWidth
- * @type number
- * @default 3
- * 
- * @param style
- * @type struct<KeyconfigCommand>
- * @default {"width":"3","text":"{\"jp\":\"設定方法変更\",\"en\":\"Change setting style\"}"}
- * 
+ *  
  * @param changeKeyLayoutCommand
  * @text キー配置/KeyLayout
  * @type struct<MultiLangString>
@@ -237,18 +223,23 @@
  * @default {"en":"seve setting","jp":"設定を保存"}
  * 
  * 
- * @param changeLayout
- * @text JIS/US
- * @type struct<KeyconfigCommand>
- * @default {"width":"3","text":"{\"jp\":\"JIS/US\",\"en\":\"JIS/US\"}"}
- * 
- * @param exit
+ * @param exitCommand
  * @text やめる/exit
- * @type struct<KeyconfigCommand>
- * @default {"width":"3","text":"{\"jp\":\"やめる\",\"en\":\"exit\"}"}
+ * @type struct<MultiLangString>
+ * @default {"en":"exit","jp":"保存せずにやめる"}
  * 
- * 
- * 
+ * @param exitWidth
+ * @type number
+ * @default 3
+ * @parent exitCommand
+
+ * @param exitHelp
+ * @text 説明文
+ * @type struct<MultiLangString>
+ * @default {"en":"seve setting","jp":"設定を保存"}
+ * @parent exitCommand
+
+* 
  * @param gamepadConfigCommandText
  * @desc ゲームパッドコンフィグを開くコマンドの名前です
  * @type struct<MultiLangString>
@@ -2765,6 +2756,13 @@ class DeviceLayout extends I_DeviceLayout{
         return this._list.length;
     }
     /**
+     * @param {T_Button} button 
+     * @returns 
+     */
+    lastIndexOf(button){
+        return this._list.lastIndexOf(button);
+    }
+    /**
      * @param {Number} index 
      */
     button(index){
@@ -3271,7 +3269,7 @@ class Key_Command {
     //   }
     // }
     helpText(){
-        return "コマンドのヘルプ";
+        return this._helpText.currentName();
     }
 }
 
@@ -3449,10 +3447,16 @@ const KEYS={
  */
 class KeyboardLayout extends DeviceLayout{
 
+    wasdMapper(){
+
+    }
 }
 
 /**
- * 
+ * @typedef {object} mappingPair
+ * @property {number} code
+ */
+/**
  * @param {ReadonlyArray<keylayoutItem>} keylist 
  * @param {string} name 
  * @param {string} symbol 
@@ -4246,15 +4250,13 @@ function createCommandV2(handlerName,name_mText,width,helpText_mText){
 function createCommandManager(){
     const params = getParam();
     const save =createCommandV2("apply",params.saveCommand,params.saveCommandWidth,params.saveDescription);
-    //const apply =Key_Command.create(params.apply,"apply");
     const wasd= createCommandV2("WASD",params.WASDCommand,(params.WASDwidth),params.WASDhelp)
-    const exit=Key_Command.create(params.exit,"exit");
+    const exit2 =createCommandV2("EXIT",params.exitCommand,params.exitWidth,params.exitHelp)
     const resetV2 =createCommandV2("reset",params.resetCommand,params.resetWidth,params.resetDescription);
-//    const reset=Key_Command.create(params.reset,"reset");
     const changeLayout = createButtonLayoutChangeCommand();
     const changeKeyLayout = createCommandV2("KeyLayout",params.changeKeyLayoutCommand,params.changeKeyLayoutCommandWidth,params.changeKeyLayoutDescription);
     const cm = new Key_CommandManager_T(
-        save,wasd,exit,resetV2,changeLayout,changeKeyLayout
+        save,wasd,exit2,resetV2,changeLayout,changeKeyLayout
     );
 
     return cm;
@@ -5578,6 +5580,9 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
     isValidMapper(){
         return this._mapper.isValidMapper();
     }
+    executeSave(){
+        this._mapper.applyKeyboard();
+    }
     /**
      * @param {DefaultMapper} value 
      */
@@ -5715,9 +5720,7 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
         this.redrawItem(95);
     }
     layoutHelpText(){
-        return "キー配列の名前";
-
-//        return setting.Keyboard.
+        return this._layout.name();
     }
     /**
      * @this {Readonly<Window_KeyConfig_MA_V10>}
@@ -5750,6 +5753,13 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
     }
     isOkEnabled(){
         return true;
+    }
+    selectExit() {
+        const index = this._layout.lastIndexOf(setting.command.exit());
+        this.select(index);
+    }
+    currentItemIsExit(){
+        return this.currentItem() === setting.command.exit();
     }
 
     isCurrentItemEnabled(){
@@ -5834,6 +5844,10 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         this._symbolWindow.setHelpWindow(this._helpWindow);
     }
 
+    playChangeKeySound(){
+        SoundManager.playEquip();
+    }
+
     symbolListHeight(){
         const mainAreaHeight=InputConfigManager.getWorkaround().mainAreaHeigth(this);
         return mainAreaHeight- this.mainWindowHeight();
@@ -5859,7 +5873,7 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         if(symbol){
             this._keyConfigWindow.changeSymbol(symbol);
         }
-        SoundManager.playEquip();
+        this.playChangeKeySound();
         this._symbolWindow.deselect();
         this._keyConfigWindow.activate();
 
@@ -5889,17 +5903,19 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         kw.setHandler("reset",this.onKeyboardReset.bind(this));
         kw.setHandler(setting.command.keylayout().handle(),this.onKeyLayout.bind(this));
         kw.setHandler(setting.command.wasd().handle(),this.onKeyWASD.bind(this));
+        kw.setHandler(setting.command.apply().handle(),this.onApply.bind(this));
         kw.refresh();
         this._keyConfigWindow=kw;
         this.addWindow(kw);
     }
     onKeyWASD(){
+        this.playChangeKeySound();
         SoundManager.playEquip();
         this._keyConfigWindow.setupWASD();
         this._keyConfigWindow.activate();
     }
     onKeyboardReset(){
-        SoundManager.playEquip();
+        this.playChangeKeySound();
         this._keyConfigWindow.resetMapper(InputConfigManager.defaultKeyMapper());
         this._keyConfigWindow.activate();
 
@@ -5907,7 +5923,14 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
 
     }
     onKeyboardCancel(){
-        this.popScene();
+        if(this._keyConfigWindow.currentItemIsExit()){
+            this.popScene();
+        }else{
+            this._keyConfigWindow.selectExit();
+            this._keyConfigWindow.activate();
+
+        }
+
     }
     commandWindowRect(){
         const height =this.calcWindowHeight(1,true);
@@ -5928,15 +5951,21 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         this._symbolWindow.select(0);            
     }
     onKeyLayout(){
-        SoundManager.playEquip();
+        this.playChangeKeySound();
         this._keyConfigWindow.changeNextLayout();
         this._keyConfigWindow.activate();
-
-
     }
     onApply(){
         if(this._keyConfigWindow.isValidMapper()){
+            this.playChangeKeySound();
+            this._keyConfigWindow.executeSave();
+            this.popScene();
+            return;
+        }else{
+            this._keyConfigWindow.playBuzzerSound();
+            this._keyConfigWindow.activate();
         }
+        
     }
 
 }
