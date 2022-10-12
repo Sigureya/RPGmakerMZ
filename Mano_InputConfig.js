@@ -221,6 +221,7 @@
  * @param changeKeyLayoutDescription
  * @type struct<MultiLangString>
  * @default {"en":"seve setting","jp":"設定を保存"}
+ * @parent changeKeyLayoutCommand
  * 
  * 
  * @param exitCommand
@@ -896,20 +897,6 @@
     @param ru
     @text русский
  */
- /*~struct~KeyconfigCommand:
-  * 
-  * @param width
-  * @desc コマンドの幅
-  * @type number
-  * @min 0
-  * @max 10
-  * @default 3
-  * 
-  * @param text
-  * @type struct<MultiLangString>
-  * @default {}
-  * 
-*/
  /*~struct~ColorManager:
   * 
   * @param normal
@@ -4298,11 +4285,6 @@ const setting = (function(){
         //なんか異常が起きているので、そのうち対処
         gamepadBackground:String(params.gamepadBackground),
         keyBackground:String(params.keyBackground),
-        //needButtonDetouch:MultiLanguageText.create(params.needButtonDetouchText),
-        //gamepadIsNotConnected: MultiLanguageText.create(params.GamepadIsNotConnectedText),
-        //gamepadConfigCommandText:MultiLanguageText.create(params.gamepadConfigCommandText),
-        //keyConfigCommandText:MultiLanguageText.create(params.keyConfigCommandText),
-        //mapperDelete:MultiLanguageText.create(params.mapperDelete),
         numVisibleRows:16,//Number(params.numVisibleRows),
         cols:4,
     };
