@@ -1064,7 +1064,8 @@ class Scene_MenuBaseMVMZ extends Scene_MenuBase{
 }
 
 /**
- * @param {InputMapperType} obj 
+ * @param {Readonly<InputMapperType>} obj 
+ * @returns {Readonly<InputMapperType>}
  */
 function objectClone(obj){
 
@@ -2990,10 +2991,13 @@ class DefaultMapper {
      */
     constructor(obj){
         //super();
+        /**
+         * @type {Readonly<{[x:number]:string;}>}
+         */
         this._mapper= ( objectClone(obj));
+
     }
     mapper(){
-        
         return this._mapper;
     }
     cloneMapper(){
@@ -5278,6 +5282,7 @@ class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
         ww.setHandler(setting.command.reset().handle(),this.onReset.bind(this));
         ww.setHandler(setting.command.buttonLayout().handle(),this.onChangeLayoutOk.bind(this));
         this.addWindow(ww);
+
         this._gamepadWindow=ww;
     }
     createSymbolListRect(){
@@ -5898,10 +5903,11 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
 
     createKeyboardWindow(){
         const rect = this.mainWindowRect();
-        const kw = new Window_KeyConfig_MA_V10(rect);
+        const kw = new Window_KeyConfig_MA_V10(rect);        
         kw.setHandler("cancel",this.onKeyboardCancel.bind(this));
         kw.setHandler("key",this.onKey.bind(this));
         kw.setHandler("reset",this.onKeyboardReset.bind(this));
+        kw.setHandler(setting.command.exit().handle(),this.onKeyboardCancel.bind(this));
         kw.setHandler(setting.command.keylayout().handle(),this.onKeyLayout.bind(this));
         kw.setHandler(setting.command.wasd().handle(),this.onKeyWASD.bind(this));
         kw.setHandler(setting.command.apply().handle(),this.onApply.bind(this));
