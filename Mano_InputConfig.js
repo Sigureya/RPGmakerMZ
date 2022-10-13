@@ -2740,11 +2740,10 @@ class DeviceLayout extends I_DeviceLayout{
     }
     /**
      * @param {T_Button} button 
-     * @param {number} fromIndex
      * @returns 
      */
-    lastIndexOf(button,fromIndex){
-        return this._list.lastIndexOf(button,fromIndex);
+    lastIndexOf(button){
+        return this._list.lastIndexOf(button);
     }
     /**
      * @param {Number} index 
@@ -4784,6 +4783,14 @@ class Window_Selectable_InputConfigVer extends Window_Selectable{
     constructor(rect){
         super(rect);
     }
+    itemLineRect(index){
+        const rect = this.itemRectWithPadding(index);
+        const padding = (rect.height - this.lineHeight()) / 2;
+        rect.y += padding;
+        rect.height -= padding * 2;
+        return rect;    
+    }
+
     /**
      * @returns {Number}
      */
@@ -5266,7 +5273,7 @@ class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
         const ww = new Window_GamepadConfig_V8(rect);
         ww.setHandler("button",this.onGamepadButton.bind(this));
         ww.setHandler("cancel",this.onGamepadCancel.bind(this));
-        ww.setHandler("exit",this.onGamepadCancel.bind(this));
+        ww.setHandler(setting.command.exit().handle(),this.onGamepadCancel.bind(this));
         ww.setHandler(setting.command.apply().handle(),this.onApply.bind(this));
         ww.setHandler(setting.command.reset().handle(),this.onReset.bind(this));
         ww.setHandler(setting.command.buttonLayout().handle(),this.onChangeLayoutOk.bind(this));
@@ -5745,7 +5752,7 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
         return true;
     }
     selectExit() {
-        const index = this._layout.lastIndexOf(setting.command.exit(),undefined);
+        const index = this._layout.lastIndexOf(setting.command.exit());
         this.select(index);
     }
     currentItemIsExit(){
@@ -5882,6 +5889,9 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         return new Rectangle(x,y,width,height);
     }
     mainWindowHeight(){
+        if(Utils.RPGMAKER_NAME ==="MV"){
+            return 300;
+        }
         return 288;
         //return this.calcWindowHeight(8,true);
     }
@@ -6079,6 +6089,9 @@ const GetButtonName =function(arg){
 if(Utils.RPGMAKER_NAME =="MV"){
     (function(){
 
+        Window_Selectable_InputConfigVer.prototype.smoothSelect =function(index){
+            this.select(index);
+        }
 
         // const Scene_Boot_start =Scene_Boot.prototype.start;
         // Scene_Boot.prototype.start =function(){
