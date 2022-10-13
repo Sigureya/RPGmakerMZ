@@ -189,7 +189,7 @@
  * 
  * @param resetDescription
  * @type struct<MultiLangString>
- * @default {"en":"reset","jp":"初期設定に戻す"}
+ * @default {"en":"reset","jp":"初期設定に戻します。"}
  * @parent resetCommand
  * 
  * 
@@ -205,7 +205,7 @@
  * 
  * @param WASDhelp
  * @type struct<MultiLangString>
- * @default {"en":"seve setting","jp":"設定を保存"}
+ * @default {"en":"seve setting","jp":"WASDのキーで移動できるようにします。"}
  * @parent WASDCommand
  *  
  * @param changeKeyLayoutCommand
@@ -215,29 +215,25 @@
  * 
  * @param changeKeyLayoutCommandWidth
  * @type number
- * @default 3
+ * @default 4
  * @parent changeKeyLayoutCommand
  * 
- * @param changeKeyLayoutDescription
- * @type struct<MultiLangString>
- * @default {"en":"seve setting","jp":"設定を保存"}
- * @parent changeKeyLayoutCommand
  * 
  * 
  * @param exitCommand
  * @text やめる/exit
  * @type struct<MultiLangString>
- * @default {"en":"exit","jp":"保存せずにやめる"}
+ * @default {"en":"exit","jp":"やめる"}
  * 
  * @param exitWidth
  * @type number
- * @default 3
+ * @default 4
  * @parent exitCommand
 
  * @param exitHelp
  * @text 説明文
  * @type struct<MultiLangString>
- * @default {"en":"seve setting","jp":"設定を保存"}
+ * @default {"en":"exit","jp":"変更を保存せずにやめる"}
  * @parent exitCommand
 
 * 
@@ -2744,10 +2740,11 @@ class DeviceLayout extends I_DeviceLayout{
     }
     /**
      * @param {T_Button} button 
+     * @param {number} fromIndex
      * @returns 
      */
-    lastIndexOf(button){
-        return this._list.lastIndexOf(button);
+    lastIndexOf(button,fromIndex){
+        return this._list.lastIndexOf(button,fromIndex);
     }
     /**
      * @param {Number} index 
@@ -3177,21 +3174,6 @@ class Key_Command {
         this._mtext = mtext;
         this._helpText =helpText;
     }
-    /**
-     * 
-     * @param {string} objText 
-     * @param {string} handler 
-     * @returns 
-     */
-    static create(objText,handler){
-        const obj = JSON.parse(objText);
-        return new Key_Command(
-            handler,
-            MultiLanguageText.create(obj.text),
-            Number(obj.width),
-            null
-        );
-    }
     isEnabled(){
         return true;
     }
@@ -3342,6 +3324,7 @@ const KEYS={
     NULL:keyinfo("",0),
     ENTER:keyinfo("Enter",13),
     ENTER_JIS:keyinfo("Enter",13),
+    ENTER_JIS_NULL:keyinfo("",13),
     ENTER_NULL:keyinfo("",13),
     ENTER_US:keyinfo("Enter",13),
     SPACE:keyinfo("Space",32),
@@ -3677,7 +3660,7 @@ function createJIS_Keyboard(command){
         KEYS.ATMARK,
         KEYS.SQUARE_BRACKETS_OPEN,
         KEYS.ENTER_JIS,
-        KEYS.ENTER_JIS,
+        KEYS.ENTER_JIS_NULL,
         KEYS.TENKEY7 ,
         KEYS.TENKEY8 ,
         KEYS.TENKEY9 ,
@@ -3695,8 +3678,8 @@ function createJIS_Keyboard(command){
         KEYS.SEMICOLON,
         KEYS.COLON,
         KEYS.SQUARE_BRACKETS_CLOSE, 
-        KEYS.ENTER_JIS,
-        KEYS.ENTER_JIS,
+        KEYS.ENTER_JIS_NULL,
+        KEYS.ENTER_JIS_NULL,
         KEYS.TENKEY4 ,
         KEYS.TENKEY5 ,
         KEYS.TENKEY6 ,
@@ -4228,10 +4211,8 @@ class Key_CommandManager_T{
  */
 function createCommandV2(handlerName,name_mText,width,helpText_mText){
     const name =MultiLanguageText.create(name_mText);
-    const help =MultiLanguageText.create(helpText_mText);
+    const help = helpText_mText ?  (MultiLanguageText.create(helpText_mText)) :null;
     return new Key_Command(handlerName,name,Number(width),help);
-
-
 }
 
 function createCommandManager(){
@@ -4241,7 +4222,7 @@ function createCommandManager(){
     const exit2 =createCommandV2("EXIT",params.exitCommand,params.exitWidth,params.exitHelp)
     const resetV2 =createCommandV2("reset",params.resetCommand,params.resetWidth,params.resetDescription);
     const changeLayout = createButtonLayoutChangeCommand();
-    const changeKeyLayout = createCommandV2("KeyLayout",params.changeKeyLayoutCommand,params.changeKeyLayoutCommandWidth,params.changeKeyLayoutDescription);
+    const changeKeyLayout = createCommandV2("KeyLayout",params.changeKeyLayoutCommand,params.changeKeyLayoutCommandWidth,null);
     const cm = new Key_CommandManager_T(
         save,wasd,exit2,resetV2,changeLayout,changeKeyLayout
     );
@@ -5519,20 +5500,33 @@ class Window_WideButton_Selectable extends Window_Selectable_InputConfigVer{
         const widthEx= (this.itemPadding() +this.itemWidth() ) *distance;
 
         rect.width += widthEx;
-
         return rect;
-
     }
-
-
 
 }
 /**
  * @extends Window_WideButton_Selectable<keylayoutItem>
  */
 class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
+
+    enterJIS_Rect(){
+        const rect = super.itemRect(32);
+        if(this.itemAt(32)===KEYS.ENTER_JIS){
+            rect.width += this.itemWidth();
+            rect.height += this.itemHeight();
+        }
+        return rect;
+    }
+    itemRect(index){
+        const item = this.itemAt(index);
+        if(item===KEYS.ENTER_JIS || item===KEYS.ENTER_JIS_NULL){
+            return this.enterJIS_Rect();
+        }
+        return super.itemRect(index);
+
+    }
     /**
-     * 
+     * @private
      * @param {Window_KeyCommand} command 
      */
     setCommandWindow(command){
@@ -5633,6 +5627,21 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
     itemAt(index){
         return this._layout.button(index);
     }
+
+    /**
+     * @param {string} keyName 
+     * @param {string} symbolName 
+     * @param {Rectangle} rect 
+     */
+    drawKey(keyName,symbolName,rect){
+        const keyNameFontSize =this.keyNameFontSize();
+        
+        this.contents.fontSize =keyNameFontSize;
+        this.drawText(keyName,rect.x,rect.y,rect.width,"center");
+        this.contents.fontSize = this.symbolNameFontSize();
+        this.drawText(symbolName,rect.x,rect.y +this.symbolNameFontSize()+2 ,rect.width,"center");
+    }
+
     /**
      * @param {number} index 
      * @returns 
@@ -5641,18 +5650,17 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
 
         const item = this.itemAt(index);
         if(!item){ return;}
+        if(item ===KEYS.ENTER_JIS_NULL){
+            return;
+        }
         const preItem = this.itemAt(index-1);
         if(preItem ===item){return;}
         const symbol = this.symbolObject(item);
         
-        const rect = item.isCommand() ? this.itemLineRect(index)  :  this.itemRectWithPadding(index);
+        const rect = (item.isCommand() || item ===KEYS.ENTER_JIS  ) ? this.itemLineRect(index)  :  this.itemRectWithPadding(index);
         const keyName = item.name();
-        this.contents.fontSize =this.keyNameFontSize();
-        this.drawText(keyName,rect.x,rect.y,rect.width,"center");
-        if(symbol){
-            this.contents.fontSize = this.symbolNameFontSize();
-            this.drawText(symbol.displayKeyName(),rect.x,rect.y +20,rect.width,"center");
-        }
+        const symbolName = symbol ? symbol.displayKeyName() : "";
+        this.drawKey(keyName,symbolName,rect);
     }
     keyNameFontSize(){
         return 22;
@@ -5737,7 +5745,7 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
         return true;
     }
     selectExit() {
-        const index = this._layout.lastIndexOf(setting.command.exit());
+        const index = this._layout.lastIndexOf(setting.command.exit(),undefined);
         this.select(index);
     }
     currentItemIsExit(){
@@ -5781,6 +5789,7 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
         }
     }
 }
+
 
 class Window_KeyCommand extends Window_Command{
     initialize(rect){
