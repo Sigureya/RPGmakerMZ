@@ -4,7 +4,7 @@
  * 
  * @target MZ
  * 
- * @url https://siguren400.booth.pm/items/3300534
+ * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_EquipSlotName.js
  * 
  * @command GetSlotName
  * @arg actor
