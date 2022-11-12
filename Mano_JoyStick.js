@@ -14,7 +14,7 @@
 /*:
  * @plugindesc JoyStick
  * @author siguren(https://github.com/Sigureya/RPGmakerMV)
- * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_InputConfig.js
+ * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_JoyStick.js
  * 
  * @target MZ
  * @orderAfter VisuMZ_1_OptionsCore
