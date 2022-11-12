@@ -1,4 +1,3 @@
-//@ts-check
 //=============================================================================
 // Mano_JoyStick.js
 // ----------------------------------------------------------------------------
@@ -12,9 +11,58 @@
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
 
-
-
 /*:
+ * @plugindesc JoyStick
+ * @author siguren(https://github.com/Sigureya/RPGmakerMV)
+ * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_InputConfig.js
+ * 
+ * @target MZ
+ * @orderAfter VisuMZ_1_OptionsCore
+ * @orderAfter MOG_TitleSplashScreen
+ * 
+ * @command ShowConfig
+ * 
+ * 
+ * @param optionCommandName
+ * @text Option Command Name
+ * @default JoyStick Setting
+ * 
+ * 
+ * @param applySetting
+ * @type struct<Command>
+ * @default {"name":"ApplySetting","description":""}
+ * @parent optionCommandName
+ * 
+ * @param resetSetting
+ * @type struct<Command>
+ * @default {"name":"Reset","description":""}
+ * @parent optionCommandName
+ * 
+ * @param axesTest
+ * @type struct<Command>
+ * @default {"name":"JoyStickTest","description":""}
+ * @parent optionCommandName
+ * 
+ * 
+ * 
+ * @param joyStickR
+ * @type struct<JoyStick>
+ * @default {"variableX":"0","variableY":"0","scele":"5"}
+ * 
+ * 
+ * 
+ * @help
+ * ゲームパッドのアナログスティックの入力を取得可能にします。
+ * 以下の機能を提供します。
+ * ・スティックの状態を変数へ書き込み。
+ * ・スティックの軸割り当て設定によって、多数のゲームパッドへ対応。
+ * 
+ * プラグインパラメータで、書き込み先の変数を指定します。
+ * 
+*/
+
+
+/*:ja
  * @plugindesc ジョイスティックの入力を扱えるようにします。
  * @author しぐれん(https://github.com/Sigureya/RPGmakerMV)
  * @url https://raw.githubusercontent.com/Sigureya/RPGmakerMZ/master/Mano_InputConfig.js
@@ -25,14 +73,11 @@
  * 
  * @command ShowConfig
  * 
- * @param commandCols
- * @type number
- * @min 1
- * @default 2
  * 
  * @param optionCommandName
  * @text コンフィグ:項目名
  * @default アナログスティック設定
+ * 
  * @param applySetting
  * @type struct<Command>
  * @default {"name":"設定を保存","description":"設定を保存します。"}
@@ -48,29 +93,18 @@
  * @default {"name":"入力検知","description":"スティックを操作して割り当てを決定します。"}
  * @parent optionCommandName
  * 
- * @param resetSettingsName
- * @default 設定を初期化する
- * @parent optionCommandName
  * 
- * @param resetDescription
- * @default 初期設定に戻します
  * 
  * @param joyStickR
  * @type struct<JoyStick>
  * @default {"variableX":"0","variableY":"0","scele":"5"}
  * 
  * 
- * @param test
- * @type note
- * @desc 入力テストモードで表示する文字(2行まで)
- * @default 入力を確認中。確定する場合、スティックを倒したまま決定。
  * 
  * @help
  * ゲームパッドのアナログスティックの入力を取得可能にします。
  * 以下の機能を提供します。
- * ・左右のスティックの入力状態を検知。
  * ・スティックの状態を変数へ書き込み。
- * ・DirectInput形式のゲームパッド使用時に十字キーとスティックの両方が使用可能。
  * ・スティックの軸割り当て設定によって、多数のゲームパッドへ対応。
  * 
  * プラグインパラメータで、書き込み先の変数を指定します。
@@ -99,43 +133,37 @@
  * @param scale
  * @type number
  * @desc スティックから受け取った値に乗算を行います。
+ * Multiply the value received from the Stick by this value.
  * @decimals 4
  * @default 5.0000
  * 
 */
 
 
-/*~struct~Picuture:
+/*~struct~Listener:
+ * @param joyL
+ * @type select
+ * @option none
+ * @value none
+ * @option dpad
+ * @value dpad
+ * @default none
  * 
- * @param pictureId
- * @type number
- * @default 0
+ * @param joyR
+ * @type select
+ * @option none
+ * @value none
+ * @option dpad
+ * @value dpad
+ * @default none
  * 
- * @param image
- * @type file
- * @dir img/pictures/
  * 
- * @param moveScale
- * @type number
- * @default 10
  * 
- * @param homeX
- * @type number
- * @default 0
- * 
- * @param homeY
- * @type number
- * @default 0
- */
-
+*/
 
 (function(){
     'use strict';
 
-/**
- * @typedef {object} JoyStickConfigItem
- * @property {number} index
- */
 //TODO:データの取得、この部分を変える
 //optionにクラス埋め込むのはアレだが、他に手が無い
 
@@ -183,15 +211,91 @@
  */
 
 /**
- * @param {Gamepad} gamepad
- * @param {number} axesIndex
- * @param {number} threshold
+ * @param {Window_Base|Window_Selectable} window_ 
+ * @param {Rectangle} rect 
+ * @param {(srect:Rectangle)=>void} initFuncton
  */
-function readAxes(gamepad,axesIndex,threshold){
-
-    const axes = (gamepad.axes[axesIndex] || 0) ;
-    return Math.abs(axes) > threshold ? axes : 0;
+ function window_initializeMVMZ(window_,rect,initFuncton){
+    if(Utils.RPGMAKER_NAME==="MZ"){
+        initFuncton.call(window_,rect);
+        return
+    }
+    if(Utils.RPGMAKER_NAME==="MV"){
+        initFuncton.call(window_,rect.x,rect.y,rect.width,rect.height);
+        return;
+    }
+    throw( new Error("Unknow RPG MAKER:"+Utils.RPGMAKER_NAME));
 }
+
+class I_MVMZ_Workaround{
+    /**
+     * @returns {Window_Help}
+     * @param {Rectangle} rect
+     */
+    createHelpWindow(rect){
+        return null;
+    }
+    /**
+     * @param {Scene_MenuBase} scene 
+     */
+    mainAreaHeigth(scene){
+        return 0;
+
+    }
+    /**
+     * @param {Number} numLines
+     * @param {Boolean} selectable
+     */
+    calcWindowHeight(numLines,selectable){
+        if(selectable){
+            return Window_Selectable.prototype.fittingHeight(( numLines))
+        }
+        return Window_Base.prototype.fittingHeight(numLines);
+    }
+
+}
+class MV_Impriment extends I_MVMZ_Workaround{
+    /**
+     * @param {Rectangle} rect 
+     * @returns 
+     */
+    createHelpWindow(rect){
+        const lines =this.helpWindowLines()
+        return new Window_Help(lines);
+    }
+    mainAreaHeigth(){
+        const helpAreaHeight = this.calcWindowHeight(this.helpWindowLines(),false);
+        return Graphics.boxHeight -helpAreaHeight;
+    }
+    helpWindowLines(){
+        return 3;
+    }
+}
+
+class MZ_Impriment extends I_MVMZ_Workaround{
+    /**
+     * 
+     * @param {Rectangle} rect 
+     * @returns {Window_Help}
+     */
+    createHelpWindow(rect){
+        return new Window_Help(rect);
+    }
+    /**
+     * 
+     * @param {Scene_MenuBase} scene 
+     */
+    mainAreaHeigth(scene){
+        return scene.mainAreaHeight();
+    }
+    /**
+     * @param {Window_Base} window 
+     */
+    colorSrc(window){
+        return ColorManager;
+    }
+}
+
 
 /**
  * @type {String}
@@ -322,22 +426,11 @@ class Joystick_Axes{
 
 
     /**
-     * @private
-     * @param {Gamepad} gamepad 
-     * @param {number} index 
-     * @param {number} threshold
-     */
-    isPressedDetail(gamepad,index,threshold){
-        const value = (gamepad.axes[index]);
-        return  (value > threshold) && //一定以下のぐらつきを排除 + NaNの時に先行して消す
-                (threshold * value) > 0; //閾値と向きのチェック
-    }
-    /**
      * @param {Gamepad} gamepad 
      * @returns {boolean}
      */
     isLeftPressed(gamepad){
-        return this.isPressedDetail(gamepad,this._indexX,-this.threshold());
+        return gamepad.axes[this._indexX] < -this.threshold();
     }
 
     /**
@@ -345,21 +438,21 @@ class Joystick_Axes{
      * @returns {boolean}
      */
     isRightPressed(gamepad){
-        return this.isPressedDetail(gamepad,this._indexX,this.threshold());
+        return gamepad.axes[this._indexX] > this.threshold();
     }
     /**
      * @param {Gamepad} gamepad 
      * @returns {boolean}
      */
     isUpPressed(gamepad){
-        return this.isPressedDetail(gamepad,this._indexY,-this.threshold());
+        return gamepad.axes[this._indexY] < -this.threshold();
     }
     /**
      * @param {Gamepad} gamepad 
      * @returns {boolean}
      */
     isDownPressed(gamepad){
-        return this.isPressedDetail(gamepad,this._indexY,this.threshold());
+        return gamepad.axes[this._indexY] > this.threshold();
     }
 
 
@@ -675,29 +768,95 @@ class JoyListner_Variable extends JoyStickListenerBase{
 
 }
 
-class AxesListnerFactory{
-    constructor(){
-        /**
-         * @type {Map<string,ReadonlyArray<JoyStickListenerBase>>}
-         */
-        this._map = new Map();
+class JoyListner_Function extends JoyStickListenerBase{
+    /**
+     * 
+     * @param {(axes:JoyStickAxesConcept,gamepad:Gamepad)=>void} func 
+     */
+    constructor(func){
+        super();
+        this._func=func;
+    }
+    /**
+     * @param {JoyStickAxesConcept} axes 
+     * @param {Gamepad} gamepad 
+     */
+    updateListner(axes,gamepad){
+        this._func(axes,gamepad);
+    }
 
+}
+
+
+
+class JoyListner_AsDpad  extends JoyStickListenerBase{
+
+    
+    /**
+     * @param {JoyStickAxesConcept} axes 
+     * @param {Gamepad} gamepad 
+     */
+    updateListner(axes,gamepad){
+        // if(axes.isUpPressed(gamepad)){
+        //     this.write(gamepad,12)
+        // }
+        if(axes.isUpPressed(gamepad)){
+            this.write(gamepad,12)
+        }else if(axes.isDownPressed(gamepad) ){
+            this.write(gamepad,13);
+        }
+        if(axes.isLeftPressed(gamepad)){
+            this.write(gamepad,14) 
+        }else if(axes.isRightPressed(gamepad)){
+            this.write(gamepad,15)
+        }
+    }
+    /**
+     * @param {Gamepad} gamepad 
+     * @param {Number} buttonIndex 
+     */
+    write(gamepad,buttonIndex){
+        const buttonName= Input.gamepadMapper[buttonIndex];
+        if(buttonName){
+            //Input._currentState[buttonName] =true;
+        }
+        if(Input._gamepadStates[gamepad.index]){
+
+            //Input._gamepadStates[gamepad.index][buttonIndex] =true;
+        }
+    }
+
+}
+
+class AxesListnerDictionary{
+    /**
+     * 
+     * @param {ReadonlyMap<string,ReadonlyArray<JoyStickListenerBase>>} map 
+     * @param {ReadonlyArray<JoyStickListenerBase>} fallback
+     */
+    constructor(map,fallback){
+        this._map = map;
+        this._fallback = fallback;
     }
     /**
      * @param {string} sceneName 
      */
     get(sceneName){
-        return this._map.get(sceneName);
+        const list = this._map.get(sceneName);
+        if(list){
+            return list;
+        }
+        return this._fallback;
     }
 
-    /**
-     * 
-     * @param {string} sceneName 
-     * @param {ReadonlyArray<JoyStickListenerBase>} list 
-     */
-    set(sceneName,list){
-        this._map.set(sceneName,list);
-    }
+    // /**
+    //  * 
+    //  * @param {string} sceneName 
+    //  * @param {ReadonlyArray<JoyStickListenerBase>} list 
+    //  */
+    // set(sceneName,list){
+    //     this._map.set(sceneName,list);
+    // }
 }
 
 
@@ -769,13 +928,19 @@ class JoyStickManager_T{
     /**
      * @param {Readonly<WordSet>} word
      * @param {Readonly<CommandList>} commnad
-     * @param {ReadonlyMap<string,ReadonlyArray<JoyStickListenerBase>>} listenerMap 
+     * 
+     * @param {AxesListnerDictionary} listenerMap 
+     * @param { I_MVMZ_Workaround} workaround
      */
-    constructor(word,commnad,listenerMap){
+    constructor(word,commnad,listenerMap,workaround){
+        /**
+         * @readonly
+         */
+        this._workaround = workaround;
         this._word =word;
         this._command =commnad;
         this._gamepad = new GamepadState();
-        this._listnersMap=listenerMap;
+        this._listnersMap =  listenerMap;
         this._joyStickMapper = new JoyStickMapper()
         //シーンごとに割り振りできるシステム
         /**
@@ -783,6 +948,9 @@ class JoyStickManager_T{
          */
         this._listners =[];
         this.changePadStateCopyMode(false);
+    }
+    workaround(){
+        return this._workaround;
     }
     word(){
         return this._word;
@@ -820,7 +988,7 @@ class JoyStickManager_T{
         this._listners[index] = listener;
     }
     /**
-     * @param {Gamepad} gamepad 
+     * @param {Readonly<Gamepad>} gamepad 
      */
     update(gamepad){
         if(this._needsAxesStateCopy){
@@ -839,13 +1007,14 @@ class JoyStickManager_T{
         for(let i =0; i < length;++i){
             const listener =this._listners[i] ;
             if(listener){
+                //indexが同じ組み合わせで、mapperとlistenerを組み合わせる
+                //mapperはaxesの番号を決める、listnerは情報の解釈を決める
                 const axes = this._joyStickMapper.itemAt(i);
                 if(axes){
                     listener.updateListner(axes,gamepad);
                 }
             }
         }
-
     }
     createConfig(){
         return this._joyStickMapper.createConfig();
@@ -896,7 +1065,6 @@ class JoyStickManager_T{
 const JoyStickManager=(function(){
 
     /**
-     * 
      * @returns {Readonly<CommandItem>}
      * @param {string} symbol
      * @param {string} text 
@@ -930,16 +1098,26 @@ const JoyStickManager=(function(){
         axesNoSignal:"このaxesはシグナルがありません。",
     };
     const v = JoyListner_Variable.create(param.joyStickR);
+    const dpad = new JoyListner_AsDpad();
     /**
      * @type {Map<string,ReadonlyArray<JoyStickListenerBase>>}
      */
     const listenerMap =new Map();
-    listenerMap.set("Scene_Map",[null,v]);
-    const manager= new JoyStickManager_T(wordSet,command,listenerMap);
+    listenerMap.set("Scene_Map",[dpad,v]);
+
+    const axesDic = new AxesListnerDictionary(
+        listenerMap,
+        [dpad,null,dpad] //JOY_L,JOY_R,DPADの順で、mapperが配置される。それに対応するのがこの並び
+    );
+    const workaround = Utils.RPGMAKER_NAME ==="MZ" ? new MZ_Impriment(): new MV_Impriment();
+    const manager= new JoyStickManager_T(wordSet,command,axesDic,workaround);
     return manager;
 }());
 
 class Window_AxesState extends Window_Selectable{
+    initialize(rect){
+        window_initializeMVMZ(this,rect,super.initialize);
+    }
     update(){
         //this._list =JoyStickManager.getLastAxesState();
         this.refresh();    
@@ -1008,7 +1186,7 @@ class Window_AxesState extends Window_Selectable{
 class Window_JoyStickMapper extends Window_Selectable{
     initialize(rect){
         this._list =JoyStickManager.createMapperTemporay();
-        super.initialize(rect);
+        window_initializeMVMZ(this,rect,super.initialize);
     }
     updateHelp(){
     }
@@ -1038,7 +1216,7 @@ class Window_JoyStickMapper extends Window_Selectable{
         const item = this.itemAt(index);
         if(item){
             const rect = this.itemRectWithPadding(index);
-            item.getIndex()
+
             this.drawAxes(rect,item.name(),item.getIndex())
 
         }
@@ -1065,6 +1243,9 @@ class Window_JoyStickMapper extends Window_Selectable{
  * @extends {Window_Command<string>}
  */
 class Window_JoyConfigCommand extends Window_Command{
+    initialize(rect){
+        window_initializeMVMZ(this,rect,super.initialize);
+    }
 
     maxCols(){
         return 2
@@ -1103,6 +1284,7 @@ class Window_JoyConfigCommand extends Window_Command{
 
     }
 }
+const JOY_STICK_WINDOW_WIDTH=300;
 
 class Scene_JoyStickConfig extends Scene_MenuBase{
     createAllWindows(){
@@ -1116,11 +1298,12 @@ class Scene_JoyStickConfig extends Scene_MenuBase{
         this.createAllWindows();
     }
     joyStickWindowWidth(){
-        return 300;
+        return JOY_STICK_WINDOW_WIDTH;;
     }
     joyStickStateWindowRect(){
         const width =this.joyStickWindowWidth();
-        const height= this.mainAreaHeight();
+        const height= JoyStickManager.workaround().mainAreaHeigth(this);
+        //const height= this.mainAreaHeight();
         return new Rectangle(Graphics.boxWidth-width,this.mainAreaTop(),width,height);
     }
     commandWindowRect(){
@@ -1236,14 +1419,52 @@ class Scene_JoyStickConfig extends Scene_MenuBase{
     }
 
 }
+if(Utils.RPGMAKER_NAME ==="MV"){
+    /**
+     * @param {number} numLines 
+     * @param {boolean} selectable 
+     * @returns 
+     */
+    Scene_JoyStickConfig.prototype.calcWindowHeight =function(numLines,selectable){
+        if(selectable){
+            return Window_Selectable.prototype.fittingHeight(( numLines))
+        }
+        return Window_Base.prototype.fittingHeight(numLines);
+    }
+
+    Scene_JoyStickConfig.prototype.mainAreaHeight =function(){
+        const helpHeight = this.calcWindowHeight(2,false);
+        return Graphics.boxHeight -helpHeight;
+    };
+    Scene_JoyStickConfig.prototype.mainAreaTop =function(){
+        return this.calcWindowHeight(2,false);
+    };
+    Window_Selectable.prototype.itemRectWithPadding =function(index){
+        const rect = this.itemRect(index);
+        const padding = this.itemPadding();
+        rect.x += padding;
+        rect.width -= padding * 2;
+        return rect;    
+    };
+
+
+    Window_Selectable.prototype.itemPadding = function(){
+        return 8;
+    };
+    Window_JoyConfigCommand.prototype.windowWidth =function(){
+        return Graphics.boxWidth -JOY_STICK_WINDOW_WIDTH;;
+    };
+}
+
 const Input_updateGamepadState=Input._updateGamepadState;
 Input._updateGamepadState =function(gamepad){
+
     Input_updateGamepadState.call(this,gamepad);
     JoyStickManager.update(gamepad);
 };
-const Scene_Map_create=Scene_Map.prototype.create;
-Scene_Map.prototype.create =function(){
-    Scene_Map_create.call(this);
+const Scene_Base_create=Scene_Base.prototype.create;
+Scene_Base.prototype.create =function(){
+    Scene_Base_create.call(this);
     JoyStickManager.onSceneCreate(this.constructor.name);
 };
 const SceneManager_onSceneCreate=SceneManager.onSceneCreate;
@@ -1294,10 +1515,10 @@ Window_Options.prototype.addVolumeOptions =function(){
     Window_Options_addVolumeOptions.call(this);
     this.addCommand(JoyStickManager.word().optionCommandName,JOY_OPTION_SYMBOL);
 };
-PluginManager.registerCommand(PLUGIN_NAME,"ShowConfig",()=>{
-    JoyStickManager.startConfigScene();
-});
-
-
+if(Utils.RPGMAKER_NAME ==="MZ"){
+    PluginManager.registerCommand(PLUGIN_NAME,"ShowConfig",()=>{
+        JoyStickManager.startConfigScene();
+    });    
+}
 
 }())
