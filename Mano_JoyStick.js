@@ -1,3 +1,4 @@
+
 //=============================================================================
 // Mano_JoyStick.js
 // ----------------------------------------------------------------------------
@@ -54,6 +55,7 @@
  * @help
  * ゲームパッドのアナログスティックの入力を取得可能にします。
  * 以下の機能を提供します。
+ * ・8方向移動(スティックのみ)
  * ・スティックの状態を変数へ書き込み。
  * ・スティックの軸割り当て設定によって、多数のゲームパッドへ対応。
  * 
@@ -73,6 +75,22 @@
  * 
  * @command ShowConfig
  * 
+ * @command ReadAxes
+ * @arg target
+ * @type select
+ * @option 左スティック
+ * @value L
+ * @option 右スティック
+ * @value R
+ * @default R
+ * 
+ * @arg x
+ * @type variable
+ * @default 0
+ * 
+ * @arg y
+ * @type variable
+ * @default 0
  * 
  * @param optionCommandName
  * @text コンフィグ:項目名
@@ -164,8 +182,6 @@
 (function(){
     'use strict';
 
-//TODO:データの取得、この部分を変える
-//optionにクラス埋め込むのはアレだが、他に手が無い
 
 /**
  * @typedef {object} JoyStickConfig
@@ -305,12 +321,19 @@ function getParam(){ return PluginManager.parameters(PLUGIN_NAME);  }
 
 const CONIFG_KEY="JOYSTICK_CONFIG";
 
-
-class Joystick_DirectAxes{
-    tiltX(){
+class AxesBase{
+    /**
+     * @param {Gamepad} gamepad 
+     * @returns 
+     */
+    tiltX(gamepad){
         return 0;
     }
-    tiltY(){
+    /**
+     * @param {Gamepad} gamepad 
+     * @returns 
+     */
+    tiltY(gamepad){
         return 0;
     }
     isDPAD(){
@@ -343,17 +366,20 @@ class Joystick_DirectAxes{
     isDownPressed(gamepad){
         return false;
     }
-    
 }
 
-class Joystick_Axes{
+class Joystick_DirectAxes extends AxesBase{
+}
+
+
+class Joystick_Axes extends AxesBase{
     /**
-     * 
      * @param {number} indexX 
      * @param {number} indexY 
      * @param {number} buttonId
      */
     constructor(indexX,indexY,buttonId){
+        super();
         this.setAxesIndexX(indexX);
         this.setAxesIndexY(indexY);
         this.setDpadMode(false);
@@ -390,7 +416,7 @@ class Joystick_Axes{
     }
 
     threshold(){
-        return 0.5;
+        return 0.3;
     }
 
     isStickPressed(){
@@ -455,7 +481,14 @@ class Joystick_Axes{
         return gamepad.axes[this._indexY] > this.threshold();
     }
 
-
+    /**
+     * @param {Gamepad} gamepad 
+     */
+    signX(gamepad){
+        const left = this.isLeftPressed(gamepad) ? 1:0;
+        const right = this.isRightPressed(gamepad)? 1:0;
+        return left -right;
+    }
 }
 
 class AxesWriterBase{
@@ -522,7 +555,6 @@ class AxesWriterY extends AxesWriterBase{
     }
     getIndex(){
         return this._axes.indexY();
-
     }
 }
 
@@ -770,7 +802,6 @@ class JoyListner_Variable extends JoyStickListenerBase{
 
 class JoyListner_Function extends JoyStickListenerBase{
     /**
-     * 
      * @param {(axes:JoyStickAxesConcept,gamepad:Gamepad)=>void} func 
      */
     constructor(func){
@@ -797,9 +828,6 @@ class JoyListner_AsDpad  extends JoyStickListenerBase{
      * @param {Gamepad} gamepad 
      */
     updateListner(axes,gamepad){
-        // if(axes.isUpPressed(gamepad)){
-        //     this.write(gamepad,12)
-        // }
         if(axes.isUpPressed(gamepad)){
             this.write(gamepad,12)
         }else if(axes.isDownPressed(gamepad) ){
@@ -828,6 +856,182 @@ class JoyListner_AsDpad  extends JoyStickListenerBase{
 
 }
 
+class JoyListner_CharacterMove extends JoyStickListenerBase{
+    /**
+     * @returns {Game_Character}
+     */
+    targetCharacter(){        
+        return $gamePlayer;
+    }
+    /**
+     * @param {Game_Character} character 
+     * @returns 
+     */
+    canMove(character){
+        if(character.isMoving()){
+            return false;
+        }
+        if(character ===$gamePlayer){
+            return $gamePlayer.canMove();
+        }
+        return true;
+
+    }
+    /**
+     * @param {JoyStickAxesConcept} axes 
+     * @param {Gamepad} gamepad 
+     */
+    updateListner(axes,gamepad){
+        //TODO:通常の動作を封じるにはdir4を0にして入力を消せばいい
+        //アクターの移動は、これしか参照していない
+        //キャラクターの動作指定でやると、通れない場合に困る
+        //傾きの大きい方に合わせて、適当に調整
+        //壁刷り移動
+
+        const character =this.targetCharacter();
+        if(character && !this.canMove(character)){
+            return;
+        }
+
+        const vecX = axes.tiltX(gamepad);
+        const vecY = axes.tiltY(gamepad);
+        if(vecX !==0 || vecY !==0){
+            Input._dir4=0;
+            const movementData= this.gggDirection(character,vecX,vecY);
+            character.setDirection(movementData.dir4);
+            if(movementData.success){
+                if(character ===$gamePlayer){
+                    $gamePlayer.followers().updateMove();
+                }
+                character._x = movementData.posX;
+                character._y = movementData.posY;
+                character.increaseSteps();
+            }
+        }
+    }
+
+    /**
+     * @returns {{
+     * dir4:(2|4|6|8),
+     * success:boolean,
+     * posX:number,
+     * posY:number,
+     * }}
+     * @param {Game_Character} character 
+     * @param {number} vecX 
+     * @param {number} vecY 
+     */
+    gggDirection(character,vecX,vecY){
+        const horz = this.sign(vecX,6,4);
+        const vert = this.sign(vecY,2,8);
+        const posX1 =character.x;
+        const posY1 =character.y;
+        const posX2 = $gameMap.roundXWithDirection(posX1,horz);
+        const posY2 = $gameMap.roundYWithDirection(posY1,vert);
+        //実装内容はGame_Character.canPassDiagonallyを参照
+
+        //向きは必要なので、先に取る
+        const dir4 = this.dir4(vecX,vecY);
+
+        //斜めの移動先は侵入可能? 
+        const passVert =character.canPass(posX1,posY1,vert);
+        if(passVert && horz !==0 && character.canPass(posX1,posY2,horz)){
+            //斜め移動が可能
+            return {
+                success:true,
+                dir4,
+                posX:posX2,
+                posY:posY2,
+            };
+        }
+        const passHorz =character.canPass(posX1,posY1,horz);
+        if(passHorz &&  vert !==0 && character.canPass(posX2,posY1,vert)){
+            //斜め移動が可能
+            return {
+                success:true,
+                dir4,
+                posX:posX2,
+                posY:posY2,
+            };
+        }
+        //斜め移動ができない
+
+        //縦向き移動可能？
+        if(passVert && dir4 ===vert ){
+            //縦方向に移動
+            return {
+                success:true,
+                dir4,
+                posX:posX1,
+                posY:posY2,
+            };
+        }
+        //横向き移動可能？
+        if(passHorz && dir4 ===horz){
+            return {
+                success:true,
+                dir4,
+                posX:posX2,
+                posY:posY1,
+            }
+    
+        }
+
+        //座標を更新せず、移動は行わない
+        return {
+            success:false,
+            dir4,
+            posX:posX1,
+            posY:posY1,
+        }
+    }
+    /**
+     * 
+     * @template {Number} T 定数時に表示内容を絞るためにTemplateにする
+     * @param {number} value 
+     * @param {T} plus 
+     * @param {T} minus 
+     */
+    sign(value,plus,minus){
+        if(value > 0){
+            return plus;
+        }
+        if(value < 0){
+            return minus;
+        }
+        return 0;
+
+    }
+
+    /**
+     * @returns {number} 向き。テンキー方式で返す
+     * @param {number} x 
+     * @param {number} y 
+     */
+    direction(x,y){
+        const signX = this.sign(x,1,-1);
+        const signY = this.sign(y,1,-1);
+        return Input._makeNumpadDirection(signX,signY);
+    }
+    /**
+     * @param {number} vecX 
+     * @param {number} vecY 
+     */
+    dir4(vecX,vecY){
+        const absX = Math.abs(vecX);
+        const absY = Math.abs(vecY);
+        if(absX > absY){
+            return vecX >0 ? 6 : 4;
+        }
+        return vecY > 0 ? 2: 8;
+    }
+
+
+
+    
+}
+
+//シーンごとに挙動を調整するのに使うディクショナリ
 class AxesListnerDictionary{
     /**
      * 
@@ -841,7 +1045,7 @@ class AxesListnerDictionary{
     /**
      * @param {string} sceneName 
      */
-    get(sceneName){
+    getListener(sceneName){
         const list = this._map.get(sceneName);
         if(list){
             return list;
@@ -858,68 +1062,20 @@ class AxesListnerDictionary{
     //     this._map.set(sceneName,list);
     // }
 }
-
-
-class GamepadState{
-    constructor(){
-        this.clear();
-    }
-    /**
-     * 
-     * @param {Readonly<Gamepad>} gamepad 
-     */
-    set(gamepad){
-        /**
-         * @type {ReadonlyArray<number>}
-         */
-        this._axes = Array.from(gamepad.axes);
-        this._name= gamepad.id;
-        this._conected=true;
-        this._numButtons = gamepad.buttons.length;
-    }
-    isContected(){
-        return this._conected;
-    }
-    clear(){
-        this._axes =[];
-        this._name="";
-        this._conected=false;
-    }
-    descriptionText(){
-        return `name:${this.name()}\nbuttons:${this._numButtons.toString().padStart(2)}`
-    }
-    name(){
-        return this._name;
-    }
-    numAxes(){
-        return this._axes.length;
-    }
-    /**
-     * @param {number} index 
-     * @returns 
-     */
-    axesValue(index){
-        return this._axes[index] ||0;
-    }
-    /**
-     * 
-     * @param {number} index 
-     * @returns 
-     */
-    isEnabled(index){
-        return this.axesValue(index) !==0;
-    }
-    maximumValueIndex(){
-        let lastIndex=0;
-        let lastValue=-1;
-        for(let index = 0; index < this._axes.length;++index){
-            const abs = Math.abs(this.axesValue(index));
-            if(abs <=1 && abs > lastValue){
-                lastIndex = index;
-                lastValue =abs;
-            }
-        }
-        return lastIndex;
+/**
+ * @param {Readonly<Gamepad>} gamepad 
+ * @returns {Readonly<Gamepad>}
+ */
+function cloneGamepad(gamepad){
+    return {
+        buttons:Array.from(gamepad.buttons),
+        axes:Array.from(gamepad.axes),
+        index:gamepad.index,
+        timestamp:gamepad.timestamp,
+        connected:gamepad.connected,
+        id:gamepad.id,
+        mapping:gamepad.mapping,
+        hapticActuators:Array.from(gamepad.hapticActuators||[]),
     }
 }
 
@@ -933,22 +1089,58 @@ class JoyStickManager_T{
      * @param { I_MVMZ_Workaround} workaround
      */
     constructor(word,commnad,listenerMap,workaround){
+        this.clearGamepadState();
         /**
          * @readonly
          */
         this._workaround = workaround;
         this._word =word;
         this._command =commnad;
-        this._gamepad = new GamepadState();
         this._listnersMap =  listenerMap;
         this._joyStickMapper = new JoyStickMapper()
-        //シーンごとに割り振りできるシステム
         /**
          * @type {JoyStickListenerBase[]}
          */
         this._listners =[];
         this.changePadStateCopyMode(false);
     }
+    /**
+     * @param {Gamepad} gamepad 
+     */
+    copyGamepadState(gamepad){
+        this._gamepadV2 = cloneGamepad(gamepad);
+    }
+    clearGamepadState(){
+        this.copyGamepadState({
+            axes:[],
+            buttons:[],
+            connected:false,
+            hapticActuators:[],
+            id:"empty init data",
+            index:NaN,
+            mapping:"",
+            timestamp:0,
+        } );
+    }
+    /**
+     * 
+     * @param {number} index 
+     * @returns 
+     */
+    axesValue(index){
+        return this._gamepadV2.axes[index] ||0;
+    }
+    numAxes(){
+        return this._gamepadV2.axes.length;
+    }
+    isGamepadConected(){
+        return this._gamepadV2.connected;
+    }
+    gamepadDescriptionText(){
+        const numButtons = this._gamepadV2.buttons.length;
+        return `name:${this._gamepadV2.id}\nbuttons:${numButtons.toString().padStart(2)}`
+    }
+
     workaround(){
         return this._workaround;
     }
@@ -958,11 +1150,17 @@ class JoyStickManager_T{
     commandList(){
         return this._command;
     }
-    isGamepadConected(){
-        return this._gamepad.isContected();
-    }
-    gamepad(){
-        return this._gamepad;
+    maximumAxesValueIndex(){
+        let lastIndex=0;
+        let lastValue=-1;
+        for(let index = 0; index < this._gamepadV2.axes.length;++index){
+            const abs = Math.abs(this.axesValue(index));
+            if(abs <=1 && abs > lastValue){
+                lastIndex = index;
+                lastValue =abs;
+            }
+        }
+        return lastIndex;
     }
     createMapperTemporay(){
         return this._joyStickMapper.createTemporaryMapper();
@@ -972,7 +1170,7 @@ class JoyStickManager_T{
      */
     changePadStateCopyMode(value){
         this._needsAxesStateCopy=value;
-        this._gamepad.clear();
+        this.clearGamepadState();
     }
     startConfigScene(){
         SceneManager.push(Scene_JoyStickConfig);
@@ -990,16 +1188,22 @@ class JoyStickManager_T{
     /**
      * @param {Readonly<Gamepad>} gamepad 
      */
-    update(gamepad){
-        if(this._needsAxesStateCopy){
-            this._gamepad.set(gamepad);
-        }
+    updateGamepadState(gamepad){
+        this.copyGamepadState(gamepad);
+        // if(this._needsAxesStateCopy){
+        //     this._gamepadOld.set(gamepad);
+        // }
         this._joyStickMapper.updateSign(gamepad);
-        this.updateListener(gamepad);
+        //this.updateListener(gamepad);
         
     }
+    onUpdateScene(){
+        if(this._gamepadV2 && this._gamepadV2.connected){
+            this.updateListener(this._gamepadV2);
+        }
+    }
     /**
-     * 
+     * @private
      * @param {Gamepad} gamepad 
      */
     updateListener(gamepad){
@@ -1042,11 +1246,11 @@ class JoyStickManager_T{
         return this._joyStickMapper.signY();
     }
     /**
-     * 
+     * @description シーンに応じて、ボタン挙動の割り当てを行う
      * @param {string} sceneName 
      */
     onSceneCreate(sceneName){
-        const list = this._listnersMap.get(sceneName);
+        const list = this._listnersMap.getListener(sceneName);
         if(list){
             this._listners =Array.from(list);
         }else{
@@ -1098,16 +1302,17 @@ const JoyStickManager=(function(){
         axesNoSignal:"このaxesはシグナルがありません。",
     };
     const v = JoyListner_Variable.create(param.joyStickR);
-    const dpad = new JoyListner_AsDpad();
+    //const dpad = new JoyListner_AsDpad();
+    const playerMove =new JoyListner_CharacterMove();
     /**
      * @type {Map<string,ReadonlyArray<JoyStickListenerBase>>}
      */
     const listenerMap =new Map();
-    listenerMap.set("Scene_Map",[dpad,v]);
+    listenerMap.set("Scene_Map",[playerMove,v]);
 
     const axesDic = new AxesListnerDictionary(
         listenerMap,
-        [dpad,null,dpad] //JOY_L,JOY_R,DPADの順で、mapperが配置される。それに対応するのがこの並び
+        [] //JOY_L,JOY_R,DPADの順で、mapperが配置される。それに対応するのがこの並び
     );
     const workaround = Utils.RPGMAKER_NAME ==="MZ" ? new MZ_Impriment(): new MV_Impriment();
     const manager= new JoyStickManager_T(wordSet,command,axesDic,workaround);
@@ -1129,7 +1334,7 @@ class Window_AxesState extends Window_Selectable{
     }
     updateInputTest(){
         if(this.isInputTestMode()){
-            const index= JoyStickManager.gamepad().maximumValueIndex();
+            const index= JoyStickManager.maximumAxesValueIndex();
             if(index !==this.index()){
                 this.select(index);
             }
@@ -1147,19 +1352,19 @@ class Window_AxesState extends Window_Selectable{
      * @returns 
      */
     axesValue(index){
-        return JoyStickManager.gamepad().axesValue(index);
+        return JoyStickManager.axesValue(index);
     }
     /**
      * @param {number} index 
      */
     isItemEnabled(index){
-        return JoyStickManager.gamepad().isEnabled(index);
+        return JoyStickManager.axesValue(index) !==0;
     }
     isCurrentItemEnabled(){
         return this.isItemEnabled(this.index());
     }
     maxItems(){
-        return JoyStickManager.gamepad().numAxes();
+        return JoyStickManager.numAxes();
     }
     /**
      * @param {number} index 
@@ -1193,7 +1398,7 @@ class Window_JoyStickMapper extends Window_Selectable{
     activate(){
         super.activate();
         if(this._helpWindow){
-            this._helpWindow.setText(JoyStickManager.gamepad().descriptionText());
+            this._helpWindow.setText(JoyStickManager.gamepadDescriptionText());
         }
     }
     /**
@@ -1276,7 +1481,7 @@ class Window_JoyConfigCommand extends Window_Command{
     }
     makeCommandList(){
         const command = JoyStickManager.commandList();
-        const coneted = JoyStickManager.gamepad().isContected();
+        const coneted = JoyStickManager.isGamepadConected();
         this.addCommand("直接設定","axes",coneted,"Axes設定を直接行います。");
         this.addCommandWord(command.test);
         this.addCommandWord(command.resetSettings);
@@ -1460,8 +1665,17 @@ const Input_updateGamepadState=Input._updateGamepadState;
 Input._updateGamepadState =function(gamepad){
 
     Input_updateGamepadState.call(this,gamepad);
-    JoyStickManager.update(gamepad);
+    JoyStickManager.updateGamepadState(gamepad);
 };
+const SceneManager_updateScene=SceneManager.updateScene;
+SceneManager.updateScene =function(){
+    if(this._scene && this._scene.isStarted() ){
+        JoyStickManager.onUpdateScene();
+    }
+    SceneManager_updateScene.call(this);
+};
+
+
 const Scene_Base_create=Scene_Base.prototype.create;
 Scene_Base.prototype.create =function(){
     Scene_Base_create.call(this);
@@ -1518,7 +1732,12 @@ Window_Options.prototype.addVolumeOptions =function(){
 if(Utils.RPGMAKER_NAME ==="MZ"){
     PluginManager.registerCommand(PLUGIN_NAME,"ShowConfig",()=>{
         JoyStickManager.startConfigScene();
-    });    
+    });
+    PluginManager.registerCommand(PLUGIN_NAME,"ReadAxes",(arg)=>{
+
+    })
 }
+
+
 
 }())
