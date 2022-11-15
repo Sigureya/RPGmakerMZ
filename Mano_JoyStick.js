@@ -1,4 +1,4 @@
-
+//@ts-check
 //=============================================================================
 // Mano_JoyStick.js
 // ----------------------------------------------------------------------------
@@ -1169,8 +1169,8 @@ class JoyStickManager_T{
      * @param {boolean} value 
      */
     changePadStateCopyMode(value){
-        this._needsAxesStateCopy=value;
-        this.clearGamepadState();
+        //this._needsAxesStateCopy=value;
+        //this.clearGamepadState();
     }
     startConfigScene(){
         SceneManager.push(Scene_JoyStickConfig);
@@ -1190,12 +1190,7 @@ class JoyStickManager_T{
      */
     updateGamepadState(gamepad){
         this.copyGamepadState(gamepad);
-        // if(this._needsAxesStateCopy){
-        //     this._gamepadOld.set(gamepad);
-        // }
-        this._joyStickMapper.updateSign(gamepad);
-        //this.updateListener(gamepad);
-        
+        this._joyStickMapper.updateSign(gamepad);        
     }
     onUpdateScene(){
         if(this._gamepadV2 && this._gamepadV2.connected){
@@ -1668,12 +1663,23 @@ Input._updateGamepadState =function(gamepad){
     JoyStickManager.updateGamepadState(gamepad);
 };
 const SceneManager_updateScene=SceneManager.updateScene;
-SceneManager.updateScene =function(){
-    if(this._scene && this._scene.isStarted() ){
-        JoyStickManager.onUpdateScene();
+
+if(Utils.RPGMAKER_NAME ==="MV"){
+    SceneManager.updateScene =function(){
+        if(this.isCurrentSceneStarted() ){
+            JoyStickManager.onUpdateScene();
+        }
+        SceneManager_updateScene.call(this);
     }
-    SceneManager_updateScene.call(this);
-};
+}else{
+    SceneManager.updateScene =function(){
+        if(this._scene && this._scene.isStarted() ){
+            JoyStickManager.onUpdateScene();
+        }
+        SceneManager_updateScene.call(this);
+    };    
+}
+
 
 
 const Scene_Base_create=Scene_Base.prototype.create;
