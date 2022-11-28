@@ -7,7 +7,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 8.1.0 2022/06/10
+// ver 9.1.0 2022/11/28
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -247,13 +247,13 @@
  * @type struct<MultiLangString>
  * @default {"en":"keyboard config","jp":"キーコンフィグ"}
  * 
- * @param gamepadBackground
+ * @param gamepadSceneBackground
  * @type file
- * @dir img/title1/
+ * @dir img/titles1/
  * 
- * @param keyBackground
+ * @param keySceneBackground
  * @type file
- * @dir img/title1/
+ * @dir img/titles1/
  * 
  * @param SettingsForYEP_OptionsCore
  * @type struct<DisguiseAsYEP>
@@ -376,9 +376,11 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 2022/10/13 ver 9.0.0
+ * 内部処理を作り直し。
+ * 
  * 2022/06/10 ver 8.1.0
  * コモンイベントの設定方法が複雑という意見があったので簡易版を作成。
- * 
  * 
  * 2022/03/15 ver 8.0.1
  * ゲームパッドコンフィグをリニューアル。
@@ -1021,6 +1023,26 @@ function window_initializeMVMZ(window_,rect,initFuncton){
     throw( new Error("Unknow RPG MAKER:"+Utils.RPGMAKER_NAME));
 }
 class Scene_MenuBaseMVMZ extends Scene_MenuBase{
+
+    /**
+     * @returns {string}
+     */
+    backgroundBitmapFileName(){
+        return "";
+    }
+    createBackground(){
+        const filename = this.backgroundBitmapFileName();
+        if(filename){
+            const backBitmap = ImageManager.loadTitle1(filename);
+            if(backBitmap){
+                const sprite = new Sprite(backBitmap);
+                this.addChild(sprite);
+                return;
+            }
+        }
+        super.createBackground();
+    }
+
     bottomAreaHeight(){
         return 20;
     }
@@ -1049,7 +1071,7 @@ class Scene_MenuBaseMVMZ extends Scene_MenuBase{
         return false;
     }
     helpWindowLines(){
-        return 3;
+        return 2;
     }
     /**
      * @param {Number} numLines
@@ -2775,6 +2797,9 @@ class DeviceLayout extends I_DeviceLayout{
         this._list=list;
         this._index=0;
     }
+    list(){
+        return this._list;
+    }
     /**
      * 
      * @param {String} symbolText 
@@ -3474,6 +3499,9 @@ class KeyboardObject extends InputDeviceBase{
     layoutSelector(){
         return this._selector;
     }
+    currentSymbol(){
+        return this._selector.currentDeviceSymbol();
+    }
 
 
 
@@ -3492,12 +3520,12 @@ class KeyboardTemporay{
 
 
 /**
- * @param {Key_CommandManager_T} cmd 
+ * @param {CommandSet} cmd 
  * @param {Array<keylayoutItem>} keys 
  */
 function pushCommad(cmd,keys){
 
-    const list= [cmd.apply(),cmd.wasd(),cmd.reset(),cmd.keylayout(),cmd.exit()];
+    const list= [cmd.save,cmd.wasd,cmd.reset,cmd.keyLayout,cmd.exit];
     for (const iterator of list) {
         const length =iterator.width();
         for(let i=0; i < length; ++i){
@@ -3508,7 +3536,7 @@ function pushCommad(cmd,keys){
 
 /**
  * 
- * @param {Key_CommandManager_T} command 
+ * @param {CommandSet} command 
  * @returns {ReadonlyArray<keylayoutItem>}
  */
  function createUS_Keyboard(command){
@@ -3620,7 +3648,7 @@ function pushCommad(cmd,keys){
 }
 /**
  * 
- * @param {Key_CommandManager_T} command 
+ * @param {CommandSet} command 
  * @returns {ReadonlyArray<keylayoutItem>}
  */
 function createJIS_Keyboard(command){
@@ -3734,8 +3762,12 @@ function createJIS_Keyboard(command){
 
     return KEY_LAYOUT_JIS;
 }
-
-function createFR_Keyboard(command){
+/**
+ * 
+ * @param {CommandSet} command 
+ * @returns {ReadonlyArray<keylayoutItem>}
+ */
+ function createFR_Keyboard(command){
     /**
      * @type {Array<keylayoutItem>}
      */
@@ -3775,7 +3807,7 @@ function createFR_Keyboard(command){
         KEYS.ATMARK,
         KEYS.SQUARE_BRACKETS_OPEN,
         KEYS.ENTER_JIS,
-        KEYS.ENTER_JIS,
+        KEYS.ENTER_JIS_NULL,
         KEYS.TENKEY7 ,
         KEYS.TENKEY8 ,
         KEYS.TENKEY9 ,
@@ -3793,8 +3825,8 @@ function createFR_Keyboard(command){
         KEYS.M,
         KEYS.COLON,
         KEYS.SQUARE_BRACKETS_CLOSE, 
-        KEYS.ENTER_JIS,
-        KEYS.ENTER_JIS,
+        KEYS.ENTER_JIS_NULL,
+        KEYS.ENTER_JIS_NULL,
         KEYS.TENKEY4 ,
         KEYS.TENKEY5 ,
         KEYS.TENKEY6 ,
@@ -3849,7 +3881,7 @@ function createFR_Keyboard(command){
 
 /**
  * 
- * @param {Key_CommandManager_T} command 
+ * @param {Readonly<CommandSet>} command 
  * @returns 
  */
 function createKeyboard(command){
@@ -3941,8 +3973,6 @@ class GamepadObject extends InputDeviceBase{
     getButtonByCode(code){
         if(code <=11){
             return this._selector.getButtonByCode(code);
-//            return this._selector.
-//            return this.currentGGG().getButtonByCode(code);
         }
 
         return null;
@@ -4110,6 +4140,7 @@ class DeviceXXX{
     }
 }
 function createGamepad(){
+    //TODO:helpText差し込み
     const nintendo=createGamepadLayout("N","nintendo","B","A","Y","X");
     const playstation=createGamepadLayout("P","playstation","×","○","□","△");
     const xbox =createGamepadLayout("X","xbox","A","B","X","Y");
@@ -4175,6 +4206,10 @@ class Key_CommandManager_T{
     getExitText(){
         return this._exit.text();
     }
+    /**
+     * @private
+     * @returns 
+     */
     createCommandList_ForKeyLayout(){
         const commandList =[
             this._reset,
@@ -4191,6 +4226,10 @@ class Key_CommandManager_T{
         }
         return result;
     }
+    /**
+     * @private
+     * @returns 
+     */
     createCommandList_ForGamepad(){
         const layout = this.buttonLayout();
         const exit =this.exit();
@@ -4218,21 +4257,59 @@ function createCommandV2(handlerName,name_mText,width,helpText_mText){
     return new Key_Command(handlerName,name,Number(width),help);
 }
 
+/**
+ * @typedef {Object} CommandSet
+ * @property {Key_Command} save
+ * @property {Key_Command} wasd
+ * @property {Key_Command} exit
+ * @property {Key_Command} reset
+ * @property {Key_Command} buttonLayout
+ * @property {Key_Command} keyLayout
+ */
+/**
+ * @returns {Readonly<CommandSet>}
+ */
 function createCommandManager(){
     const params = getParam();
     const save =createCommandV2("apply",params.saveCommand,params.saveCommandWidth,params.saveDescription);
     const wasd= createCommandV2("WASD",params.WASDCommand,(params.WASDwidth),params.WASDhelp)
-    const exit2 =createCommandV2("EXIT",params.exitCommand,params.exitWidth,params.exitHelp)
-    const resetV2 =createCommandV2("reset",params.resetCommand,params.resetWidth,params.resetDescription);
+    const exit =createCommandV2("EXIT",params.exitCommand,params.exitWidth,params.exitHelp)
+    const reset =createCommandV2("reset",params.resetCommand,params.resetWidth,params.resetDescription);
     const changeLayout = createButtonLayoutChangeCommand();
     const changeKeyLayout = createCommandV2("KeyLayout",params.changeKeyLayoutCommand,params.changeKeyLayoutCommandWidth,null);
-    const cm = new Key_CommandManager_T(
-        save,wasd,exit2,resetV2,changeLayout,changeKeyLayout
-    );
 
-    return cm;
+
+    /**
+     * @type {CommandSet}
+     */
+    const comandSet={
+        save,
+        exit,
+        wasd,reset,keyLayout: changeKeyLayout,buttonLayout:changeLayout
+    };
+    return comandSet;
+    // const cm = new Key_CommandManager_T(
+    //     save,wasd,exit,reset,changeLayout,changeKeyLayout
+    // );
+
+    // return cm;
 }
 
+class DeviceManager_T{
+    /**
+     * @param {string} symbol 
+     */
+    selectButtonLayout(symbol){
+
+    }
+    /**
+     * 
+     * @param {string} symbol 
+     */
+    selectKeyLayout(symbol){
+
+    }
+}
 
 const setting = (function(){
     const params = getParam();
@@ -4267,13 +4344,14 @@ const setting = (function(){
         mandatorySymbols:createMandatorySymbols(params),
         windowSymbolListWidht:Number(params.windowSymbolListWidth),
         //なんか異常が起きているので、そのうち対処
-        gamepadBackground:String(params.gamepadBackground),
-        keyBackground:String(params.keyBackground),
+        gamepadBackground:String(params.gamepadSceneBackground),
+        keyBackground:String(params.keySceneBackground),
         numVisibleRows:16,//Number(params.numVisibleRows),
         cols:4,
     };
     return result;
 })();
+
 function currentGamepadConfigText(){
     return setting.text.gamepadConfigCommandText.currentName();
 }
@@ -4341,7 +4419,7 @@ class MV_Impriment extends I_MVMZ_Workaround{
         return Graphics.boxHeight -helpAreaHeight;
     }
     helpWindowLines(){
-        return 3;
+        return 2;
     }
 }
 
@@ -4414,8 +4492,7 @@ class InputConfigManager_T{
      * @returns 
      */
     createHelpWindow(rect){
-        //@ts-ignore
-        return this._readonly.workaround().createHelpWindow(rect,3);
+        return this._readonly.workaround().createHelpWindow(rect);
     }
 
     makeSaveData(){
@@ -4510,21 +4587,48 @@ function defaultKeyLayout() {
     }
     return 'US';
 }
+/**
+ * @typedef {object} InputConifgData
+ * @property {string} keylayout
+ * @property {string} buttonlayout
+ * @property {Record<number,string>} keyMapper
+ * @property {Record<number,string>} gamepadMapper
+ */
+
 //saveconfig
 const  ConfigManager_makeData = ConfigManager.makeData;
 ConfigManager.makeData =function(){
+    
+    /**
+     * @type {InputConifgData}
+     */
+    const data ={
+        keylayout:setting.Keyboard.currentLayout().deviceSymbol(),
+        buttonlayout:setting.gamepad.currentLayout().deviceSymbol(),
+        keyMapper :Input.keyMapper,
+        gamepadMapper:Input.gamepadMapper,
+    };
     const result = ConfigManager_makeData.call(this);
-    result[MA_INPUTCONFIG_STYLE] = ConfigManager[MA_INPUTCONFIG_STYLE] ||"normal";
-    result[MA_GAMEPAD_CONFIG] =Input.gamepadMapper;
-    result[MA_KEYBOARD_CONFIG] = Input.keyMapper;
-    //@ts-ignore
-    result[MA_KEYBOARD_LAYOUT] = ConfigManager.keyLayout_MA ||defaultKeyLayout();
+    result[MA_INPUTCONFIG_CONTENTS]=data;
+    // result[MA_INPUTCONFIG_STYLE] = ConfigManager[MA_INPUTCONFIG_STYLE] ||"normal";
+    // result[MA_GAMEPAD_CONFIG] =Input.gamepadMapper;
+    // result[MA_KEYBOARD_CONFIG] = Input.keyMapper;
+    // //@ts-ignore
+    // result[MA_KEYBOARD_LAYOUT] = ConfigManager.keyLayout_MA ||defaultKeyLayout();
     return result;
 };
 //loadconfig
 const ConfigManager_applyData = ConfigManager.applyData;
 ConfigManager.applyData =function(config){
     ConfigManager_applyData.call(this,config);
+    /**
+     * @type {InputConifgData}
+     */
+    const data = config[MA_INPUTCONFIG_CONTENTS];
+    if(data){
+
+
+    }
     const gamepad =readGamePadConfig(config);
     if(gamepad){
         Input.gamepadMapper = gamepad;
@@ -5112,10 +5216,10 @@ class Window_GamepadConfig_V8 extends Window_Selectable_InputConfigVer{
     initialize(rect){
         const CommandManager =setting.command;
         this._tmpMapper= new TemporaryMappper(Input.gamepadMapper);
-        this._layoutCommand = new V8_Itemn_LayoutCommand(setting.command.buttonLayout());
-        this._exitCommand = new V8Item_Command(CommandManager.exit());
-        this._resetCommand = new V8Item_Command(CommandManager.reset());
-        this._applyCommand = new V8_Item_ApplyCommand(CommandManager.apply(),this._tmpMapper);
+        this._layoutCommand = new V8_Itemn_LayoutCommand(setting.command.buttonLayout);
+        this._exitCommand = new V8Item_Command(CommandManager.exit);
+        this._resetCommand = new V8Item_Command(CommandManager.reset);
+        this._applyCommand = new V8_Item_ApplyCommand(CommandManager.save,this._tmpMapper);
         const layout= setting.gamepad.currentLayout();
         /**
          * @type {ReadonlyArray<V8_Item>}
@@ -5252,8 +5356,37 @@ class Window_GamepadConfig_V8 extends Window_Selectable_InputConfigVer{
         }
     }
 }
+/**
+ * @typedef {Object} GamepadDetailCommand
+ * @property {()=>string} helpText
+ */
+/**
+ * @extends {Window_Command<GamepadDetailCommand>}
+ */
+class Window_GamepadDetail extends Window_Command{
+
+    updateHelp(){
+        super.updateHelp();
+        const ext = this.currentExt();
+        if(ext){
+            this._helpWindow.setText(ext.helpText());
+        }
+    }
+
+
+}
 
 class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
+    constructor(){
+        super();
+        this._detailWindow = null;
+        this._sybmolWindow = null;
+        this._gamepadWindow = null;
+        this._helpWindow = null;
+    }
+    backgroundBitmapFileName(){
+        return setting.gamepadBackground;
+    }
 
     symbolListHeight(){
         const mainAreaHeight=InputConfigManager.getWorkaround().mainAreaHeigth(this);
@@ -5277,10 +5410,10 @@ class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
         const ww = new Window_GamepadConfig_V8(rect);
         ww.setHandler("button",this.onGamepadButton.bind(this));
         ww.setHandler("cancel",this.onGamepadCancel.bind(this));
-        ww.setHandler(setting.command.exit().handle(),this.onGamepadCancel.bind(this));
-        ww.setHandler(setting.command.apply().handle(),this.onApply.bind(this));
-        ww.setHandler(setting.command.reset().handle(),this.onReset.bind(this));
-        ww.setHandler(setting.command.buttonLayout().handle(),this.onChangeLayoutOk.bind(this));
+        ww.setHandler(setting.command.exit.handle(),this.onGamepadCancel.bind(this));
+        ww.setHandler(setting.command.save.handle(),this.onApply.bind(this));
+        ww.setHandler(setting.command.reset.handle(),this.onReset.bind(this));
+        ww.setHandler(setting.command.buttonLayout.handle(),this.onChangeLayoutOk.bind(this));
         this.addWindow(ww);
 
         this._gamepadWindow=ww;
@@ -5373,7 +5506,7 @@ class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
 
     onSymbolListCnacel(){
         this._sybmolWindow.deselect();
-        this._sybmolWindow.hide();
+        //this._sybmolWindow.hide();
         this._gamepadWindow.activate();
     }
     onReset(){
@@ -5405,6 +5538,32 @@ class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
         selector.changeNext();
         this._gamepadWindow.setLayout(selector.currentLayout() );
         this._gamepadWindow.activate();
+    }
+
+    gamepadDetailRect(){
+        return new Rectangle(200,200,200,400);
+    }
+    createGamepadDetailWindow(){
+        const rect = this.gamepadDetailRect();
+        const gdw = new Window_GamepadDetail(rect);
+
+
+        for (const iterator of setting.gamepad.layoutSelector().list()) {
+            //gdw.addCommand(iterator.name(),iterator.)
+        } 
+
+
+        this._detailWindow=gdw;
+
+    }
+    onDetailLayoutOk(){
+        const selector = setting.gamepad.layoutSelector();
+        selector.selectOfSymbol(this._detailWindow.currentSymbol())
+        this._gamepadWindow.setLayout(selector.currentLayout() );
+        this._gamepadWindow.activate();
+
+        this._detailWindow.deactivate();
+        this._detailWindow.hide();
     }
 }
 
@@ -5447,11 +5606,13 @@ class Window_WideButton_Selectable extends Window_Selectable_InputConfigVer{
      * @param {number} index 
      */
     drawItemBackground(index){
-        if(this._lastBackground !==index){
+        const head = this.itemHeadIndex(index);
+        if(head!==this._lastBackground ){
             super.drawItemBackground(index);
             this._lastBackground =index;
         }
     }
+
     /**
      * @param {number} index 
      * @returns {T}
@@ -5529,6 +5690,10 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
         }
         return rect;
     }
+    /**
+     * @param {Number} index 
+     * @returns {Rectangle}
+     */
     itemRect(index){
         const item = this.itemAt(index);
         if(item===KEYS.ENTER_JIS || item===KEYS.ENTER_JIS_NULL){
@@ -5537,6 +5702,54 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
         return super.itemRect(index);
 
     }
+    /**
+     * @returns {{color1:string,color2:string}}
+     * @param {number} index 
+     */
+    colorPair(index){
+        const item = this.itemAt(index);
+        if(item){
+            const symbol= this.symbolObject(item);
+            if(symbol){
+                const color1= symbol.backColor();
+
+                return {
+                    color1,
+                    color2:ColorManager.itemBackColor2(),
+                }
+            }
+        }
+        return {
+            color1:ColorManager.itemBackColor1(),
+            color2:ColorManager.itemBackColor2(),
+        }
+
+    }
+    /**
+     * @param {number} index 
+     */
+    drawItemBackground(index){
+        const rect = this.itemRect(index);
+        const pair = this.colorPair(index);
+        this.drawItemBackgroundEx(rect,pair.color1,pair.color2);
+    }
+
+    /**
+     * 
+     * @param {Rectangle} rect 
+     * @param {string} color1 
+     * @param {string} color2 
+     */
+    drawItemBackgroundEx(rect,color1,color2){
+        const x = rect.x;
+        const y = rect.y;
+        const w = rect.width;
+        const h = rect.height;
+        this.contentsBack.gradientFillRect(x, y, w, h, color1, color2, true);
+        this.contentsBack.strokeRect(x, y, w, h, color1);
+    
+    }
+
     /**
      * @private
      * @param {Window_KeyCommand} command 
@@ -5653,6 +5866,7 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
         this.contents.fontSize = this.symbolNameFontSize();
         this.drawText(symbolName,rect.x,rect.y +this.symbolNameFontSize()+2 ,rect.width,"center");
     }
+    
 
     /**
      * @param {number} index 
@@ -5734,7 +5948,7 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
         if(!item){
             return ""
         }
-        if(item ===setting.command.keylayout()){
+        if(item ===setting.command.keyLayout){
             return this.layoutHelpText();
         }
         if(item.isCommand()){
@@ -5757,11 +5971,11 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
         return true;
     }
     selectExit() {
-        const index = this._layout.lastIndexOf(setting.command.exit());
+        const index = this._layout.lastIndexOf(setting.command.exit);
         this.select(index);
     }
     currentItemIsExit(){
-        return this.currentItem() === setting.command.exit();
+        return this.currentItem() === setting.command.exit;
     }
 
     isCurrentItemEnabled(){
@@ -5770,7 +5984,7 @@ class Window_KeyConfig_MA_V10 extends Window_WideButton_Selectable{
             return false;
         }
         //保存
-        if(item ===setting.command.apply()){
+        if(item ===setting.command.save){
             return this._mapper.isValidMapper();
         }
         return item.isEnabled();
@@ -5819,8 +6033,8 @@ class Window_KeyCommand extends Window_Command{
         this.clearCommandList();
 
 
-        this.addCommandEx(setting.command.wasd());
-        this.addCommandEx(setting.command.reset());
+        this.addCommandEx(setting.command.wasd);
+        this.addCommandEx(setting.command.reset);
 
     }
 }
@@ -5830,6 +6044,12 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         this._symbolWindow =null;
         this._keyConfigWindow=null;
     }
+    backgroundBitmapFileName(){
+        return setting.keyBackground;
+    }
+
+
+
     create(){
         super.create();
         this.createAllWindows();
@@ -5906,12 +6126,13 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
         const kw = new Window_KeyConfig_MA_V10(rect);        
         kw.setHandler("cancel",this.onKeyboardCancel.bind(this));
         kw.setHandler("key",this.onKey.bind(this));
-        kw.setHandler("reset",this.onKeyboardReset.bind(this));
-        kw.setHandler(setting.command.exit().handle(),this.onKeyboardCancel.bind(this));
-        kw.setHandler(setting.command.keylayout().handle(),this.onKeyLayout.bind(this));
-        kw.setHandler(setting.command.wasd().handle(),this.onKeyWASD.bind(this));
-        kw.setHandler(setting.command.apply().handle(),this.onApply.bind(this));
+        kw.setHandler(setting.command.reset.handle(),this.onKeyboardReset.bind(this));
+        kw.setHandler(setting.command.exit.handle(),this.onKeyboardCancel.bind(this));
+        kw.setHandler(setting.command.keyLayout.handle(),this.onKeyLayout.bind(this));
+        kw.setHandler(setting.command.wasd.handle(),this.onKeyWASD.bind(this));
+        kw.setHandler(setting.command.save.handle(),this.onApply.bind(this));
         kw.refresh();
+        kw.select(0);
         this._keyConfigWindow=kw;
         this.addWindow(kw);
     }
@@ -6019,6 +6240,11 @@ class Scene_KeyConfig_V10 extends Scene_MenuBaseMVMZ{
             return;
         }
     };
+const Scene_Options_maxCommands=Scene_Options.prototype.maxCommands;
+Scene_Options.prototype.maxCommands =function(){
+    return Scene_Options_maxCommands.call(this)+2;
+};
+
 function setupPP_option(){
     //これ以外の方法だと、変数が宣言されていないエラーで死ぬ
     if(!Imported.PP_Option){
