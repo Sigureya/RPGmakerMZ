@@ -7,7 +7,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 9.1.0 2022/11/28
+// ver 9.0.2 2022/12/22
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -2099,6 +2099,7 @@ class ExtendsSymbol extends I_SymbolDefine{
                 if(judge.isBasicSymbol(symbol)){
                     return symbol;
                 }
+                return symbol;
            }
         }
         return null;
@@ -2123,7 +2124,8 @@ class ExtendsSymbol extends I_SymbolDefine{
         if(manualSymbol){
             return manualSymbol;
         }
-        switch (this._advanced.overwriteType()) {
+        const type =this._advanced.overwriteType()
+        switch (type) {
             case 1:
                 return this.padSymbol(judge);
             case 2:
@@ -2439,7 +2441,7 @@ class SymbolManager_T {
         for (const iterator of this._basicSymbols) {
             yield iterator;
         }
-        for (const iterator of this._basicSymbols) {
+        for (const iterator of this._extendSymbols) {
             yield iterator;
         }
         for (const iterator of this._unknowList) {
@@ -4363,8 +4365,8 @@ function currentKeyConfigText(){
  * @typedef {Object} ConfigSavedata 
  * @property {String} keyboardLayout
  * @property {String} padLayout
- * @property {Object} gamepadConfig
- * @property {Object} keyboardConfig
+ * @property {Record<number,string>} gamepadConfig
+ * @property {Record<number,string>} keyboardConfig
  */
 
 /**
@@ -4506,12 +4508,13 @@ class InputConfigManager_T{
                 padLayout:"",
                 keyboardLayout:"",
             }
-            this._saveData =save;
+            this.setConfigObject(save);
         }
     }
 
 
     /**
+     * @private
      * @param {ConfigSavedata} config 
      */
     setConfigObject(config){
