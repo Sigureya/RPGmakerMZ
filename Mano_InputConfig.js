@@ -7,7 +7,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 9.0.2 2022/12/22
+// ver 9.0.3 2022/12/24
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -1667,10 +1667,13 @@ class BasicSymbol extends I_SymbolDefine{
         return this._mandatory;
     }
     helpText(){
-        const text= super.helpText();
-        if(text){
-            return text;
+        if(this._helpText){
+            const text= this._helpText.currentName();
+            if(text){
+                return text;
+            }    
         }
+        // const text= super.helpText();
         return this.name();
     }
     name(){
@@ -2096,10 +2099,9 @@ class ExtendsSymbol extends I_SymbolDefine{
            const char_=  keys.charCodeAt(i);
            const symbol = Input.keyMapper[char_];
            if(symbol){
-                if(judge.isBasicSymbol(symbol)){
+                if(!judge.isBasicSymbol(symbol)){
                     return symbol;
                 }
-                return symbol;
            }
         }
         return null;
