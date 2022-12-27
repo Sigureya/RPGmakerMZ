@@ -7,7 +7,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 9.0.3 2022/12/24
+// ver 9.1.0 2022/12/28
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -573,7 +573,24 @@
  * @type string
  * @desc 半角英字で設定。例 Ef65
  * Set the key corresponding to the action (ex:Ef65)
- * 
+ *
+ * @param exKeys
+ * @text 追加のキー
+ * @desc 文字以外の特殊なキーを割り当てる場合に使用します。
+ * @type select[]
+ * @option Shift(16)
+ * @value 16
+ * @option CTRL(17)
+ * @value 17
+ * @option Alt(18)
+ * @value 18
+ * @option pageup(33)
+ * @value 33
+ * @option PageDown(34)
+ * @value 34
+ * @option End(35)
+ * @value 35
+ * @default []
  * 
  * @param text
  * @text キーの表示/keyText
@@ -726,10 +743,6 @@
 
 /*~struct~InputDefine:
  * 
- * @param keys
- * @text キー設定/KeySetting
- * @desc 廃止予定。同名の新しいパラメータを使用してください。
- * Scheduled to be abolished. Use the new parameter.
  * 
  * @param keySetting
  * @text キー設定/keySetting
@@ -786,7 +799,7 @@
  * @default {"jp":"","en":""}
  * 
  * @param event
- * @text イベント/event
+ * @text イベント/CommonEvent
  * @desc ボタンを押した際にコモンイベントを実行します。
  * Executes a common event when the button is pressed.
  * @type struct<EventCaller>
@@ -1857,11 +1870,13 @@ class KeySetting{
      * 
      * @param {String} keys 
      * @param {String} color 
+     * @param {ReadonlyArray<number>} exKeyCode
      * @param {MultiLanguageText} text 
      */
-    constructor(keys,color,text){
+    constructor(keys,color,exKeyCode,text){
         this._keys=keys.toUpperCase();
         this._color = color;
+        this._exKeyCode= exKeyCode;
         this._mText=text;
     }
     /**
@@ -1870,14 +1885,18 @@ class KeySetting{
      */
     static create(objText){
         if(!objText){
-            return new KeySetting("",null,new MultiLanguageText("",""));
+            return new KeySetting("",null,[],new MultiLanguageText("",""));
         }
         const obj =JSON.parse(objText);
         const keys =obj.keys;
         const color = (obj.color||null);
+        /**
+         * @type {string[]}
+         */
+        const exKeys = JSON.parse(obj.exKeys ||"[]");
         const mtext = MultiLanguageText.create(obj.text);
 
-        return new KeySetting(keys,color,mtext);
+        return new KeySetting(keys,color,exKeys.map(Number),mtext);
     }
     backColor(){
         return this._color;
@@ -1885,6 +1904,17 @@ class KeySetting{
     keys(){
         return this._keys;
     }
+
+    *iterateKeyCord(){
+        const length = this._keys.length;
+        for(let i=0 ; i< length; ++i){
+            yield this._keys.charCodeAt(i);
+        }
+        for (const iterator of this._exKeyCode) {
+            yield iterator;
+        }
+    }
+
     keyText(){
         if(this._mText){
             return this._mText.currentName();
@@ -1894,7 +1924,6 @@ class KeySetting{
 
 
 }
-
 class AdovancedSetting{
     /**
      * 
@@ -1914,7 +1943,7 @@ class AdovancedSetting{
      */
     static create(objText){
         if(!objText){
-            return new AdovancedSetting(null,0,false); 
+            return EMPTY_AdovancedSetting;
         }
         const obj=JSON.parse(objText);
         const symbol=(obj.symbol);
@@ -1946,6 +1975,8 @@ class AdovancedSetting{
     }
 
 }
+
+const EMPTY_AdovancedSetting = new AdovancedSetting(null,0,false);
 /**
  * @typedef {object} BasicSymbolJudge
  * @property {(symbol:string)=>boolean} isBasicSymbol
@@ -1955,6 +1986,26 @@ class AdovancedSetting{
  * @property {ExtendsSymbol} exSymbol
  * @property {TouchButton} button
  */
+const createSimpleEventCaller =function(objText){
+    const obj =JSON.parse(objText);
+    const actionName =MultiLanguageText.create (obj.name)
+    const helpText =MultiLanguageText.create(obj.helpText);
+    const adv = EMPTY_AdovancedSetting;
+    const eventCaller = EventCaller.create(obj.event);
+    const enabled = (obj.enabled ==="true")
+    const buttonNumber =Number(obj.button);    
+    const keyText = MultiLanguageText.create(obj.keyText);
+    const keySetting = new KeySetting(String(obj.key||""),null,[],keyText);
+
+    const e= new ExtendsSymbol(adv,actionName,buttonNumber,eventCaller,enabled,helpText,keySetting);
+
+    return {
+        exSymbol:e,
+        button:null,
+    }
+
+};
+
 /**
  * @param {String} objText 
  * @returns {ExtendsSymbolPair}
@@ -1969,12 +2020,12 @@ const createExtendsSymbol=function(objText){
             button:null
         };
     }
-    const adovanced = AdovancedSetting.create(obj.adovanced);
+    const adovanced = AdovancedSetting.create(obj.adovanced) ;
     const buttonId =Number(obj.button);
 
     const mtext = MultiLanguageText.create(obj.name);
     const helpText =MultiLanguageText.create(obj.helpText||"{}");
-    const keySetting = KeySetting.create(obj.keySetting);
+    const keySetting =  KeySetting.create(obj.keySetting);
 
     const eventObj =EventCaller.create(obj.event);
     const def = new ExtendsSymbol(adovanced,mtext, buttonId,eventObj ,enabled,helpText,keySetting);
@@ -2024,6 +2075,9 @@ class ExtendsSymbol extends I_SymbolDefine{
     getKeys(){
         return  this._keySetting.keys();
     }
+    iterateKeyCode(){
+        return this._keySetting.iterateKeyCord();
+    }
     overwriteType(){
         return this._advanced.overwriteType();
     }
@@ -2032,7 +2086,7 @@ class ExtendsSymbol extends I_SymbolDefine{
     }
 
     isMandatory(){
-        return this._advanced.isMandatory();
+        return  this._advanced.isMandatory();
     }
     displayKeyName(){
         const keyText = this._keySetting.keyText();
@@ -2093,12 +2147,10 @@ class ExtendsSymbol extends I_SymbolDefine{
      * @returns {String}
      */
     firstKeySymbol(judge){
-        const keys = this.getKeys();
-        const charLen =keys.length;
-        for(let i =0; i <charLen; ++i){
-           const char_=  keys.charCodeAt(i);
-           const symbol = Input.keyMapper[char_];
-           if(symbol){
+
+        for (const charCode of this._keySetting.iterateKeyCord()) {
+            const symbol = Input.keyMapper[charCode];
+            if(symbol){
                 if(!judge.isBasicSymbol(symbol)){
                     return symbol;
                 }
@@ -2106,6 +2158,7 @@ class ExtendsSymbol extends I_SymbolDefine{
         }
         return null;
     }
+
     eventCallSymbol(){
         if(this._event){
             const eventId =this._event.eventId()
@@ -2198,12 +2251,20 @@ class ExtendsSymbol extends I_SymbolDefine{
         if(!isNaN( this._buttonId)){
             this.mapperWrite(Input.gamepadMapper,this._buttonId);
         }
-        const keys=this.getKeys();
-        const len = keys.length;
-        for(let i =0; i< len;++i){
-            const charcode =keys.charCodeAt(i);
-            this.mapperWrite(Input.keyMapper,charcode);
+
+
+        for (const keycord of this.iterateKeyCode()) {
+            this.mapperWrite(Input.keyMapper,keycord);
         }
+
+        // const keys=this.getKeys();
+
+
+        // const len = keys.length;
+        // for(let i =0; i< len;++i){
+        //     const charcode =keys.charCodeAt(i);
+        //     this.mapperWrite(Input.keyMapper,charcode);
+        // }
     }
     updateEventCall(){
         if(this._event){
@@ -2560,24 +2621,13 @@ function setupExtendsSymbols(textList,symbolManager,buttonManager,func){
 setupExtendsSymbols(JSON.parse(getParam().extendsMapper ||"[]") ,  symbolManager,ButtonManager,function(arg){
     return createExtendsSymbol(arg);
 });
+function createSymbolAndButton(objText){
+
+
+}
+
 setupExtendsSymbols(JSON.parse(getParam().eventList ||"[]") ,  symbolManager,ButtonManager,function(arg){
-
-    const obj =JSON.parse(arg);
-    const actionName =MultiLanguageText.create (obj.name)
-    const helpText =MultiLanguageText.create(obj.helpText);
-    const adv = new AdovancedSetting(null,0,false);
-    const eventCaller = EventCaller.create(obj.event);
-    const enabled = (obj.enabled ==="true")
-    const buttonNumber =Number(obj.button);
-    const keyText = MultiLanguageText.create(obj.keyText);
-    const keySetting = new KeySetting(String(obj.key||""),null,keyText);
-
-    const e= new ExtendsSymbol(adv,actionName,buttonNumber,eventCaller,enabled,helpText,keySetting);
-
-    return {
-        exSymbol:e,
-        button:null,
-    }
+    return createSimpleEventCaller(arg);
 });
 
 if(ButtonManager.isTouchButtonEnabled()){
