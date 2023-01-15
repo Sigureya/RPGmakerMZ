@@ -578,6 +578,8 @@
  * @text 追加のキー
  * @desc 文字以外の特殊なキーを割り当てる場合に使用します。
  * @type select[]
+ * @option Tab(9)
+ * @value 9
  * @option Shift(16)
  * @value 16
  * @option CTRL(17)
@@ -2851,6 +2853,13 @@ class DeviceLayout extends I_DeviceLayout{
         this._list=list;
         this._index=0;
     }
+    topItemName(){
+        const item = this._list[0];
+        if(item){
+            return item.name();
+        }
+        return "";
+    }
     list(){
         return this._list;
     }
@@ -3934,7 +3943,6 @@ function createJIS_Keyboard(command){
 }
 
 /**
- * 
  * @param {Readonly<CommandSet>} command 
  * @returns 
  */
@@ -4413,13 +4421,6 @@ function currentKeyConfigText(){
     return setting.text.keyConfigCommandText.currentName();
 }
 
-/**
- * @typedef {Object} ConfigSavedata 
- * @property {String} keyboardLayout
- * @property {String} padLayout
- * @property {Record<number,string>} gamepadConfig
- * @property {Record<number,string>} keyboardConfig
- */
 
 /**
  * @param {String} base 
@@ -4514,25 +4515,28 @@ class InputConfigReadOnly{
 
 }
 
+
 class InputConfigManager_T{
     /**
      * @param {InputConfigReadOnly} readonlyData 
      */
     constructor(readonlyData){
         this._readonly=readonlyData;
-        /**
-         * @type {ConfigSavedata}
-         */
-        this._saveData=null;
         this._defaultGamepad =null;
         this._defaultKeyborad =null;
+        this.setLayout("","");
     }
     getWorkaround(){
         return this._readonly.workaround();
     }
+
     makeDefaultMapper(){
-        this._defaultKeyborad =new DefaultMapper(Input.keyMapper);
-        this._defaultGamepad= new DefaultMapper(Input.gamepadMapper);
+        if(this._defaultGamepad===null){
+            this._defaultGamepad= new DefaultMapper(Input.gamepadMapper);
+        }
+        if(this._defaultKeyborad ===null){
+            this._defaultKeyborad =new DefaultMapper(Input.keyMapper);
+        }
     }
     defaultGamepadMapper(){
         return this._defaultGamepad;
@@ -4549,29 +4553,67 @@ class InputConfigManager_T{
         return this._readonly.workaround().createHelpWindow(rect);
     }
 
+    padLayoutTopItemName(){
+        return setting.gamepad.layoutSelector().topItemName();
+
+    }
+
     makeSaveData(){
-        if(!this._saveData){
-            /**
-             * @type {ConfigSavedata}
-             */
-            const save = {
-                gamepadConfig:{},
-                keyboardConfig:{},
-                padLayout:"",
-                keyboardLayout:"",
-            }
-            this.setConfigObject(save);
+        if(!this._config){
+            this.setConfigSaveData(null);
         }
     }
 
-
     /**
      * @private
-     * @param {ConfigSavedata} config 
+     * @param {InputConifgSaveData} config 
+     * @returns {InputConifgSaveData}
      */
-    setConfigObject(config){
-        this._saveData=config;
+    validateSaveData(config){
+        return{
+            keylayout:(config && config.keylayout) || this.defaultKeyLayout(),
+            keyMapper:(config && config.keyMapper) || this._defaultKeyborad.cloneMapper(),
+            gamepadMapper:(config && config.gamepadMapper ) || this._defaultGamepad.cloneMapper(),
+            padlayout:(config && config.padlayout) ||this.padLayoutTopItemName(),
+        }
     }
+    /**
+     * 
+     * @param {string} key 
+     * @param {string} pad 
+     */
+    setLayout(key,pad){
+        this._config={
+            keyLayout:key,
+            padLayout:pad,
+        };
+    }
+
+    /**
+     * @param {InputConifgSaveData} config 
+     */
+    setConfigSaveData(config){
+        const saveData= this.validateSaveData(config);
+
+        const tmpGamepad = new TemporaryMappper(saveData.gamepadMapper);
+        const tmpKeyMapper= new TemporaryMappper(saveData.keyMapper);
+        Input.gamepadMapper =tmpGamepad.createNormalizedMapper();
+        Input.keyMapper = tmpKeyMapper.createNormalizedMapper();
+        this.setLayout(saveData.keylayout,saveData.padlayout);
+    }
+
+    /**
+     * @returns {InputConifgSaveData}
+     */
+    createConfigData(){
+        return {
+            keylayout:setting.Keyboard.currentLayout().deviceSymbol(),
+            padlayout: setting.gamepad.currentLayout().deviceSymbol(),
+            gamepadMapper:Input.gamepadMapper,
+            keyMapper:Input.keyMapper,
+        };
+    }
+    
     defaultKeyLayout() {
         //オプション系プラグインで先行してmakeData()するタイプへの対策
         if($gameSystem && $gameSystem.isJapanese()){
@@ -4581,14 +4623,15 @@ class InputConfigManager_T{
     }
 
     createTemporalyGamepadMapper(){
-        const mapper = new TemporaryMappper(this._saveData.gamepadConfig);
-        return mapper;
+
+        return new TemporaryMappper(Input.gamepadMapper);
     }
-    applyGamepadConfig(){
+    // applyGamepadConfig(){
+    //     // if(this._saveData){
+    //     //     Input.gamepadMapper= objectClone(this._saveData.gamepadMapper);
+    //     // }
+    // }
 
-
-
-    }
     isAllButtonDetouch(){
         return Input._latestButton===null;
     }
@@ -4629,40 +4672,26 @@ function readKeyboardConfig(config){
     // }
     return null;
 }
-//@ts-ignore
-ConfigManager.setKeyLayoutMA =function(layout){
-    //@ts-ignore
-    ConfigManager.keyLayout_MA =layout;
-};
 
-function defaultKeyLayout() {
-    //オプション系プラグインで先行してmakeData()するタイプへの対策
-    if($gameSystem && $gameSystem.isJapanese()){
-        return 'JIS';
-    }
-    return 'US';
-}
 /**
- * @typedef {object} InputConifgData
+ * @typedef {object} InputConifgSaveData
  * @property {string} keylayout
- * @property {string} buttonlayout
+ * @property {string} padlayout
  * @property {Record<number,string>} keyMapper
  * @property {Record<number,string>} gamepadMapper
+ */
+/**
+ * @typedef {object} InputConifgLayoutData
+ * @description マネージャーで所持するデータ
+ * @property {string} keylayout
+ * @property {string} padlayout
  */
 
 //saveconfig
 const  ConfigManager_makeData = ConfigManager.makeData;
 ConfigManager.makeData =function(){
     
-    /**
-     * @type {InputConifgData}
-     */
-    const data ={
-        keylayout:setting.Keyboard.currentLayout().deviceSymbol(),
-        buttonlayout:setting.gamepad.currentLayout().deviceSymbol(),
-        keyMapper :Input.keyMapper,
-        gamepadMapper:Input.gamepadMapper,
-    };
+    const data= InputConfigManager.createConfigData();
     const result = ConfigManager_makeData.call(this);
     result[MA_INPUTCONFIG_CONTENTS]=data;
     // result[MA_INPUTCONFIG_STYLE] = ConfigManager[MA_INPUTCONFIG_STYLE] ||"normal";
@@ -4677,23 +4706,12 @@ const ConfigManager_applyData = ConfigManager.applyData;
 ConfigManager.applyData =function(config){
     ConfigManager_applyData.call(this,config);
     /**
-     * @type {InputConifgData}
+     * @type {InputConifgSaveData}
      */
     const data = config[MA_INPUTCONFIG_CONTENTS];
     if(data){
-
-
+        InputConfigManager.setConfigSaveData(data);
     }
-    const gamepad =readGamePadConfig(config);
-    if(gamepad){
-        Input.gamepadMapper = gamepad;
-    }
-    const keyMapper =readKeyboardConfig(config);
-    if(keyMapper){
-        Input.keyMapper =keyMapper;
-    }
-    //@ts-ignore
-    ConfigManager.setKeyLayoutMA(config[MA_KEYBOARD_LAYOUT]||'JIS');
     Input.clear();
 };
 //@ts-ignore
@@ -4726,6 +4744,7 @@ class TemporaryMappperBase extends I_ReadonlyMapper{
 
     }
     /**
+     * @protected
      * @returns {InputMapperType}
      */
     createNormalizedMapper(){
@@ -4738,6 +4757,8 @@ class TemporaryMappperBase extends I_ReadonlyMapper{
 /**
  * @typedef {Record<Number,String> } InputMapperType
  */
+
+
 //TODO:mapperのリセット用に保存してあるデータを何とかする
 //主にリセットで使うので、それに向いた構造に改造したい
 class TemporaryMappper extends TemporaryMappperBase{
@@ -4767,6 +4788,28 @@ class TemporaryMappper extends TemporaryMappperBase{
         super();
         this.reset(mapper);
     }
+    /**
+     * @returns 
+     */
+    createNormalizedMapper(){
+        /**
+         * @type {InputMapperType}
+         */
+        const result ={};
+        for (const iterator of this._map.entries()) {
+            const n =(iterator[0]);
+            const symbol =iterator[1];
+            if(!isNaN(n) &&symbol){
+                result[n] = symbol;
+            }
+        }
+        return result;
+    }
+    cloneMapper(){
+        return this.createNormalizedMapper();
+    }
+
+
     createSymbolsSet(){
         const set =new Set(this._map.values());
         return set;
@@ -4820,23 +4863,6 @@ class TemporaryMappper extends TemporaryMappperBase{
         return false;
 
 
-    }
-    createNormalizedMapper(){
-        /**
-         * @type {InputMapperType}
-         */
-        const result ={};
-        for (const iterator of this._map.entries()) {
-            const n =(iterator[0]);
-            const symbol =iterator[1];
-            if(!isNaN(n) &&symbol){
-                result[n] = symbol;
-            }
-        }
-        return result;
-    }
-    cloneMapper(){
-        return this.createNormalizedMapper();
     }
     /**
      * 
@@ -5505,9 +5531,6 @@ class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
         this._gamepadWindow.setHelpWindow(this._helpWindow);
         this._gamepadWindow.activate();
         this._gamepadWindow.select(0);
-    }
-    xx(){
-        return setting.gamepadSelector
     }
     onGamepadReset(){
         const mapper = this._gamepadWindow.getMapper();
