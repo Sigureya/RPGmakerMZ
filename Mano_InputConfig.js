@@ -7,7 +7,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 9.1.0 2022/12/28
+// ver 9.2.0 2023/04/16
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -90,37 +90,37 @@
  * @param basicOk
  * @text 決定/ok
  * @type struct<BasicSymbol>
- * @default {"name":"{\"jp\":\"決定\",\"en\":\"OK\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
+ * @default {"mandatory":"true","name":"{\"jp\":\"決定\",\"en\":\"OK\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
  * @param basicCancel
  * @text 取り消し/cancle
  * @type struct<BasicSymbol>
- * @default {"name":"{\"jp\":\"キャンセル\",\"en\":\"cancel\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
+ * @default {"mandatory":"true","name":"{\"jp\":\"キャンセル\",\"en\":\"cancel\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
  * @param basicShift
  * @text ダッシュ/dash
  * @type struct<BasicSymbol>
- * @default {"name":"{\"jp\":\"ダッシュ\",\"en\":\"dash\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
+ * @default {"mandatory":"true","name":"{\"jp\":\"ダッシュ\",\"en\":\"dash\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
  * @param basicMenu
  * @text メニュー/menu
  * @type struct<BasicSymbol>
- * @default {"name":"{\"jp\":\"メニュー\",\"en\":\"menu\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
+ * @default {"mandatory":"true","name":"{\"jp\":\"メニュー\",\"en\":\"menu\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
  * @param basicEscape
  * @text メニュー(2)/menu(2)
  * @type struct<BasicSymbol>
- * @default {"name":"{\"jp\":\"メニュー/キャンセル\",\"en\":\"menu/cancel\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
+ * @default {"mandatory":"true","name":"{\"jp\":\"メニュー/キャンセル\",\"en\":\"menu/cancel\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
  * @param basicPageup
  * @text 次/next
  * @type struct<BasicSymbol>
- * @default {"name":"{\"jp\":\"次\",\"en\":\"next\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
+ * @default {"mandatory":"true","name":"{\"jp\":\"次\",\"en\":\"next\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
  * @param basicPagedown
  * @text 前/prev
  * @type struct<BasicSymbol>
- * @default {"name":"{\"jp\":\"前\",\"en\":\"prev\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
+ * @default {"mandatory":"true","name":"{\"jp\":\"前\",\"en\":\"prev\"}","keyText":"{\"jp\":\"\",\"en\":\"\"}","helpText":"{\"jp\":\"\",\"en\":\"\"}"}
  * 
  * 
  * 
@@ -164,6 +164,13 @@
  * @text 設定の保存/SaveSetting
  * @type struct<MultiLangString>
  * @default {"en":"seve setting","jp":"設定を保存"}
+ * 
+ * @param saveValidTest
+ * @text 設定検証/Validating the Configuration
+ * @desc 入力設定の不備がある場合、保存を禁止。
+ * If the input settings are incomplete, save is prohibited.
+ * @type boolean
+ * @default true
  * 
  * @param saveCommandWidth
  * @text 幅/width
@@ -376,6 +383,10 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 2023/04/16 ver 9.2.0
+ * 標準の操作の必須指定を変更可能に。
+ * その他、軽微なバグ修正。
+ * 
  * 2022/10/13 ver 9.0.0
  * 内部処理を作り直し。
  * 
@@ -509,6 +520,11 @@
  * 
  */
 /*~struct~BasicSymbol:
+ * @param mandatory
+ * @text 必須扱い/mandatory
+ * @type boolean
+ * @default true
+ * 
  * @param name
  * @type struct<MultiLangString>
  * @default {"jp":"","en":""}
@@ -1600,6 +1616,13 @@ class EscapeSymbol extends I_SymbolDefine{
         return new EscapeSymbol(name,helpText,keyText);
     }
 
+    helpText(){
+        return this._helpText.currentName();
+    }
+    displayKeyName(){
+        return this._keyText.currentName();
+    }
+   
     name(){
         return this._name.currentName();
     }
@@ -1663,20 +1686,22 @@ class BasicSymbol extends I_SymbolDefine{
      * 
      * @param {string} symbol 
      * @param {string} objText 
-     * @param {boolean} mandatory
+     * @param {boolean} mandatoryByMapper
      * @returns 
      */
-    static create(symbol,objText,mandatory){
+    static create(symbol,objText,mandatoryByMapper){
         if(!objText){
-            return new BasicSymbol(symbol,null,null,null,mandatory);
+            return new BasicSymbol(symbol,null,null,null,mandatoryByMapper);
         }
         const obj = JSON.parse(objText);
         const name =MultiLanguageText.create(obj.name);
         const keyText =MultiLanguageText.create(obj.keyText);
         const helpText =MultiLanguageText.create(obj.helpText);
+
+        const mandatory = (obj.mandatory ==="true");
         //const exKeys =String(obj.exKeys||"");
         //const exButton =Number(obj.exButton );
-        return new BasicSymbol(symbol,name,keyText,helpText,mandatory);
+        return new BasicSymbol(symbol,name,keyText,helpText,mandatoryByMapper && mandatory);
     }
     isMandatory(){
         return this._mandatory;
@@ -3454,7 +3479,7 @@ const KEYS={
     F:keychar("F"),
     G:keychar("G"),
     H:keychar("H"),
-    I:keychar("H"),
+    I:keychar("I"),
     J:keychar("J"),
     K:keychar("K"),
     L:keychar("L"), 
@@ -4519,11 +4544,21 @@ class InputConfigReadOnly{
 class InputConfigManager_T{
     /**
      * @param {InputConfigReadOnly} readonlyData 
+     * @param {GamepadObject} gamepad
+     * @param {KeyboardObject} keyboard
      */
-    constructor(readonlyData){
+    constructor(readonlyData,gamepad,keyboard){
         this._readonly=readonlyData;
         this._defaultGamepad =null;
         this._defaultKeyborad =null;
+        /**
+         * @readonly
+         */
+        this._gamepad = gamepad;
+        /**
+         * @readonly
+         */
+        this._keyboard = keyboard;
         this.setLayout("","");
     }
     getWorkaround(){
@@ -4637,7 +4672,7 @@ class InputConfigManager_T{
     }
 
     isAnyButtonLongPressed(){
-        return Input._pressedTime >60;
+        return Input._pressedTime > 60;
     }
 
 }
@@ -4647,7 +4682,7 @@ const InputConfigManager =(function(){
     const mvmz = (Utils.RPGMAKER_NAME==="MV") ? new MV_Impriment() :new MZ_Impriment();
     const readonlyData =new InputConfigReadOnly(mvmz)
 
-    return new InputConfigManager_T(readonlyData);
+    return new InputConfigManager_T(readonlyData,setting.gamepad,setting.Keyboard);
 }())
 
 const MA_INPUTCONFIG_CONTENTS =makeCONFIG_KEY("MANO_INPUTCONFIG");
@@ -5409,9 +5444,6 @@ class Window_GamepadConfig_V8 extends Window_Selectable_InputConfigVer{
         }
 
         return false;
-    }
-    gamepad(){
-        return setting.gamepadSelector
     }
     /**
      * @param {GamepadButtonObj} button 
