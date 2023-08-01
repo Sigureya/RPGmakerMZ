@@ -1,4 +1,3 @@
-
 //=============================================================================
 // Mano_InputConfig.js
 // ----------------------------------------------------------------------------
@@ -7,7 +6,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 9.2.0 2023/04/16
+// ver 9.2.1 2023/07/05
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -383,6 +382,9 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 2023/07/05 ver 9.2.1
+ * null参照で落ちる不具合があったのを修正
+ * 
  * 2023/04/16 ver 9.2.0
  * 標準の操作の必須指定を変更可能に。
  * その他、軽微なバグ修正。
@@ -1606,7 +1608,9 @@ class EscapeSymbol extends I_SymbolDefine{
     static create(objText){
         if(!objText){
             const name = new MultiLanguageText("menu/cancel","メニュー/キャンセル");
-            return new EscapeSymbol(name,null,null);
+            const help = new MultiLanguageText("","");
+            const keytext = new MultiLanguageText("","");
+            return new EscapeSymbol(name,help,keytext);
         }
         const obj=JSON.parse(objText);
 
@@ -1638,12 +1642,14 @@ class EscapeSymbol extends I_SymbolDefine{
  * @param {MultiLanguageText} mText 
  */
 function xxxxMtext(mText){
-    if(mText){
-        if(!mText.isEmpty()){
-            return mText
-        }
-    }
-    return null;
+    return mText;
+    // if(mText){
+    //     if(!mText.isEmpty()){
+    //         return mText
+    //     }
+    // }
+    //ミスって、ぬるぽ発生していたので無効にする
+    // return null;
 }
 class BasicSymbol extends I_SymbolDefine{
     /**
@@ -4672,6 +4678,7 @@ class InputConfigManager_T{
     }
 
     isAnyButtonLongPressed(){
+        //@ts-ignore
         return Input._pressedTime > 60;
     }
 
