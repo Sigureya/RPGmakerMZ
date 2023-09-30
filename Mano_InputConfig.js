@@ -1,3 +1,4 @@
+
 //=============================================================================
 // Mano_InputConfig.js
 // ----------------------------------------------------------------------------
@@ -6,7 +7,7 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
-// ver 9.2.1 2023/07/05
+// ver 9.3.0 2023/09/30
 // ----------------------------------------------------------------------------
 // [Twitter]: https://twitter.com/Sigureya/
 //=============================================================================
@@ -382,6 +383,9 @@
  * これで、指定されたシーンに移動できます。
  * 
  * 更新履歴
+ * 2023/09/30 ver 9.2.0
+ * PS5 DualSenseで配置が大きく異なるので仮対応
+ * 
  * 2023/07/05 ver 9.2.1
  * null参照で落ちる不具合があったのを修正
  * 
@@ -4235,10 +4239,12 @@ class DeviceXXX{
 function createGamepad(){
     //TODO:helpText差し込み
     const nintendo=createGamepadLayout("N","nintendo","B","A","Y","X");
-    const playstation=createGamepadLayout("P","playstation","×","○","□","△");
     const xbox =createGamepadLayout("X","xbox","A","B","X","Y");
+    const playstation=createGamepadLayout("P","playstation4","×","○","□","△");
+    const ps5DualDualSense = createGamepadLayout("PS5","playstation5","□","×","○","△");
+
     const numberGamepad =createButtonNumberLayout("Number","ButtonNumber");
-    const gamepadLayoutSelector = new LayoutSelecter([numberGamepad,nintendo,xbox,playstation]);
+    const gamepadLayoutSelector = new LayoutSelecter([numberGamepad,nintendo,xbox,playstation,ps5DualDualSense]);
     const gamepad= new GamepadObject(gamepadLayoutSelector);
     return gamepad;
 }
@@ -5496,6 +5502,74 @@ class Window_GamepadDetail extends Window_Command{
 
 }
 
+class ButtonFindTask{
+
+    constructor(){
+        //NaNではない適当な値を入れておく
+        //比較とかの関係
+        this.clear();
+    }
+    clear(){
+        this._lastButtonId =NaN;
+        this._triggerLock = false;
+        this._sameButtonPressCount =0;
+    }
+
+    isXXXX(){
+        //ボタンを指定回数以上押したか？
+        return !isNaN(this._lastButtonId) && this._sameButtonPressCount >=3;
+    }
+
+    /**
+     * @param {number} buttonId 
+     */
+    #countUpButtonPressed(buttonId){
+
+        this._lastButtonId = buttonId;
+        this._sameButtonPressCount++;
+
+    }
+
+    buttonFindMode(){
+        if(!navigator.getGamepads){
+            return;
+        }
+        const gamepads = navigator.getGamepads();
+        for (const iterator of gamepads) {
+            this.#readButtonState(iterator);
+        }
+    }
+    /**
+     * @param {Gamepad} gamepad 
+     */
+    #readButtonState(gamepad){
+        let buttonId =NaN;
+        for (let index = 0; index < gamepad.buttons.length; index++) {
+            if(gamepad.buttons[index].pressed){
+                //既にボタンが押されている？
+                if(!isNaN(buttonId) ){
+                    //2個以上押されているので入力を無視
+                    //入力を消去
+                    this.clear();
+                    return;
+                }
+                //押されたボタンを一時記録
+                buttonId = index;
+            }
+        }
+        //ボタンが押されなかった
+        if(isNaN(buttonId)){
+            this._triggerLock = false;
+            return;
+        }
+        //一度ボタンが離されているか？
+        if(!this._triggerLock){
+            this.#countUpButtonPressed(buttonId);
+        }
+    }
+   
+}
+
 class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
     constructor(){
         super();
@@ -5660,9 +5734,31 @@ class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
     gamepadDetailRect(){
         return new Rectangle(200,200,200,400);
     }
+
+    isButtonFindMode(){
+        return false;
+    }
+
+    startButtonFindMode(){
+
+
+    }
+
+    buttonFindMode(){
+        if(!navigator.getGamepads){
+            return;
+        }
+        const gamepads = navigator.getGamepads();
+
+        
+    }
+
+
+
     createGamepadDetailWindow(){
         const rect = this.gamepadDetailRect();
         const gdw = new Window_GamepadDetail(rect);
+        //TODO:ボタン検索モード
 
 
         for (const iterator of setting.gamepad.layoutSelector().list()) {
@@ -5671,6 +5767,7 @@ class Scene_GamepadConfig_V8 extends Scene_MenuBaseMVMZ{
 
 
         this._detailWindow=gdw;
+        this.addWindow(gdw);
 
     }
     onDetailLayoutOk(){
