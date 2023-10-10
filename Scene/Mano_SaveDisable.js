@@ -1,7 +1,19 @@
+//========================================================================
+// Mano_SaveDisable.js
+// -----------------------------------------------------------------------
+// Copyright (c) 2023-2023 Sigureya
+// This software is released under the MIT License.
+// http://opensource.org/licenses/mit-license.php
+// -----------------------------------------------------------------------
+// Version
+// ver 1.0.0 2023/10/11
+// -----------------------------------------------------------------------
+// [Twitter]: https://twitter.com/Sigureya/
+//========================================================================
 /*:
  * @plugindesc セーブ禁止状態でセーブ画面を開いた場合にも禁止する
  * @author しぐれん
- * 
+ * @url https://github.com/Sigureya/RPGmakerMZ/blob/master/Scene/Mano_SaveDisable.js
  * @target MZ
  * 
  * @param helpText
