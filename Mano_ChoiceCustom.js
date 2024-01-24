@@ -14,7 +14,7 @@
 
 
 /*:
- * @plugindesc 選択肢の機能を強化します。
+ * @plugindesc 選択肢を表示し、結果を変数に保存します。
  * Show choices and save the result to a variable
  * @author しぐれん(https://github.com/Sigureya/RPGmakerMV)
  * 
@@ -154,7 +154,7 @@
  * @arg isInMember
  * @text パーティ内メンバーを表示
  * @type boolean
- * @default true
+ * @default false
  *  
  * @arg list
  * @text 表示するアクターのリスト
@@ -391,92 +391,73 @@
     "use strict";
 const PLUGIN_NAME='Mano_ChoiceCustom';
 
-class ChoiceHelp{
-    /**
-     * @param {string[]} list 
-     */
-    constructor(list){
-        this._list =list;
-    }
-    /**
-     * @param {number} index 
-     * @returns 
-     */
-    text(index){
-        return this._list[index];
-    }
-}
-
-class ChoiceManager_T{
-
-}
-
 function evalTemp(item,expr){
     const a =item;
     return !!(eval(expr));
 }
 
-class I_ChoiceItem{
-    constructor(){
-        this._enabled =true;
-    }
-    /**
-     * @param {Boolean} value 
-     */
-    setEnabled(value){
-        this._enabled =this._enabled && value;
-    }
+    class I_ChoiceItem{
+        constructor(){
+            this._enabled =true;
+        }
+        /**
+         * @param {Boolean} value 
+         */
+        setEnabled(value){
+            this._enabled =this._enabled && value;
+        }
 
-    /**
-     * @param {Number} valueId 
-     */
-    setSwitchId(valueId){
-        if(valueId >0){
-            this.setEnabled( $gameSwitches.value(valueId));
+        /**
+         * @param {Number} valueId 
+         */
+        setSwitchId(valueId){
+            if(valueId >0){
+                this.setEnabled( $gameSwitches.value(valueId));
+            }
+        }
+
+        /**
+         * @param {String} evalText 
+         */
+        evalCondition(evalText){
+            const item = this.item();
+            this.setEnabled(!!evalTemp( item,evalText ));
+        }
+
+        isEnabled(){
+            return this._enabled;
+        }
+        item(){
+            return null;
+        }
+        name(){
+            return "";
+        }
+        value(){
+            return 0;
+        }
+        helpText(){
+            return "";
+        }
+        /**
+         * @param {Window_Help} helpWindow 
+         */
+        writeHelp(helpWindow){
+            helpWindow.setText(this.helpText());
+        }
+
+        /**
+         * @returns {Game_Actor}
+         */
+        actor(){
+            return null;
         }
     }
-
-    /**
-     * @param {String} evalText 
-     */
-    evalCondition(evalText){
-        const item = this.item();
-        this.setEnabled(!!evalTemp( item,evalText ));
-    }
-
-    isEnabled(){
-        return this._enabled;
-    }
-    item(){
-        return null;
-    }
-    name(){
-        return "";
-    }
-    value(){
-        return 0;
-    }
-    helpText(){
-        return "";
-    }
-    /**
-     * @param {Window_Help} helpWindow 
-     */
-    writeHelp(helpWindow){
-        helpWindow.setText(this.helpText());
-    }
-
-    /**
-     * @returns {Game_Actor}
-     */
-    actor(){
-        return null;
-    }
-}
 
 
 class ChoiceItem_Actor extends I_ChoiceItem{
     /**
+     * 
      * @param {Game_Actor} actor 
      */
     constructor(actor){
@@ -508,18 +489,7 @@ class ChoiceItem_Actor extends I_ChoiceItem{
     }
 }
 
-class ChoiceBase {
-    constructor(){
-        this.setCancelEnabled(true);
-    }
-    /**
-     * 
-     * @param {boolean} value 
-     */
-    setCancelEnabled(value){
-        this._cancelEnabled =value;
-    }
-
+class I_Choice {
     /**
      * @returns {string[]}
      */
@@ -527,8 +497,7 @@ class ChoiceBase {
         return [];
     }
     cancelType(){
-        return this._cancelEnabled ? -2:-1;
-        //return -2;
+        return -2;
     }
     canCancel(){
         return true;
@@ -587,7 +556,7 @@ class SimpleChoiceItem extends I_ChoiceItem{
 
 }
 
-class ChoiceSimple extends ChoiceBase{
+class ChoiceSimple extends I_Choice{
     constructor(){
         super();
         this.setList([]);
@@ -657,7 +626,7 @@ class ChoiceSimple extends ChoiceBase{
      */
     makeChoiceMessageEX(func){
         this.removeDisabledItem();
-        if(this._list.length > 0){
+        if(this._list.length>0){
             $gameMessage.setChoices(
                 this.choiceList(),
                 this.defaultIndex(),
@@ -673,11 +642,9 @@ class ChoiceSimple extends ChoiceBase{
         }
     }
 
-    // cancelType(){
-    //     //TODO:修正が必要
-    //     //禁止できるようにする
-    //     return -2;
-    // }
+    cancelType(){
+        return -2;
+    }
     saveCursor(index){
         $gameVariables.setValue(this._cursorMemoryVariable,index);
     }
@@ -690,6 +657,7 @@ function parseList(listText){
     const textList =JSON.parse(listText);
     const objList = textList.map( t =>{return JSON.parse(t)});
     return objList;
+
 }
 
 function parseBasicArg(argText){
@@ -699,7 +667,6 @@ function parseBasicArg(argText){
         cursorSave:Number(arg.cursorSave)||0,
         displayMode:String(arg.displayMode) ,
         enabledExpr:String(arg.enabledExpr||""),
-        cancelEnabled:(arg.cancelEnabled==="true"),
     };
 }
 /**
@@ -717,7 +684,6 @@ function createCusutomChoice(arg){
     const choice = new ChoiceSimple();
     choice.setCursorMemory(param.cursorSave);
     choice.setTargetVaribale(param.variableId);
-    choice.setCancelEnabled(param.cancelEnabled);
     return choice;
 }
 function customChoice(arg){
@@ -952,16 +918,5 @@ PluginManager.registerCommand(PLUGIN_NAME,"classChange",function(arg){
     classChange(arg);
     setWait(this);
 });
-// const Scene_Map_createAllWindows=Scene_Map.prototype.createAllWindows;
-// Scene_Map.prototype.createAllWindows =function(){
-
-//     Scene_Map_createAllWindows.call(this);
-//     if(!this._helpWindow ){
-//         if(this.createHelpWindow){
-//             this.createHelpWindow();
-//         }
-//     }
-
-// };
 
 })();
